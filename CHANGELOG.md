@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.40.0 - 2026-11-21
+
+### Added
+- Sharing statistics on the web now works like the page you are looking at for the Team, Player, Side-out study and Cross rotation tabs of a match. The link carries only the data shown in the tab, with the filters you had set, and the web page redraws the real charts, so hovering, tooltips and the filters (Set, Skill, Rally phase, Evaluations) work as in the app. On the Player tab the link contains only the athletes you picked. Links you shared before keep working, and the Report, Play-by-play, Trends and Team analysis tabs still share as before.
+- The reception and defense system editors now warn you when the back-row middle (the libero's place) is drawn on or in front of the attack line. A rotation tab shows an exclamation mark and a message explains it. You can still save and correct the drawing later.
+
+### Changed
+- Charts no longer animate while a tab is being exported or shared, so the images and links always show the final result.
+
+### Fixed
+- The window shown after an update, with the invitation to support the project, now appears in the centre of the screen instead of sliding partly off to the left on a phone. It has a clear "Later" button, closes when you tap outside it or press Escape, and the same close button is now used in the update-available windows.
+- On smartphones, the statistics pages no longer become wider than the screen. In landscape the tabs of the statistics page now wrap onto more lines, the Match report header stays inside the screen, and the Data page list and the live scouting start card fit narrow phones. Wide tables, such as the Match report and the Cross rotation table, still scroll inside their own frame.
+- During live scouting, the libero is no longer drawn in the front row on the tactical court when a saved system places the back-row middle at the net. The libero is moved to the usual back-row spot. Your saved systems and matches are not changed.
+- Shared statistics pages now show the detail lines of the efficiency bars (for example aces and errors), keep each value next to its own label in the number cards, and keep all section titles and the points and errors legend. Create a new link to get these improvements; older links stay as they were.
+- With a video from a local file in live scouting, clicking the video window no longer pauses it. Pause with the play button of the video bar or with the space bar, as with a YouTube video.
+
 ## 0.39.3 - 2026-11-21
 
 ### Fixed

@@ -1,3 +1,4 @@
+import { StatsCaptureContext } from '@src/features/analytics/export/stats-capture-context';
 import { LoadingProgressBanner, yieldToUi, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { EfficiencyNote } from '@src/features/analytics/EfficiencyNote';
 import { SelectableTable } from '@src/components/SelectableTable';
@@ -351,7 +352,7 @@ export function TeamAnalysisPage() {
           }
         />
       ) : null}
-      <div ref={exportPanelRef}>
+      <StatsCaptureContext.Provider value={isExportingTab}><div ref={exportPanelRef}>
       {activeTab === 'report' && singleMatch && singleHomeTeam && singleAwayTeam && singleScoutingConfig && singleMatchStats ? (
         <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
           <MatchReportTable
@@ -409,7 +410,7 @@ export function TeamAnalysisPage() {
         </div>
       ) : null}
       {['report', 'team-performance', 'player-performance', 'trends'].includes(activeTab) ? <EfficiencyNote /> : null}
-      </div>
+      </div></StatsCaptureContext.Provider>
     </AppPageLayout>
   ) : null;
 

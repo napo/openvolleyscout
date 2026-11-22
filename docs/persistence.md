@@ -227,3 +227,12 @@ Generated files are outside the app database:
 - Analysis has no dedicated persisted report model; reports and charts are
   regenerated from match projects.
 - There is no centralized query cache; features explicitly refresh after writes.
+
+## `.ovs` files and the app version
+
+Every `.ovs` file (a single match or a whole-database backup) contains a
+`manifest.json` with the field `appVersion`: the version of OpenVolleyScout
+that exported the file, next to `exportedAt` and the format version
+(`ovsFormatVersion`). It says which release wrote the file, not which release
+scouted the match. Use it first when a problem is reported on a shared or
+restored match.

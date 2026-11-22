@@ -46,6 +46,21 @@ regular player instead of the libero. `restoreFrontRowLiberoMarker` in
 the replaced player unconditionally for any marker rendered in a front-row position
 that is still flagged `isLibero`.
 
+The final marker normalization also checks the actual drawing coordinates. A
+back-row slot alone is insufficient: a saved system with stale middle-blocker
+labels can assign that slot a point in the front zone. If the libero's point is
+at or in front of the attack line, it is replaced with the standard coordinate
+of their back-row slot. This applies to both display sides and every tactical
+phase without changing the saved system or the match event log.
+
+The reception and defense system editors warn when the back-row middle (the
+marker representing the libero) is drawn on or in front of the attack line.
+The check follows the role order and setter rotation, so it does not flag the
+front-row middle. This is an advisory warning, separate from reception overlap
+faults: a forward drawing coordinate does not change a player's rotation slot.
+Reception also explains this distinction. Saving remains available so the scout
+can review and correct the drawing.
+
 ### When all three layers are active simultaneously
 
 - The libero player physically occupies a front-row slot in the `ActiveLineup`.

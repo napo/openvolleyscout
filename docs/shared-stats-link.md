@@ -88,14 +88,22 @@ Tuple fields:
    - `[5, items]`: `{ kind: 'kpi', items }` (KPI / situation analytics card grid)
    - `[6, dataUrl, alt]`: `{ kind: 'image', dataUrl, alt? }` (compact WebP/PNG raster snapshots of canvas heatmaps, restricted to `data:image/(png|webp|jpeg);base64,`)
 
+Bar items retain the original 4-field (single bar) and 7-field (paired bars) tuples. An optional final `details` field contains `[label, value]` string pairs, producing 5-field or 8-field tuples. The viewer displays these supporting statistics below the bar label. Existing links without details remain supported. Previously omitted details require generating a new link from the analysis tab.
+
+KPI extraction uses explicit label/value elements, including player totals, so cards remain correctly paired even when the analysis tab displays values before labels. Points/errors legends and all six heading levels are retained. Shared pages remain static snapshots: analysis filters and chart interactions are not included.
+
+### Version 3 (`3.<base64url>`) - Filtered data, real components
+
+Used for the Team, Player, Side-out study and Cross rotation tabs of the match Analysis page. The payload is a 6-element tuple like v2 whose last element is a snapshot: the calculated match statistics the tab shows plus the page filters and the picked athletes. On the Player tab the statistics are cut to the picked athletes (their totals and the rallies they touched). Each set's rallies are not sent twice; they are rebuilt from the rally list on decode. `SharedStatsPanel` restores the filters and mounts the same dashboard components as the Data study page, so charts, tooltips and filters behave the same. The athlete picker is hidden because the athletes are chosen by the sender. Trends, Priorities and the multi-match Team analysis page still use v2.
+
 ## Size Limits and Validation
 
 Enforced in `stats-share-link.ts`:
-- `MAX_BYTES = 2_000_000` (2 MB uncompressed UTF-8 JSON; `inflateSync` uses a bounded `Uint8Array(MAX_BYTES + 1)` buffer to prevent zip-bomb expansion).
-- `MAX_LINK_LENGTH = 180_000` characters for `<version>.<base64url>`.
+- `MAX_BYTES = 4_000_000` (4 MB uncompressed UTF-8 JSON; `inflateSync` uses a bounded `Uint8Array(MAX_BYTES + 1)` buffer to prevent zip-bomb expansion).
+- `MAX_LINK_LENGTH = 250_000` characters for `<version>.<base64url>`.
 - `MAX_BLOCKS = 400` blocks per v2 snapshot.
 - `title` and `matchLabel` must each be `<= 1000` characters.
-- Regex gate before inflation: `/^[12]\.[\w-]+$/`.
+- Regex gate before inflation: `/^[123]\.[\w-]+$/`.
 
 ## Expiry Semantics
 

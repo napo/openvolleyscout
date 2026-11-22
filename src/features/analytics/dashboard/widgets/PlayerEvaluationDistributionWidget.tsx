@@ -1,3 +1,4 @@
+import { useStatsChartAnimation } from '@src/features/analytics/export/stats-capture-context';
 import { useMemo } from 'react';
 import { getEvaluationChipStyle, getEvaluationColor, getEvaluationScale } from '@src/domain/touch/evaluation-scale';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -81,6 +82,7 @@ function SkillBar({
   teamSide: TeamSide;
   label: string;
 }) {
+  const animate = useStatsChartAnimation();
   const { t } = useTranslation();
   const evals = SKILL_EVALUATIONS[skill] ?? ['#', '+', '!', '-', '/', '='];
   const counts = evals.map((ev) => getEvalCount(skillStats, ev));
@@ -117,7 +119,7 @@ function SkillBar({
                     dataKey={EVAL_DATA_KEYS[ev]}
                     stackId={`${teamSide}-${skill}`}
                     fill={colors[ev]}
-                    isAnimationActive
+                    isAnimationActive={animate}
                     animationDuration={520}
                   />
                 ))}

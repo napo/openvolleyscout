@@ -81,6 +81,21 @@ export type OverlapFault =
   | { kind: 'depth'; front: CourtPosition; back: CourtPosition }
   | { kind: 'lateral'; left: CourtPosition; right: CourtPosition };
 
+/** The back-row middle stands for the libero in the systems editors. */
+export function hasAdvancedLiberoPosition(
+  roleSequence: readonly PlayerRole[],
+  rotation: ReceptionRotation,
+  positions: readonly Pick<ReceptionPosition, 'role' | 'y'>[],
+): boolean {
+  const courtPositions = getRoleCourtPositions(roleSequence, rotation);
+  return positions.some((position) => {
+    const courtPosition = courtPositions.get(position.role);
+    const representsLibero = position.role === PlayerRole.LIBERO
+      || (MIDDLE_BLOCKERS.has(position.role) && courtPosition !== undefined && !FRONT_ROW.has(courtPosition));
+    return representsLibero && position.y <= 100 / 3;
+  });
+}
+
 type Point = { x: number; y: number };
 
 function checkPoints(points: ReadonlyMap<CourtPosition, Point>): OverlapFault[] {

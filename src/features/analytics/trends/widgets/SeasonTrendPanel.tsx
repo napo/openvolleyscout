@@ -1,3 +1,4 @@
+import { useStatsChartAnimation } from '@src/features/analytics/export/stats-capture-context';
 import { useMemo, useState } from 'react';
 import {
   LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
@@ -32,6 +33,7 @@ export interface SeasonTrendPanelProps {
 }
 
 export function SeasonTrendPanel({ matches, teamRef }: SeasonTrendPanelProps) {
+  const animate = useStatsChartAnimation();
   const { t } = useTranslation();
   const [selectedAxis, setSelectedAxis] = useState<RadarAxisId>('attackEfficiency');
 
@@ -102,7 +104,7 @@ export function SeasonTrendPanel({ matches, teamRef }: SeasonTrendPanelProps) {
               strokeWidth={3}
               dot
               connectNulls
-              isAnimationActive
+              isAnimationActive={animate}
             />
           </LineChart>
         </ResponsiveContainer>

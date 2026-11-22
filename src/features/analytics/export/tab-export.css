@@ -243,7 +243,7 @@
   overflow: hidden;
 }
 .shared-stats-viewer__bar-track--bicolor {
-  background: #fee2e2;
+  background: #ef4444;
 }
 .shared-stats-viewer__bar-pair {
   display: grid;
@@ -280,4 +280,19 @@
 .shared-stats-viewer__kpi-sub {
   font-size: 0.76rem;
   color: #64748b;
+}
+
+.shared-stats-viewer__bar-details {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #475569;
+}
+.shared-stats-viewer__bar-details > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.shared-stats-viewer__bar-details dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
 }

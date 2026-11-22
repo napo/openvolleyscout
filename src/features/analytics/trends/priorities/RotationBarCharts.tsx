@@ -1,3 +1,4 @@
+import { useStatsChartAnimation } from '@src/features/analytics/export/stats-capture-context';
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, ReferenceLine, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -43,6 +44,7 @@ function RotationTooltip({ active, payload }: { active?: boolean; payload?: Tool
 }
 
 function PhaseBarChart({ phase, rows }: { phase: RotationPhase; rows: RotationBarRow[] }) {
+  const animate = useStatsChartAnimation();
   const { good, bad } = CROSS_ROTATION_THRESHOLDS[phase];
 
   return (
@@ -61,7 +63,7 @@ function PhaseBarChart({ phase, rows }: { phase: RotationPhase; rows: RotationBa
         <ReferenceLine y={good * 100} stroke={TONE_COLOR.green} strokeDasharray="4 4" />
         <ReferenceLine y={bad * 100} stroke={TONE_COLOR.red} strokeDasharray="4 4" />
         <Tooltip content={<RotationTooltip />} />
-        <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={24}>
+        <Bar isAnimationActive={animate} dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={24}>
           {rows.map((row) => (
             <Cell key={row.rotation} fill={row.tone ? TONE_COLOR[row.tone] : TONE_COLOR.neutral} />
           ))}

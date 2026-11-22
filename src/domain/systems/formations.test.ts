@@ -14,9 +14,42 @@ import {
   getReceptionOverlapFaults,
   getRoleCourtPositions,
   getRoleOrder,
+  hasAdvancedLiberoPosition,
 } from '@src/domain/systems';
 
 const FRONT_ROW = new Set([2, 3, 4]);
+
+describe('libero drawing warning', () => {
+  for (const order of ['PSC', 'PCS'] as const) {
+    it(`${order}: follows the back-row middle through all rotations`, () => {
+      const sequence = ROLE_ORDER_SEQUENCES[order];
+      const contexts = createDefenseContextsForPreset({ id: `${order.toLowerCase()}-base`, order });
+      for (const entry of contexts.break_point) {
+        const courtPositions = getRoleCourtPositions(sequence, entry.rotation);
+        expect(hasAdvancedLiberoPosition(sequence, entry.rotation, entry.positions)).toBe(false);
+        for (const middle of [PlayerRole.MIDDLE_BLOCKER_1, PlayerRole.MIDDLE_BLOCKER_2]) {
+          const positions = entry.positions.map((position) => position.role === middle
+            ? { ...position, y: 100 / 3 } : position);
+          expect(hasAdvancedLiberoPosition(sequence, entry.rotation, positions))
+            .toBe(!FRONT_ROW.has(courtPositions.get(middle)!));
+        }
+      }
+    });
+  }
+
+  it('warns for a short reception even when there is no overlap fault', () => {
+    const sequence = ROLE_ORDER_SEQUENCES.PSC;
+    const courtPositions = getRoleCourtPositions(sequence, 1);
+    const positions = sequence.map((role) => {
+      const slot = courtPositions.get(role)!;
+      return { role, x: [82, 82, 50, 18, 18, 50][slot - 1], y: FRONT_ROW.has(slot) ? 10 : 25 };
+    });
+    expect(getReceptionOverlapFaults(sequence, 1, positions)).toEqual([]);
+    expect(hasAdvancedLiberoPosition(sequence, 1, positions)).toBe(true);
+    expect(hasAdvancedLiberoPosition(sequence, 1, [{ role: PlayerRole.LIBERO, y: 20 }])).toBe(true);
+    expect(hasAdvancedLiberoPosition(sequence, 1, [{ role: PlayerRole.LIBERO, y: 34 }])).toBe(false);
+  });
+});
 
 describe('role order', () => {
   it('reads P-S-C as outside hitter in 2 and middle in 3 (the base OVS system)', () => {

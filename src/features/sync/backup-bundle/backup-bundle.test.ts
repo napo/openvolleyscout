@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { test } from 'vitest';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchProject } from '@src/domain/match/types';
+import { APP_VERSION } from '@src/lib/constants/app';
 import { buildOvsBackupBundle, readOvsBackupBundle, reconstructMatchEvents } from './zip-backup-bundle';
 import type { ArchivedDataSnapshot, BackupSelection } from './types';
 
@@ -93,6 +94,11 @@ test('backup bundle round-trip preserves each match\'s own events under a combin
   const eventsByMatch = reconstructMatchEvents(parsed);
   assert.deepStrictEqual(eventsByMatch['match-a'], matchAEvents);
   assert.deepStrictEqual(eventsByMatch['match-b'], matchBEvents);
+});
+
+test('backup bundle records the app version that produced it', () => {
+  const parsed = readOvsBackupBundle(buildOvsBackupBundle([buildProject('match-a', matchAEvents)], emptyArchives, {}, 'device-1'));
+  assert.strictEqual(parsed.manifest.appVersion, APP_VERSION);
 });
 
 test('backup bundle includes each match\'s archived video playlists', () => {

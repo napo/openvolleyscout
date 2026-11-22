@@ -173,7 +173,11 @@ function extractEfficiencyBars(teamEl: Element): SharedStatsBlock | null {
       label: totalText ? `${skillName} (${totalText})` : skillName,
       valueLabel: effStrong || '-',
       pct,
-      color: '#16a34a',
+      color: '#22c55e',
+      details: Array.from(sec.querySelectorAll('.perf-dashboard__stat-row')).filter(visible).map(row => [
+        (row.querySelector('.perf-dashboard__stat-label')?.textContent ?? '').trim(),
+        (row.querySelector('.perf-dashboard__stat-value')?.textContent ?? '').trim(),
+      ]),
     });
   }
   return items.length > 0 ? { kind: 'bars', ...(title ? { title } : {}), items } : null;
@@ -207,6 +211,13 @@ function extractKpiCards(gridEl: Element): SharedStatsBlock | null {
   const cards = Array.from(gridEl.children).filter(visible);
   const items: SharedStatsKpiItem[] = [];
   for (const card of cards) {
+    const label = card.querySelector('.perf-dashboard__kpi-label');
+    const value = card.querySelector('.perf-dashboard__kpi-value');
+    if (label && value) {
+      const sub = card.querySelector('.perf-dashboard__kpi-sub')?.textContent?.trim();
+      items.push({ label: label.textContent?.trim() ?? '', value: value.textContent?.trim() ?? '', ...(sub ? { sub } : {}) });
+      continue;
+    }
     const texts = Array.from(card.querySelectorAll('span, strong, small, p, div'))
       .filter((node) => !node.children.length && visible(node))
       .map((node) => (node.textContent ?? '').replace(/\s+/g, ' ').trim())
@@ -237,11 +248,13 @@ export function extractSharedTabBlocks(root: HTMLElement): SharedStatsBlock[] {
     if (element.classList.contains('perf-dashboard__pe-team')) {
       const peBlock = extractPointsErrorsBars(element);
       if (peBlock) {
+        const legend = Array.from(element.querySelectorAll('.perf-dashboard__pe-legend-item')).filter(visible).map(node => node.textContent?.trim()).filter(Boolean).join(' / ');
+        if (legend) blocks.push({ kind: 'text', text: legend });
         blocks.push(peBlock);
         return;
       }
     }
-    if (element.classList.contains('situation-analytics__grid') || element.classList.contains('perf-dashboard__kpi-grid')) {
+    if (element.classList.contains('situation-analytics__grid') || element.classList.contains('perf-dashboard__kpi-grid') || element.classList.contains('perf-dashboard__player-totals')) {
       const kpiBlock = extractKpiCards(element);
       if (kpiBlock) {
         blocks.push(kpiBlock);
@@ -284,7 +297,7 @@ export function extractSharedTabBlocks(root: HTMLElement): SharedStatsBlock[] {
       }
       return;
     }
-    if (element.matches('h1, h2, h3, h4')) {
+    if (element.matches('h1, h2, h3, h4, h5, h6')) {
       const text = (element.textContent || '').replace(/\s+/g, ' ').trim();
       if (text) blocks.push({ kind: 'heading', text });
       return;
@@ -294,8 +307,12 @@ export function extractSharedTabBlocks(root: HTMLElement): SharedStatsBlock[] {
       if (text) blocks.push({ kind: 'text', text });
       return;
     }
-    for (const child of element.children) {
-      visit(child);
+    for (const child of element.childNodes) {
+      if (child instanceof Element) visit(child);
+      else if (child.nodeType === Node.TEXT_NODE) {
+        const text = (child.textContent ?? '').replace(/\s+/g, ' ').trim();
+        if (text) blocks.push({ kind: 'text', text });
+      }
     }
   };
   visit(root);

@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { test } from 'vitest';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchProject } from '@src/domain/match/types';
+import { APP_VERSION } from '@src/lib/constants/app';
 import { exportMatchToOvsBundle, parseOvsBundleFile } from './index';
 import { flattenTouchEvents, unflattenTouchRows } from './serializer/touches-flatten';
 import { flattenNonTouchEvents, unflattenEventRows } from './serializer/events-flatten';
@@ -153,6 +154,9 @@ test('full bundle round-trip: export then parse reconstructs the match project s
 
   const parsed = parseOvsBundleFile(bytes);
   assert.strictEqual(parsed.matchId, 'match-1');
+  // The file says which app version produced it, to trace data problems back to a release.
+  assert.strictEqual(parsed.manifest.appVersion, APP_VERSION);
+  assert.ok(APP_VERSION.length > 0);
   assert.strictEqual(parsed.events.length, project.events.length);
   assert.deepStrictEqual(parsed.meta.metadata, project.metadata);
   assert.deepStrictEqual(parsed.meta.homeSelection, project.homeSelection);

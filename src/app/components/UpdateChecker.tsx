@@ -57,6 +57,15 @@ export function UpdateChecker() {
   );
 
   useEffect(() => {
+    if (!justUpdated) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setJustUpdated(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [justUpdated]);
+
+  useEffect(() => {
     if (!isTauri()) return;
 
     let cancelled = false;
@@ -116,20 +125,28 @@ export function UpdateChecker() {
 
   if (justUpdated) {
     return (
-      <div className="update-toast" role="status">
-        <p className="update-toast__message">
-          <strong>{t('updateInstalled', { version: APP_VERSION })}</strong> {t('updateSupportInvite')}
-        </p>
-        <div className="update-toast__actions">
-          {donateLink}
-          <button
-            type="button"
-            className="update-toast__btn update-toast__btn--dismiss"
-            onClick={() => setJustUpdated(false)}
-            aria-label={t('updateDismiss')}
-          >
-            ×
-          </button>
+      <div className="update-modal-backdrop" role="presentation" onClick={() => setJustUpdated(false)}>
+        <div
+          className="update-toast update-toast--modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('updateInstalled', { version: APP_VERSION })}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <p className="update-toast__message">
+            <strong>{t('updateInstalled', { version: APP_VERSION })}</strong> {t('updateSupportInvite')}
+          </p>
+          <div className="update-toast__actions">
+            {donateLink}
+            <button
+              type="button"
+              className="update-toast__btn update-toast__btn--dismiss"
+              onClick={() => setJustUpdated(false)}
+              autoFocus
+            >
+              {t('updateDismiss')}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -154,7 +171,7 @@ export function UpdateChecker() {
               onClick={() => setState({ phase: 'dismissed' })}
               aria-label={t('updateDismiss')}
             >
-              ×
+              {t('updateDismiss')}
             </button>
             <button
               type="button"
@@ -188,7 +205,7 @@ export function UpdateChecker() {
               onClick={() => setState({ phase: 'dismissed' })}
               aria-label={t('updateDismiss')}
             >
-              ×
+              {t('updateDismiss')}
             </button>
             <ExternalLink href={state.url} className="update-toast__btn update-toast__btn--primary">
               {t('updateInstallNow')}
@@ -221,7 +238,7 @@ export function UpdateChecker() {
             onClick={() => setState({ phase: 'dismissed' })}
             aria-label={t('updateDismiss')}
           >
-            ×
+            {t('updateDismiss')}
           </button>
         </div>
       </div>

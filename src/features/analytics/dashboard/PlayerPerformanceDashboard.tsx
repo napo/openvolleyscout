@@ -42,9 +42,10 @@ interface FilterBarProps {
   onSelectedPlayersChange: (playerIds: string[]) => void;
   /** The team is fixed by the page, not chosen by the user: it is not an active filter. */
   lockedTeam?: 'home' | 'away';
+  readOnlyPlayers?: boolean;
 }
 
-function FilterBar({ filters, stats, selectedPlayerIds, onSelectedPlayersChange, lockedTeam }: FilterBarProps) {
+function FilterBar({ filters, stats, selectedPlayerIds, onSelectedPlayersChange, lockedTeam, readOnlyPlayers }: FilterBarProps) {
   const { t } = useTranslation();
   const { updateFilter, resetFilters } = useFilterActions();
   const sets = getAvailableSets(stats);
@@ -58,13 +59,13 @@ function FilterBar({ filters, stats, selectedPlayerIds, onSelectedPlayersChange,
 
   return (
     <div className="perf-dashboard__filters" aria-label={t('dashboardFilters')}>
-      <PlayerMultiAutocomplete
+      {readOnlyPlayers ? null : <PlayerMultiAutocomplete
         players={lockedTeam ? players.filter((p) => p.teamSide === lockedTeam) : players}
         selectedPlayerIds={selectedPlayerIds}
         onChange={onSelectedPlayersChange}
         homeTeamName={homeTeamName}
         awayTeamName={awayTeamName}
-      />
+      />}
 
       <div className="perf-dashboard__filter-group">
         <label className="perf-dashboard__filter-label" htmlFor="dash-filter-skill">
@@ -146,6 +147,8 @@ interface PlayerPerformanceDashboardProps {
   stats: MatchStats;
   /** Restrict player selection and data to a single team. */
   lockedTeam?: 'home' | 'away';
+  /** Shared view: the athletes were chosen by whoever shared the page, so the picker is hidden. */
+  readOnlyPlayers?: boolean;
 }
 
 /** The full set of widgets for one athlete, filtered by the page filters. */
@@ -185,7 +188,7 @@ function PlayerPerformanceBlock({ stats, player, filters }: { stats: MatchStats;
   );
 }
 
-export function PlayerPerformanceDashboard({ stats, lockedTeam }: PlayerPerformanceDashboardProps) {
+export function PlayerPerformanceDashboard({ stats, lockedTeam, readOnlyPlayers }: PlayerPerformanceDashboardProps) {
   const { t } = useTranslation();
   const storeFilters = useAdvancedFilters() as DashboardFilters;
   const filters: DashboardFilters = lockedTeam ? { ...storeFilters, team: lockedTeam } : storeFilters;
@@ -232,6 +235,7 @@ export function PlayerPerformanceDashboard({ stats, lockedTeam }: PlayerPerforma
         selectedPlayerIds={selectedPlayerIds}
         onSelectedPlayersChange={handleSelectedPlayersChange}
         lockedTeam={lockedTeam}
+        readOnlyPlayers={readOnlyPlayers}
       />
 
       {selectedPlayers.length === 0 ? (

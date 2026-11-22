@@ -1,3 +1,4 @@
+import { useStatsChartAnimation } from '@src/features/analytics/export/stats-capture-context';
 import { useEffect, useMemo, useState } from 'react';
 import {
   RadarChart,
@@ -117,6 +118,7 @@ export function RadarComparisonChart({
   onScaleModeChange,
   title,
 }: RadarComparisonChartProps) {
+  const animate = useStatsChartAnimation();
   const { t } = useTranslation();
   const narrow = useIsNarrow();
 
@@ -207,7 +209,7 @@ export function RadarComparisonChart({
               stroke={s.color ?? SERIES_COLORS[index % SERIES_COLORS.length]}
               fill={s.color ?? SERIES_COLORS[index % SERIES_COLORS.length]}
               fillOpacity={0.15}
-              isAnimationActive
+              isAnimationActive={animate}
             />
           ))}
           <Legend />

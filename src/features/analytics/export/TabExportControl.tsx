@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { ActionIcon } from '@src/components/ActionIcon';
 import { ExternalLink } from '@src/components/ExternalLink';
@@ -5,16 +6,19 @@ import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 import { sharedPlaylistExpiryAfter } from '@src/features/analysis/video/youtube-share-link';
 import { buildSharedStatsUrl, type SharedStatsTabId } from './stats-share-link';
+import type { SharedStatsSnapshot } from './shared-stats-snapshot';
 import type { TabExportFormat } from './tab-export';
 import './tab-export.css';
 
-export function TabExportControl({ panelRef, title, matchLabel, tabId = 'generic', onBusyChange, onExportPdf }: {
+export function TabExportControl({ panelRef, title, matchLabel, tabId = 'generic', onBusyChange, onExportPdf, buildSnapshot }: {
   panelRef: RefObject<HTMLDivElement>;
   title: string;
   matchLabel: string;
   tabId?: SharedStatsTabId;
   onBusyChange: (busy: boolean) => void;
   onExportPdf?: () => Promise<void>;
+  /** When given, the share link carries this tab's filtered data and the viewer redraws the real page. */
+  buildSnapshot?: () => SharedStatsSnapshot;
 }) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
@@ -73,33 +77,48 @@ export function TabExportControl({ panelRef, title, matchLabel, tabId = 'generic
     const panel = panelRef.current;
     if (!panel || pending.current) return;
     pending.current = true;
-    setBusy(true);
-    onBusyChange(true);
+    flushSync(() => {
+      setBusy(true);
+      onBusyChange(true);
+    });
     setShareError(false);
     setShareCopied(false);
     setShareUrl('');
     try {
-      const { extractSharedTabBlocks } = await import('./tab-export');
       const now = new Date();
-      const blocks = extractSharedTabBlocks(panel);
-      if (blocks.length === 0) {
-        throw new Error('Empty tab content');
-      }
       const expiresAt = sharedPlaylistExpiryAfter(shareDays)!;
       const isPublicWeb = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
         && !/^(localhost|127\.0\.0\.1|tauri\.localhost)$/i.test(window.location.hostname);
       const baseUrl = isPublicWeb
         ? `${window.location.origin}${window.location.pathname}`
         : APP_METADATA.urls.webApp;
-      const url = buildSharedStatsUrl(baseUrl, {
-        version: 2,
-        tabId,
-        title,
-        matchLabel,
-        blocks,
-        expiresAt,
-        generatedAt: now.getTime(),
-      });
+      let url: string;
+      if (buildSnapshot) {
+        url = buildSharedStatsUrl(baseUrl, {
+          version: 3,
+          tabId,
+          title,
+          matchLabel,
+          snapshot: buildSnapshot(),
+          expiresAt,
+          generatedAt: now.getTime(),
+        });
+      } else {
+        const { extractSharedTabBlocks } = await import('./tab-export');
+        const blocks = extractSharedTabBlocks(panel);
+        if (blocks.length === 0) {
+          throw new Error('Empty tab content');
+        }
+        url = buildSharedStatsUrl(baseUrl, {
+          version: 2,
+          tabId,
+          title,
+          matchLabel,
+          blocks,
+          expiresAt,
+          generatedAt: now.getTime(),
+        });
+      }
       setShareUrl(url);
     } catch (cause) {
       console.error('Tab share link failed:', cause);

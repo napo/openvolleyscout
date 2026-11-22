@@ -53,8 +53,8 @@ describe('stats-share-link', () => {
           kind: 'bars',
           title: 'Efficiency',
           items: [
-            { label: 'Serve (40)', valueLabel: '42%', pct: 42, color: '#16a34a' },
-            { label: 'Attack (60)', valueLabel: '24', pct: 80, color: '#16a34a', secondaryValueLabel: '6', secondaryPct: 20, secondaryColor: '#dc2626' },
+            { label: 'Serve (40)', valueLabel: '42%', pct: 42, color: '#16a34a', details: [['Aces', '18']] },
+            { label: 'Attack (60)', valueLabel: '24', pct: 80, color: '#16a34a', secondaryValueLabel: '6', secondaryPct: 20, secondaryColor: '#dc2626', details: [['Total', '60']] },
           ],
         },
         { kind: 'kpi', items: [{ label: 'Side-out', value: '62%', sub: '31 / 50' }] },
@@ -71,6 +71,12 @@ describe('stats-share-link', () => {
       blocks: [{ kind: 'svg' as const, svg: '<script>alert(1)</script>' }],
     });
     expect(decodeSharedStats(badV2)).toBeNull();
+
+    const badDetails = encodeSharedStats({
+      ...v2,
+      blocks: [{ kind: 'bars' as const, items: [{ label: 'Serve', valueLabel: '42%', pct: 42, color: '#16a34a', details: [['missing value']] }] }],
+    });
+    expect(decodeSharedStats(badDetails)).toBeNull();
 
     const badImg = encodeSharedStats({
       ...v2,

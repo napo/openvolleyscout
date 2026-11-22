@@ -731,7 +731,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     // Docked mode always displays the video tile; collapsed only applies
     // to the optional floating window on smaller screens.
     const playerView = source ? (
-      <div className="live-video-panel__player-wrap">
+      <div className={`live-video-panel__player-wrap${showTransportControls ? ' live-video-panel__player-wrap--app-transport' : ''}`}>
         <VideoPlayerView
           ref={playerRef}
           source={source}

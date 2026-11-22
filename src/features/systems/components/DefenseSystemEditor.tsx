@@ -9,6 +9,7 @@ import {
   getNearestDataVolleyZone,
   getRoleLabel,
   getRoleOrder,
+  hasAdvancedLiberoPosition,
   getSetterRotationLabel,
   type DefenseContext,
   type DefensePosition,
@@ -130,6 +131,10 @@ export function DefenseSystemEditor({
   const selectedPositions = getRotationPositions(draftBlock, selectedContext, selectedRotation);
   const selectedContextLabel = t(DEFENSE_CONTEXT_LABEL_KEYS[selectedContext]);
   const selectedRotationLabel = getSetterRotationLabel(selectedRotation, locale);
+  const hasLiberoWarning = (rotation: DefenseRotation) => hasAdvancedLiberoPosition(
+    draftBlock.roleSequence, rotation, getRotationPositions(draftBlock, selectedContext, rotation),
+  );
+  const selectedLiberoWarning = hasLiberoWarning(selectedRotation);
 
   const updateDraftPosition = (role: DefensePosition['role'], event: PointerEvent) => {
     const coordinates = getPointerCoordinates(event, courtRef.current);
@@ -323,10 +328,12 @@ export function DefenseSystemEditor({
             <button
               key={rotation}
               type="button"
-              className={`defense-system-editor__rotation-tab${selectedRotation === rotation ? ' is-active' : ''}`}
+              className={`defense-system-editor__rotation-tab${selectedRotation === rotation ? ' is-active' : ''}${hasLiberoWarning(rotation) ? ' has-warning' : ''}`}
+              title={hasLiberoWarning(rotation) ? t('liberoPositionWarningTitle') : undefined}
               onClick={() => setSelectedRotation(rotation)}
             >
               {getSetterRotationLabel(rotation, locale)}
+              {hasLiberoWarning(rotation) ? ' !' : ''}
             </button>
           ))}
         </div>
@@ -345,6 +352,12 @@ export function DefenseSystemEditor({
         </div>
       </div>
 
+      {selectedLiberoWarning ? (
+        <div className="systems-editor__warning" role="status">
+          <strong>{t('liberoPositionWarningTitle')}</strong>
+          <p>{t('liberoPositionWarning')}</p>
+        </div>
+      ) : null}
     </section>
   );
 }

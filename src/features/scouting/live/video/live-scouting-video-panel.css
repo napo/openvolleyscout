@@ -134,6 +134,15 @@
   height: 100%;
 }
 
+/* A local file is driven by the app's own transport bar (native controls are off):
+   a click on the picture must not reach the <video>, where the browser can pause it
+   and leave the bar showing "playing". Like a YouTube player, it keeps playing when
+   the window is clicked; Space and the bar are the only ways to pause. */
+.live-video-panel__player-wrap--app-transport video,
+.video-popout-page__player-wrap video {
+  pointer-events: none;
+}
+
 /* Panel is small and fixed-aspect: crop to fill. Popout is a resizable OS
    window with no fixed aspect: letterbox instead of cropping. */
 .live-video-panel__player-wrap video,

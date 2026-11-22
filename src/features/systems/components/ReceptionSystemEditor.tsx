@@ -9,6 +9,7 @@ import {
   getRoleLabel,
   getReceptionOverlapFaults,
   getRoleOrder,
+  hasAdvancedLiberoPosition,
   type OverlapFault,
   getSetterRotationLabel,
   type ReceptionPosition,
@@ -125,6 +126,10 @@ export function ReceptionSystemEditor({
     ? t('overlapFaultDepth', { front: fault.front, back: fault.back })
     : t('overlapFaultLateral', { left: fault.left, right: fault.right }));
   const selectedRotationLabel = getSetterRotationLabel(selectedRotation, locale);
+  const hasLiberoWarning = (rotation: ReceptionRotation) => hasAdvancedLiberoPosition(
+    draftBlock.roleSequence, rotation, getRotationPositions(draftBlock, rotation),
+  );
+  const selectedLiberoWarning = hasLiberoWarning(selectedRotation);
 
   const updateDraftPosition = (role: ReceptionPosition['role'], event: PointerEvent) => {
     const coordinates = getPointerCoordinates(event, courtRef.current);
@@ -301,13 +306,13 @@ export function ReceptionSystemEditor({
               key={rotation}
               type="button"
               className={`reception-system-editor__rotation-tab${selectedRotation === rotation ? ' is-active' : ''}${
-                getFaults(rotation).length > 0 ? ' has-fault' : ''
+                getFaults(rotation).length > 0 ? ' has-fault' : hasLiberoWarning(rotation) ? ' has-warning' : ''
               }`}
               onClick={() => setSelectedRotation(rotation)}
-              title={getFaults(rotation).length > 0 ? t('overlapFaultsTitle') : undefined}
+              title={getFaults(rotation).length > 0 ? t('overlapFaultsTitle') : hasLiberoWarning(rotation) ? t('liberoPositionWarningTitle') : undefined}
             >
               {getSetterRotationLabel(rotation, locale)}
-              {getFaults(rotation).length > 0 ? ' !' : ''}
+              {getFaults(rotation).length > 0 || hasLiberoWarning(rotation) ? ' !' : ''}
             </button>
           ))}
         </div>
@@ -337,6 +342,13 @@ export function ReceptionSystemEditor({
         </div>
       ) : null}
 
+      {selectedLiberoWarning ? (
+        <div className="systems-editor__warning" role="status">
+          <strong>{t('liberoPositionWarningTitle')}</strong>
+          <p>{t('liberoPositionWarning')}</p>
+          <p>{t('liberoReceptionPositionNote')}</p>
+        </div>
+      ) : null}
     </section>
   );
 }

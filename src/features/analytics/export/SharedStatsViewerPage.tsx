@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { decodeSharedStats, isSharedStatsExpired, type SharedStatsTabId } from './stats-share-link';
+import { SharedStatsPanel } from './SharedStatsPanel';
 import '@src/features/opponent-reports/pages/opponent-reports.css';
 import './tab-export.css';
 
@@ -51,7 +52,7 @@ export function SharedStatsViewerPage() {
     );
   }
 
-  const tabBadgeKey = stats.version === 2 ? TAB_LABEL_KEYS[stats.tabId] : undefined;
+  const tabBadgeKey = stats.version === 2 || stats.version === 3 ? TAB_LABEL_KEYS[stats.tabId] : undefined;
 
   return (
     <main dir={locale === 'ar' ? 'rtl' : 'ltr'} className="tactical-shared shared-stats-viewer">
@@ -68,7 +69,9 @@ export function SharedStatsViewerPage() {
         </div>
       </header>
 
-      {stats.version === 2 ? (
+      {stats.version === 3 ? (
+        <SharedStatsPanel tabId={stats.tabId} snapshot={stats.snapshot} />
+      ) : stats.version === 2 ? (
         <section className="shared-stats-viewer__content" data-tab-id={stats.tabId}>
           {stats.blocks.map((block, index) => {
             if (block.kind === 'heading') {
@@ -115,7 +118,14 @@ export function SharedStatsViewerPage() {
                               : item.valueLabel}
                           </strong>
                         </div>
-                        {item.secondaryPct !== undefined ? (
+                        {item.details?.length ? (
+                          <dl className="shared-stats-viewer__bar-details">
+                            {item.details.map(([label, value], di) => (
+                              <div key={di}><dt>{label}</dt><dd>{value}</dd></div>
+                            ))}
+                          </dl>
+                        ) : null}
+                        {item.valueLabel === '-' && item.secondaryPct === undefined ? null : item.secondaryPct !== undefined ? (
                           <div className="shared-stats-viewer__bar-pair">
                             <div className="shared-stats-viewer__bar-track">
                               <div

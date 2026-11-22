@@ -6,6 +6,7 @@ import {
   isSharedPlaylistExpired,
 } from '@src/features/analysis/video/youtube-share-link';
 import { STATS_VIEWER_PREVIEW_PATH } from './stats-preview';
+import { fromWireSnapshot, isWireSnapshot, toWireSnapshot, type SharedStatsSnapshot } from './shared-stats-snapshot';
 
 export type SharedStatsTabId =
   | 'report'
@@ -26,6 +27,7 @@ export interface SharedStatsBarItem {
   secondaryValueLabel?: string;
   secondaryPct?: number;
   secondaryColor?: string;
+  details?: string[][];
 }
 
 export interface SharedStatsKpiItem {
@@ -62,7 +64,18 @@ export interface SharedMatchStatsV2 {
   generatedAt?: number;
 }
 
-export type SharedMatchStats = SharedMatchStatsV1 | SharedMatchStatsV2;
+/** The tab's calculated data and filters: the viewer renders the real analysis components. */
+export interface SharedMatchStatsV3 {
+  version: 3;
+  tabId: SharedStatsTabId;
+  title: string;
+  matchLabel: string;
+  snapshot: SharedStatsSnapshot;
+  expiresAt: number;
+  generatedAt?: number;
+}
+
+export type SharedMatchStats = SharedMatchStatsV1 | SharedMatchStatsV2 | SharedMatchStatsV3;
 
 const TAB_TO_CODE: Record<SharedStatsTabId, string> = {
   report: 'r',
@@ -80,8 +93,8 @@ const CODE_TO_TAB: Record<string, SharedStatsTabId> = Object.fromEntries(
   Object.entries(TAB_TO_CODE).map(([tab, code]) => [code, tab as SharedStatsTabId]),
 );
 
-const MAX_BYTES = 2_000_000;
-const MAX_LINK_LENGTH = 180_000;
+const MAX_BYTES = 4_000_000;
+const MAX_LINK_LENGTH = 250_000;
 const MAX_BLOCKS = 400;
 
 export const SHARED_STATS_ROUTE = '/stats-viewer';
@@ -93,7 +106,9 @@ export function isSharedStatsExpired(stats: Pick<SharedMatchStats, 'expiresAt'>,
 
 type PackedBarItem =
   | [string, string, number, string]
-  | [string, string, number, string, string, number, string];
+  | [string, string, number, string, string[][]]
+  | [string, string, number, string, string, number, string]
+  | [string, string, number, string, string, number, string, string[][]];
 
 type PackedKpiItem = [string, string] | [string, string, string];
 
@@ -132,19 +147,17 @@ function packBlock(block: SharedStatsBlock): PackedBlock {
       return [
         4,
         block.title ?? '',
-        block.items.map((item): PackedBarItem => (
-          item.secondaryPct !== undefined
-            ? [
-              item.label,
-              item.valueLabel,
-              clampPct(item.pct),
-              item.color,
-              item.secondaryValueLabel ?? '',
-              clampPct(item.secondaryPct),
-              item.secondaryColor ?? '#dc2626',
-            ]
-            : [item.label, item.valueLabel, clampPct(item.pct), item.color]
-        )),
+        block.items.map((item): PackedBarItem => {
+          if (item.secondaryPct !== undefined) {
+            const paired: [string, string, number, string, string, number, string] = [
+              item.label, item.valueLabel, clampPct(item.pct), item.color,
+              item.secondaryValueLabel ?? '', clampPct(item.secondaryPct), item.secondaryColor ?? '#dc2626',
+            ];
+            return item.details ? [...paired, item.details] : paired;
+          }
+          const single: [string, string, number, string] = [item.label, item.valueLabel, clampPct(item.pct), item.color];
+          return item.details ? [...single, item.details] : single;
+        }),
       ];
     case 'kpi':
       return [
@@ -176,7 +189,9 @@ function unpackBlock(raw: unknown): SharedStatsBlock | null {
   if (kindCode === 4 && raw.length === 3 && typeof payload === 'string' && Array.isArray(raw[2])) {
     const items: SharedStatsBarItem[] = [];
     for (const entry of raw[2]) {
-      if (!Array.isArray(entry) || (entry.length !== 4 && entry.length !== 7)) return null;
+      if (!Array.isArray(entry) || ![4, 5, 7, 8].includes(entry.length)) return null;
+      const details = entry.length === 5 ? entry[4] : entry.length === 8 ? entry[7] : undefined;
+      if (details !== undefined && (!Array.isArray(details) || !details.every(row => Array.isArray(row) && row.length === 2 && row.every(cell => typeof cell === 'string')))) return null;
       const [label, valueLabel, pct, color] = entry;
       if (
         typeof label !== 'string'
@@ -188,7 +203,7 @@ function unpackBlock(raw: unknown): SharedStatsBlock | null {
       ) {
         return null;
       }
-      if (entry.length === 7) {
+      if (entry.length >= 7) {
         const [, , , , secVal, secPct, secColor] = entry;
         if (
           typeof secVal !== 'string'
@@ -207,9 +222,10 @@ function unpackBlock(raw: unknown): SharedStatsBlock | null {
           secondaryValueLabel: secVal,
           secondaryPct: clampPct(secPct),
           secondaryColor: secColor,
+          ...(details ? { details } : {}),
         });
       } else {
-        items.push({ label, valueLabel, pct: clampPct(pct), color });
+        items.push({ label, valueLabel, pct: clampPct(pct), color, ...(details ? { details } : {}) });
       }
     }
     return { kind: 'bars', ...(payload ? { title: payload } : {}), items };
@@ -237,6 +253,20 @@ function unpackBlock(raw: unknown): SharedStatsBlock | null {
 }
 
 export function encodeSharedStats(stats: SharedMatchStats): string {
+  if (stats.version === 3) {
+    const bytes = strToU8(JSON.stringify([
+      TAB_TO_CODE[stats.tabId] ?? 'g',
+      stats.title,
+      stats.matchLabel,
+      Math.floor(stats.expiresAt / 1000),
+      stats.generatedAt ? Math.floor(stats.generatedAt / 1000) : 0,
+      toWireSnapshot(stats.snapshot),
+    ]));
+    if (bytes.length > MAX_BYTES) throw new Error('Match statistics snapshot exceeds sharing size limit');
+    const payload = `3.${bytesToBase64Url(deflateSync(bytes, { level: 9 }))}`;
+    if (payload.length > MAX_LINK_LENGTH) throw new Error('Match statistics link exceeds sharing size limit');
+    return payload;
+  }
   if (stats.version === 2) {
     const tuple: PackedV2Tuple = [
       TAB_TO_CODE[stats.tabId] ?? 'g',
@@ -269,7 +299,7 @@ export function encodeSharedStats(stats: SharedMatchStats): string {
 }
 
 export function decodeSharedStats(payload: string): SharedMatchStats | null {
-  if (!payload || payload.length > MAX_LINK_LENGTH || !/^[12]\.[\w-]+$/.test(payload)) {
+  if (!payload || payload.length > MAX_LINK_LENGTH || !/^[123]\.[\w-]+$/.test(payload)) {
     return null;
   }
   const versionChar = payload.charAt(0);
@@ -279,6 +309,31 @@ export function decodeSharedStats(payload: string): SharedMatchStats | null {
     const json = strFromU8(bytes).replace(/\0+$/, '');
     if (strToU8(json).length > MAX_BYTES) {
       return null;
+    }
+
+    if (versionChar === '3') {
+      const tuple = JSON.parse(json) as unknown;
+      if (!Array.isArray(tuple) || tuple.length !== 6) return null;
+      const [tabCode, title, matchLabel, expiresAtSec, generatedAtSec, wire] = tuple;
+      if (
+        typeof tabCode !== 'string'
+        || typeof title !== 'string' || title.length > 1000
+        || typeof matchLabel !== 'string' || matchLabel.length > 1000
+        || typeof expiresAtSec !== 'number' || !Number.isFinite(expiresAtSec)
+        || typeof generatedAtSec !== 'number' || !Number.isFinite(generatedAtSec)
+        || !isWireSnapshot(wire)
+      ) {
+        return null;
+      }
+      return {
+        version: 3,
+        tabId: CODE_TO_TAB[tabCode] ?? 'generic',
+        title,
+        matchLabel,
+        snapshot: fromWireSnapshot(wire),
+        expiresAt: expiresAtSec * 1000,
+        ...(generatedAtSec > 0 ? { generatedAt: generatedAtSec * 1000 } : {}),
+      };
     }
 
     if (versionChar === '2') {

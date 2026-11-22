@@ -448,6 +448,7 @@ function normalizeTacticalCourtPlayers({
   const usedPlayerIds = new Set<string>();
   const normalizedMarkers: TacticalCourtPlayer[] = [];
   const recoveryReasons: string[] = [];
+  const attackLineX = mapHalfCourtSystemPointToLiveCourt(displaySide, { x: 50, y: 100 / 3 }).x;
 
   if (dedupedMarkers.length !== markers.length) {
     recoveryReasons.push('duplicate_team_scoped_markers_removed');
@@ -468,8 +469,25 @@ function normalizeTacticalCourtPlayers({
       recoveryReasons.push(`filled_from_lineup:${legalMarker.playerId}`);
     }
 
+    // A legal rotation slot does not guarantee legal drawing coordinates: saved
+    // systems can still put the back-row middle's role at the net after a change.
+    // Check the final point as well, including markers recovered from the lineup.
+    const liberoDrawnInFrontRow = legalMarker.isLibero && (
+      !Number.isFinite(marker.x)
+      || !Number.isFinite(marker.y)
+      || (displaySide === 'left' ? marker.x >= attackLineX : marker.x <= attackLineX)
+    );
+    const coordinate = liberoDrawnInFrontRow
+      ? getCourtPositionCoordinate(displaySide, legalMarker.slot.courtPosition)
+      : marker;
+    if (liberoDrawnInFrontRow) {
+      recoveryReasons.push(`libero_coordinates_restored:${legalMarker.playerId}`);
+    }
+
     normalizedMarkers.push({
       ...marker,
+      x: coordinate.x,
+      y: coordinate.y,
       courtPosition: legalMarker.slot.courtPosition,
       jerseyNumber: legalMarker.jerseyNumber,
       isLibero: legalMarker.isLibero,

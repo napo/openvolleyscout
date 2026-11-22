@@ -1,3 +1,4 @@
+import { useStatsChartAnimation } from '@src/features/analytics/export/stats-capture-context';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
@@ -49,6 +50,7 @@ function EvaluationTooltip({ active, payload, label }: { active?: boolean; paylo
 }
 
 export function StackedEvaluationChart({ points }: { points: readonly MatchEvaluationPoint[] }) {
+  const animate = useStatsChartAnimation();
   const { t } = useTranslation();
 
   const rows: ChartRow[] = points.map((point) => {
@@ -76,7 +78,7 @@ export function StackedEvaluationChart({ points }: { points: readonly MatchEvalu
         <Tooltip content={<EvaluationTooltip />} />
         <Legend formatter={(symbol: string) => t(SYMBOL_LABEL_KEY[symbol as EvaluationSymbol])} />
         {SYMBOL_ORDER.map((symbol) => (
-          <Bar key={symbol} dataKey={symbol} stackId="evaluation" fill={EVALUATION_SYMBOL_COLOR[symbol]} maxBarSize={28} />
+          <Bar isAnimationActive={animate} key={symbol} dataKey={symbol} stackId="evaluation" fill={EVALUATION_SYMBOL_COLOR[symbol]} maxBarSize={28} />
         ))}
       </BarChart>
     </ResponsiveContainer>
