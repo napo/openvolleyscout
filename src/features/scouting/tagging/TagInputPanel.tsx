@@ -252,6 +252,8 @@ export function TagInputPanel({
   const [pendingCell, setPendingCell] = useState<GridCell | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showCodes, setShowCodes] = useState(false);
+  // Phones: the legend opens in its own window instead of taking room under the keys.
+  const [showLegend, setShowLegend] = useState(false);
   // Attack subtype for the next attack (DataVolley H / P / T), hard by default.
   const [attackSubtype, setAttackSubtype] = useState<AttackSubtype>('H');
   const [ballType, setBallType] = useState<string | null>(null);
@@ -832,6 +834,25 @@ export function TagInputPanel({
     </dl>
   );
 
+  const renderLegendDialog = () => (
+    <div className="tag-flow__legend-backdrop" onClick={() => setShowLegend(false)}>
+      <div
+        className="tag-flow__legend-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('tagEvalLegendTitle')}
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => { if (event.key === 'Escape') setShowLegend(false); }}
+      >
+        <div className="tag-flow__legend-dialog-head">
+          <strong>{t(getSkillTranslationKey(activeSkill))} · {t('tagEvalLegendTitle')}</strong>
+          <button type="button" className="tag-flow__legend-close" onClick={() => setShowLegend(false)} autoFocus>{t('pickerClose')}</button>
+        </div>
+        <div className="tag-flow__legend-dialog-body">{renderLegend()}</div>
+      </div>
+    </div>
+  );
+
   const renderSkillTabs = () => (
     <div className="tag-flow__skills" role="group" aria-label={t('tagOtherPlay')}>
       {skillTabs.map((skill) => (
@@ -1092,6 +1113,15 @@ export function TagInputPanel({
               {partner ? (
                 <button type="button" className="tag-flow__partner-skip" onClick={skipPartner}>{t('tagPartnerSkip')}</button>
               ) : null}
+              <button
+                type="button"
+                className="tag-input__details-toggle tag-flow__legend-toggle"
+                aria-haspopup="dialog"
+                title={t('tagEvalLegendTitle')}
+                onClick={() => setShowLegend(true)}
+              >
+                {t('tagEvalLegendButton')}
+              </button>
               {/* Beside Details: the corner on the left is taken by the video button. */}
               {codeList ? (
                 <button type="button" className="tag-input__details-toggle tag-input__codes-toggle" onClick={() => setShowCodes(true)}>{t('tagCodesButton')}</button>
@@ -1124,6 +1154,7 @@ export function TagInputPanel({
               {extra ? <div className="tag-flow__extra">{extra}</div> : null}
               {renderLegend()}
             </div>
+            {showLegend ? renderLegendDialog() : null}
           </>
         )}
       </div>

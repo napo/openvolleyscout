@@ -273,17 +273,179 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-/* Upright phone: who above what, the whole pad scrolls. */
+/* The tag pad never grows past the screen: its columns scroll inside instead. */
+.scouting-screen--phone .scouting-screen__main-area:has(> .scouting-screen__court-area--tag),
+.scouting-screen--phone .scouting-screen__court-area--tag,
+.scouting-screen--phone .scouting-screen__court-area--tag > .tag-input {
+    min-height: 0;
+}
+
+/* Upright phone: who above what, all on screen without scrolling. The keys,
+   the direction pad and the rally-end buttons keep their size; the player
+   buttons shrink to the height that is left. */
 @media (orientation: portrait) {
     .scouting-screen--phone .tag-input {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: none;
-        grid-auto-rows: max-content;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
     }
 
-    .scouting-screen--phone .tag-input__who,
+    .scouting-screen--phone .tag-input__who {
+        flex: 1 0 auto;
+        min-height: 0;
+        overflow: visible;
+        gap: 0.3rem;
+    }
+
     .scouting-screen--phone .tag-input__what {
-        overflow-y: visible;
+        flex: 0 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        gap: 0.3rem;
+    }
+
+    .scouting-screen--phone .tag-input__topbar {
+        min-height: 2.2rem;
+    }
+
+    /* The jersey numbers stay readable: the court never gets shorter than four
+       rows of buttons; on a very short screen the keys column scrolls instead. */
+    .scouting-screen--phone .tag-input__who > .tag-court {
+        flex: 1 0 auto;
+        min-height: 11.5rem;
+    }
+
+    .scouting-screen--phone .tag-court--single {
+        min-height: 7rem;
+    }
+
+    .scouting-screen--phone .tag-court--vertical {
+        grid-template-rows: minmax(0, 1fr) 0.35rem minmax(0, 1fr);
+    }
+
+    .scouting-screen--phone .tag-court__half {
+        min-height: 0;
+        grid-auto-rows: minmax(0, 1fr);
+    }
+
+    /* Number and role on one line: shorter keys, the number always readable. */
+    .scouting-screen--phone .tag-input .tag-court .tag-court__player {
+        flex-direction: row;
+        justify-content: center;
+        gap: 0.3rem;
+        min-height: 2.5rem;
+        padding: 0.1rem 0.25rem;
+        overflow: hidden;
+    }
+
+    .scouting-screen--phone .tag-input .tag-court .tag-court__player strong {
+        flex: 0 0 auto;
+        font-size: 1.25rem;
+    }
+
+    .scouting-screen--phone .tag-input .tag-court .tag-court__player span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.62rem;
+    }
+
+    .scouting-screen--phone .tag-input .tag-court__extras > .tag-input__player,
+    .scouting-screen--phone .tag-input .tag-court__extras > .tag-input__bench-toggle,
+    .scouting-screen--phone .tag-input .tag-input__point {
+        min-height: 2.3rem;
+    }
+
+    .scouting-screen--phone .tag-input .tag-flow__legend-toggle {
+        align-items: center;
+        white-space: nowrap;
+    }
+
+    .scouting-screen--phone .tag-court__extras-row .tag-court__team-name {
+        display: none;
+    }
+
+    /* The six evaluations in one row. */
+    .scouting-screen--phone .tag-input .tag-input__what > .tag-flow__outcomes {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .scouting-screen--phone .tag-flow__head {
+        gap: 0.2rem 0.4rem;
+    }
+
+    .scouting-screen--phone .tag-flow__title strong {
+        font-size: 1.15rem;
+    }
+
+    /* One line: skill, prompt and the two buttons. */
+    .scouting-screen--phone .tag-flow__head {
+        flex-wrap: nowrap;
+        align-items: center;
+    }
+
+    .scouting-screen--phone .tag-flow__title small {
+        display: none;
+    }
+
+    .scouting-screen--phone .tag-flow__head .tag-flow__prompt {
+        order: 0;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.75rem;
+    }
+
+    .scouting-screen--phone .tag-input__topbar {
+        min-height: 0;
+    }
+
+    .scouting-screen--phone .tag-input .tag-input__undo,
+    .scouting-screen--phone .tag-input .tag-input__note {
+        min-height: 2rem;
+    }
+
+    .scouting-screen--phone .tag-zone-picker {
+        gap: 0.25rem;
+        padding: 0.3rem;
+    }
+
+    /* The direction pad uses the whole width: wider zones, easier to hit. */
+    .scouting-screen--phone .tag-flow__top,
+    .scouting-screen--phone .tag-flow__extra {
+        display: block;
+        width: 100%;
+    }
+
+    .scouting-screen--phone .tag-zone-picker__court {
+        width: auto;
+    }
+
+    .scouting-screen--phone .tag-zone-picker__court--horizontal > .tag-zone-picker__half {
+        flex: 1 1 0;
+    }
+
+    /* Each row shares the width equally, whatever the number of zones in it. */
+    .scouting-screen--phone .tag-zone-picker__row {
+        grid-template-columns: none;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+    }
+
+    .scouting-screen--phone .tag-input .tag-zone-picker .tag-zone-picker__zone {
+        width: auto;
+        height: 1.45rem;
+        font-size: 0.85rem;
+    }
+
+    .scouting-screen--phone .tag-input .tag-input__details-toggle {
+        min-height: 2.2rem;
+        padding: 0 0.6rem;
+        font-size: 0.8rem;
     }
 }
 

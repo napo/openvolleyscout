@@ -9,6 +9,8 @@ import { PlayerRole } from '@src/domain/systems';
 import { LiveRallyStage } from '../components/LiveRallyStage';
 import type { PendingTouch } from '../model';
 import { getInitialTeamTacticalPhases } from '../live/tactical/tactical-transition';
+import { TagInputPanel } from '../tagging/TagInputPanel';
+import { TagZonePicker } from '../tagging/TagZonePicker';
 import '../scouting-screen.css';
 
 const SERVING_TEAM: TeamSide = 'home';
@@ -123,10 +125,14 @@ export function DevLiveScoutingSmokePage() {
     () => createActiveLineup(awayStartingLineup, { servingTeam: SERVING_TEAM }),
     [awayStartingLineup],
   );
+  const tagMode = typeof window !== 'undefined' && window.location.hash.includes('tag');
+  const withZones = typeof window !== 'undefined' && window.location.hash.includes('zones');
+  const phone = typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) <= 520;
+  const phonePortrait = phone && window.innerHeight > window.innerWidth;
   const teamTacticalPhases = useMemo(() => getInitialTeamTacticalPhases(SERVING_TEAM), []);
 
   return (
-    <main className="scouting-screen scouting-screen--fixed scouting-screen--operational scouting-screen--dev-smoke">
+    <main className={`scouting-screen scouting-screen--fixed scouting-screen--operational scouting-screen--dev-smoke${tagMode && phone ? ` scouting-screen--phone${phonePortrait ? ' scouting-screen--phone-portrait' : ''}` : ''}`}>
       <div className="scouting-screen__container scouting-screen__container--fixed">
         <section className="scouting-screen__header scouting-screen__header--compact scouting-screen__header--operational">
           <div className="scouting-screen__header-main scouting-screen__matchbar">
@@ -162,6 +168,34 @@ export function DevLiveScoutingSmokePage() {
         </section>
 
         <section className="scouting-screen__stage-shell scouting-screen__stage-shell--operational">
+          {/* #/dev/live-scouting-smoke?tag (&zones: with the direction picker open): the Tags input. */}
+          {tagMode ? (
+            <div className="scouting-screen__main-area">
+              <div className="scouting-screen__court-area scouting-screen__court-area--tag">
+                <TagInputPanel
+                  homeTeam={homeTeam}
+                  awayTeam={awayTeam}
+                  homeLineup={homeLineup}
+                  awayLineup={awayLineup}
+                  servingTeam={SERVING_TEAM}
+                  currentRallyTouches={currentRallyTouches}
+                  leftTeamSide="away"
+                  rightTeamSide="home"
+                  recordTeams="both"
+                  onRecordTeamsChange={() => undefined}
+                  onCommitTouches={() => undefined}
+                  onFinalizeRally={() => undefined}
+                  onUndo={() => undefined}
+                  canUndo={false}
+                  onSubstitute={() => false}
+                  onAssignJersey={async () => null}
+                  extra={withZones ? (
+                    <TagZonePicker variant="pad" skill="attack" onStart={() => undefined} onEnd={() => undefined} onClose={() => undefined} />
+                  ) : undefined}
+                />
+              </div>
+            </div>
+          ) : (
           <LiveRallyStage
             awayTeam={awayTeam}
             homeTeam={homeTeam}
@@ -188,6 +222,7 @@ export function DevLiveScoutingSmokePage() {
             }}
             statusMessage={statusMessage}
           />
+          )}
         </section>
       </div>
     </main>

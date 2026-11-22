@@ -31,6 +31,37 @@ const SERVE_START_ZONES = new Set<number>([5, 7, 6, 9, 1]);
 export type TagZoneRotationSteps = 0 | 1 | 2 | 3;
 
 const ROTATION_STORAGE_KEY = 'ovs:tag-zone-picker-rotation';
+const VIEW_STORAGE_KEY = 'ovs:tag-zone-picker-view';
+
+/**
+ * How the picker is drawn: the compact pad (turned with the 90° button), or a volleyball
+ * court with the two teams left and right, or one above the other.
+ */
+export type TagZonePickerView = 'pad' | 'court-horizontal' | 'court-vertical';
+const VIEWS: readonly TagZonePickerView[] = ['pad', 'court-horizontal', 'court-vertical'];
+
+function loadSavedView(): TagZonePickerView {
+  try {
+    const raw = window.localStorage.getItem(VIEW_STORAGE_KEY);
+    if (raw && (VIEWS as readonly string[]).includes(raw)) return raw as TagZonePickerView;
+  } catch {
+    // Ignore storage errors
+  }
+  return 'pad';
+}
+
+/** The court views keep their orientation; the button only swaps the two teams. */
+export function getViewRotation(view: TagZonePickerView, rotation: TagZoneRotationSteps): TagZoneRotationSteps {
+  if (view === 'court-horizontal') return rotation === 3 ? 3 : 1;
+  if (view === 'court-vertical') return rotation === 2 ? 2 : 0;
+  return rotation;
+}
+
+export function getNextRotation(view: TagZonePickerView, rotation: TagZoneRotationSteps): TagZoneRotationSteps {
+  const current = getViewRotation(view, rotation);
+  if (view === 'pad') return ((current + 1) % 4) as TagZoneRotationSteps;
+  return ((current + 2) % 4) as TagZoneRotationSteps;
+}
 export const DEFAULT_TAG_ZONE_ROTATION: TagZoneRotationSteps = 1;
 
 export function rotateGrid90CW<T>(grid: readonly (readonly T[])[], steps: TagZoneRotationSteps): T[][] {
@@ -84,15 +115,25 @@ interface TagZonePickerProps {
 
 export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onEnd, onClose }: TagZonePickerProps) {
   const { t } = useTranslation();
-  const [rotation, setRotation] = useState<TagZoneRotationSteps>(() => loadSavedRotation());
+  const [savedRotation, setSavedRotation] = useState<TagZoneRotationSteps>(() => loadSavedRotation());
+  const [view, setView] = useState<TagZonePickerView>(() => loadSavedView());
+  const rotation = getViewRotation(view, savedRotation);
 
   const handleRotate = () => {
-    setRotation((prev) => {
-      const next = ((prev + 1) % 4) as TagZoneRotationSteps;
-      saveRotation(next);
-      return next;
-    });
+    const next = getNextRotation(view, savedRotation);
+    saveRotation(next);
+    setSavedRotation(next);
   };
+
+  const handleView = (next: TagZonePickerView) => {
+    setView(next);
+    try {
+      window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {
+      // Ignore storage errors
+    }
+  };
+  const viewLabelKey = { pad: 'tagZoneViewPad', 'court-horizontal': 'tagZoneViewCourtHorizontal', 'court-vertical': 'tagZoneViewCourtVertical' } as const;
 
   const titleKey = skill === 'serve'
     ? 'tagZoneServeTitle'
@@ -184,7 +225,7 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
   const secondHalf = topFirst ? renderHalfB(isHorizontal) : renderHalfA(isHorizontal);
 
   return (
-    <div className={`tag-zone-picker tag-zone-picker--${variant}`} role="group" aria-label={t('tagZoneTitle')}>
+    <div className={`tag-zone-picker tag-zone-picker--${variant}${view === 'pad' ? '' : ' tag-zone-picker--court-look'}`} role="group" aria-label={t('tagZoneTitle')}>
       <div className="tag-zone-picker__header">
         <strong>{t(titleKey)}</strong>
         <div className="tag-zone-picker__header-actions">
@@ -192,15 +233,22 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
             type="button"
             className="tag-zone-picker__rotate"
             onClick={handleRotate}
-            title={t('tagZoneRotate')}
-            aria-label={t('tagZoneRotate')}
+            title={t(view === 'pad' ? 'tagZoneRotate' : 'tagZoneSwapTeams')}
+            aria-label={t(view === 'pad' ? 'tagZoneRotate' : 'tagZoneSwapTeams')}
           >
-            ↻ 90°
+            {view === 'pad' ? '↻ 90°' : view === 'court-horizontal' ? '⇄' : '⇅'}
           </button>
           <button type="button" className="tag-zone-picker__close" onClick={onClose} aria-label={t('tagZoneSkip')}>
             {t(startZone || endZone ? 'tagZoneDone' : 'tagZoneSkip')}
           </button>
         </div>
+      </div>
+      <div className="tag-zone-picker__views" role="group" aria-label={t('tagZoneViewLabel')}>
+        {VIEWS.map((value) => (
+          <button key={value} type="button" className={view === value ? 'is-selected' : ''} aria-pressed={view === value} onClick={() => handleView(value)}>
+            {t(viewLabelKey[value])}
+          </button>
+        ))}
       </div>
       <div className={`tag-zone-picker__court${isHorizontal ? ' tag-zone-picker__court--horizontal' : ''}`}>
         {firstHalf}

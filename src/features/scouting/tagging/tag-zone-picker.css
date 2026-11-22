@@ -177,3 +177,110 @@
   align-self: stretch;
   margin-top: 0;
 }
+
+/* View choice: grid, court with the teams left and right, or one above the other. */
+.tag-zone-picker__views {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.tag-zone-picker__views button,
+.tag-input .tag-zone-picker .tag-zone-picker__views button {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  padding: 0.15rem 0.4rem;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tag-zone-picker__views button.is-selected,
+.tag-input .tag-zone-picker .tag-zone-picker__views button.is-selected {
+  border-color: #22c55e;
+  background: #22c55e;
+  color: #052e16;
+}
+
+/* Court views: drawn as a volleyball court, orange floor, white lines, net in the middle. */
+.tag-zone-picker--court-look .tag-zone-picker__court {
+  gap: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: 4px;
+  background: #3b82f6;
+}
+
+.tag-zone-picker--court-look .tag-zone-picker__half {
+  gap: 2px;
+  padding: 2px;
+  border: 2px solid #fff;
+  background: #fff;
+}
+
+.tag-zone-picker--court-look .tag-zone-picker__row {
+  gap: 2px;
+}
+
+.tag-zone-picker--court-look .tag-zone-picker__part {
+  display: none;
+}
+
+.tag-input .tag-zone-picker.tag-zone-picker--court-look .tag-zone-picker__zone,
+.tag-input .tag-zone-picker.tag-zone-picker--court-look .tag-zone-picker__subzone,
+.tag-zone-picker--court-look .tag-zone-picker__zone,
+.tag-zone-picker--court-look .tag-zone-picker__subzone {
+  background: #f08a3e;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.tag-input .tag-zone-picker.tag-zone-picker--court-look .tag-zone-picker__zone.tag-zone-picker__zone--start,
+.tag-zone-picker--court-look .tag-zone-picker__zone--start {
+  background: #d9732a;
+}
+
+.tag-input .tag-zone-picker.tag-zone-picker--court-look .tag-zone-picker__zone.is-selected,
+.tag-input .tag-zone-picker.tag-zone-picker--court-look .tag-zone-picker__subzone.is-selected,
+.tag-zone-picker--court-look .tag-zone-picker__zone.is-selected,
+.tag-zone-picker--court-look .tag-zone-picker__subzone.is-selected {
+  background: #22c55e;
+  color: #052e16;
+  text-shadow: none;
+}
+
+.tag-zone-picker--court-look .tag-zone-picker__net {
+  position: relative;
+  z-index: 1;
+  margin: -3px 0;
+  height: 6px;
+  background: #0f172a;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+.tag-zone-picker--court-look .tag-zone-picker__court--horizontal .tag-zone-picker__net {
+  margin: 0 -3px;
+  width: 6px;
+  height: auto;
+}
+
+/* The 3 m line: a wider white line between the front row (next to the net) and the back rows. */
+.tag-zone-picker--court-look .tag-zone-picker__court:not(.tag-zone-picker__court--horizontal) > .tag-zone-picker__half:first-child:not(.tag-zone-picker__half--baseline) > div:last-of-type {
+  margin-top: 3px;
+}
+
+.tag-zone-picker--court-look .tag-zone-picker__court:not(.tag-zone-picker__court--horizontal) > .tag-zone-picker__half:last-child:not(.tag-zone-picker__half--baseline) > div:first-of-type {
+  margin-bottom: 3px;
+}
+
+.tag-zone-picker--court-look .tag-zone-picker__court--horizontal > .tag-zone-picker__half:first-child:not(.tag-zone-picker__half--baseline) .tag-zone-picker__row > :last-child {
+  margin-left: 3px;
+}
+
+.tag-zone-picker--court-look .tag-zone-picker__court--horizontal > .tag-zone-picker__half:last-child:not(.tag-zone-picker__half--baseline) .tag-zone-picker__row > :first-child {
+  margin-right: 3px;
+}

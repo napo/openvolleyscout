@@ -1134,3 +1134,80 @@
 .tag-input .tag-flow__outcome.is-unsuggested:not(:disabled) {
     opacity: 0.5;
 }
+
+/* Legend in its own window: the button shows on phones only, where the legend
+   under the keys would push the pad off the screen. */
+.tag-flow__legend-toggle {
+    display: none;
+}
+
+.tag-flow__legend-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.tag-flow__legend-dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(26rem, 100%);
+    max-height: min(32rem, 80dvh);
+    border-radius: 14px;
+    background: var(--color-surface, #fff);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.3);
+    overflow: hidden;
+}
+
+.tag-flow__legend-dialog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.tag-flow__legend-dialog-head strong {
+    min-width: 0;
+    font-size: 0.95rem;
+}
+
+.tag-input .tag-flow__legend-close {
+    flex: 0 0 auto;
+    min-height: 2.4rem;
+    padding: 0 0.9rem;
+    font-weight: 700;
+}
+
+.tag-flow__legend-dialog-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.6rem 0.75rem 0.8rem;
+}
+
+.tag-flow__legend-dialog-body .tag-flow__legend {
+    display: grid;
+    width: auto;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+@media (max-width: 640px), (max-height: 520px) {
+    .tag-input .tag-flow__legend-toggle {
+        display: inline-flex;
+    }
+
+    .tag-flow__top > .tag-flow__legend {
+        display: none;
+    }
+}
