@@ -178,6 +178,7 @@ export function MatchSetupPage() {
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
+  const closeProject = useAppStore((state) => state.closeProject);
 
   const [formData, setFormData] = useState<MatchSetupData>(() => createEmptyMatchSetupData());
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -617,7 +618,7 @@ export function MatchSetupPage() {
     return archivedTeam;
   };
 
-  const persistProject = async (scoutingState?: { quickStart: QuickStartRequest }) => {
+  const persistProject = async (scoutingState?: { quickStart: QuickStartRequest }, options?: { stay?: boolean }) => {
     if (!validateBeforeReview()) {
       return false;
     }
@@ -670,7 +671,9 @@ export function MatchSetupPage() {
         : await matchRepository.create(normalizedProject);
 
       setActiveProject(persistedProject);
-      navigate('/scouting', scoutingState ? { state: scoutingState } : undefined);
+      // Saving changes to an existing match (a date, a venue) goes back to the match list.
+      if (options?.stay) navigate('/load-data');
+      else navigate('/scouting', scoutingState ? { state: scoutingState } : undefined);
       return true;
     } catch (error) {
       console.error('Error creating match project:', error);
@@ -698,6 +701,13 @@ export function MatchSetupPage() {
     if (currentStep === 'away_team') {
       await persistProject();
     }
+  };
+
+  /** Leaves the open match (it stays saved) and starts an empty new one. */
+  const handleStartNewMatch = () => {
+    closeProject();
+    setSetupMode('quick');
+    setCurrentStep('match_info');
   };
 
   const handleBackStep = () => {
@@ -861,6 +871,21 @@ export function MatchSetupPage() {
                 </button>
               ))}
             </div>
+            {activeProject ? (
+              <div className="match-setup-editing" role="status">
+                <p className="match-setup-editing__text">
+                  {t('matchSetupEditing', { match: `${activeProject.homeTeam.name} - ${activeProject.awayTeam.name}` })}
+                </p>
+                <div className="match-setup-editing__actions">
+                  <button type="button" className="btn-primary btn-small" disabled={isSubmitting} onClick={() => void persistProject(undefined, { stay: true })}>
+                    {t('matchSetupSaveChanges')}
+                  </button>
+                  <button type="button" className="btn-secondary btn-small" disabled={isSubmitting} onClick={handleStartNewMatch}>
+                    {t('newMatch')}
+                  </button>
+                </div>
+              </div>
+            ) : null}
             {/* The wizard covers match and teams; say what follows so "3 of 3" is not a surprise. */}
             <p className="match-setup-next-hint">{t('matchWizardNextHint')}</p>
           </>

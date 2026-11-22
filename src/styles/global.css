@@ -5284,3 +5284,29 @@ input[type="radio"] {
     min-width: 0;
     max-width: 100%;
 }
+
+/* Match setup with a match open: say which one, and offer save or a new match. */
+.match-setup-editing {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--color-primary-light, #c7d2fe);
+    border-radius: var(--border-radius-md, 8px);
+    background: var(--color-primary-light, #eef2ff);
+}
+
+.match-setup-editing__text {
+    margin: 0;
+    flex: 1 1 16rem;
+    font-size: var(--font-size-sm, 0.9rem);
+}
+
+.match-setup-editing__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}

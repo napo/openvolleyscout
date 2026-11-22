@@ -77,6 +77,8 @@ export const it = {
   goldenSet: 'Golden set',
   startup: 'Startup',
   matchSetup: 'Impostazione Gara',
+  matchSetupEditing: 'Stai modificando {{match}}. Cambia ciò che serve e salva, oppure crea una nuova gara con altre squadre.',
+  matchSetupSaveChanges: 'Salva modifiche',
   collection: 'Scouting',
   analysis: 'Analisi',
   systems: 'Sistemi',

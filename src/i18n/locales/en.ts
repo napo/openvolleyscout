@@ -77,6 +77,8 @@ export const en = {
   goldenSet: 'Golden set',
   startup: 'Startup',
   matchSetup: 'Match Setup',
+  matchSetupEditing: 'You are editing {{match}}. Change what you need and save, or start a new match with other teams.',
+  matchSetupSaveChanges: 'Save changes',
   collection: 'Scouting',
   analysis: 'Analysis',
   systems: 'Systems',

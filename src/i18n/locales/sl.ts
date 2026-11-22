@@ -47,6 +47,8 @@ export const sl = {
   goldenSet: 'Zlati komplet',
   startup: 'Zagon',
   matchSetup: 'Nastavitev tekme',
+  matchSetupEditing: 'Urejate {{match}}. Spremenite, kar je treba, in shranite ali ustvarite novo tekmo z drugimi ekipami.',
+  matchSetupSaveChanges: 'Shrani spremembe',
   collection: 'Skavtstvo',
   analysis: 'Analiza',
   systems: 'Sistemi',

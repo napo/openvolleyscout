@@ -47,6 +47,8 @@ export const de = {
   goldenSet: 'Goldenes Set',
   startup: 'Startup',
   matchSetup: 'Match-Setup',
+  matchSetupEditing: 'Du bearbeitest {{match}}. Ändere, was nötig ist, und speichere, oder lege ein neues Spiel mit anderen Mannschaften an.',
+  matchSetupSaveChanges: 'Änderungen speichern',
   collection: 'Scouting',
   analysis: 'Analyse',
   systems: 'Systeme',

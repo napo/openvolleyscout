@@ -47,6 +47,8 @@ export const ar = {
   goldenSet: 'الشوط الذهبي',
   startup: 'البداية',
   matchSetup: 'إعداد المباراة',
+  matchSetupEditing: 'أنت تعدّل {{match}}. غيّر ما تحتاجه واحفظ، أو أنشئ مباراة جديدة بفرق أخرى.',
+  matchSetupSaveChanges: 'حفظ التغييرات',
   collection: 'التحليل',
   analysis: 'التحليلات',
   systems: 'الأنظمة',

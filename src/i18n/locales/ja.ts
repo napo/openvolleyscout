@@ -47,6 +47,8 @@ export const ja = {
   goldenSet: "ゴールデンセット",
   startup: "開始",
   matchSetup: "試合の設定",
+  matchSetupEditing: '{{match}} を編集中です。必要な箇所を変更して保存するか、別のチームで新しい試合を作成してください。',
+  matchSetupSaveChanges: '変更を保存',
   collection: "スカウティング",
   analysis: "分析",
   systems: "システム",

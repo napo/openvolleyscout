@@ -47,6 +47,8 @@ export const zh = {
   goldenSet: '金局',
   startup: '启动',
   matchSetup: '比赛设置',
+  matchSetupEditing: '您正在编辑 {{match}}。修改所需内容后保存，或用其他球队新建一场比赛。',
+  matchSetupSaveChanges: '保存更改',
   collection: '侦察',
   analysis: '分析',
   systems: '系统',

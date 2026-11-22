@@ -47,6 +47,8 @@ export const ro = {
   goldenSet: 'Set decisiv',
   startup: 'Pornire',
   matchSetup: 'Configurare meci',
+  matchSetupEditing: 'Editezi {{match}}. Modifică ce este nevoie și salvează sau creează un meci nou cu alte echipe.',
+  matchSetupSaveChanges: 'Salvează modificările',
   collection: 'Scouting',
   analysis: 'Analiză',
   systems: 'Sisteme',

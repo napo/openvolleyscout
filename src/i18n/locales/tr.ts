@@ -47,6 +47,8 @@ export const tr = {
   goldenSet: 'Altın Set',
   startup: 'Başlangıç',
   matchSetup: 'Maç Kurulumu',
+  matchSetupEditing: '{{match}} maçını düzenliyorsunuz. Gerekeni değiştirip kaydedin ya da başka takımlarla yeni bir maç oluşturun.',
+  matchSetupSaveChanges: 'Değişiklikleri kaydet',
   collection: 'Scouting',
   analysis: 'Analiz',
   systems: 'Sistemler',
