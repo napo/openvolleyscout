@@ -79,7 +79,7 @@ export function TrendsPanel({ subTabs, similarityFocus, teamOptions }: TrendsPan
         </div>
       ) : (
         <div className="trends-panel__section">
-          {teamOptions.length > 1 && (
+          {(teamOptions.length > 1 || subTabs) && (
             <div className="trends-panel__team-toggle" role="tablist">
               {teamOptions.map((option) => (
                 <button

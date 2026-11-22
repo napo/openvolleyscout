@@ -68,10 +68,10 @@ export function PrioritiesPanel({ matches, teamRef }: PrioritiesPanelProps) {
         )}
       </section>
 
-      {shared && selectedPlayerIds.size === 0 ? null : (
+      {shared && availablePlayers.length === 0 ? null : (
       <section className="priorities-panel__section">
         <h3 className="priorities-panel__title">{t('prioritiesPlayerTechnicalTitle')}</h3>
-        {shared ? null : <PlayerPicker players={availablePlayers} selectedIds={selectedPlayerIds} onToggle={togglePlayer} />}
+        <PlayerPicker players={availablePlayers} selectedIds={selectedPlayerIds} onToggle={togglePlayer} />
         {selectedPlayerIds.size === 0 ? (
           <p className="trends-panel__empty">{t('prioritiesNoPlayerSelected')}</p>
         ) : (

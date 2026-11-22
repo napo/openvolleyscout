@@ -51,7 +51,6 @@ export function SharedStatsPanel({ tabId, snapshot }: { tabId: SharedStatsTabId;
   if (tabId === 'trends') {
     return snapshot.trends && trendsSource ? (
       <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-        <h3 className="trends-panel__shared-team">{snapshot.trends.teamLabel}</h3>
         <TrendsSourceContext.Provider value={trendsSource}>
           <TrendsPanel
             subTabs={['priorities', 'season-trend']}
