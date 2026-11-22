@@ -122,7 +122,7 @@ describe('LiveRallyStage court-side rendering', () => {
     // the same outcome resolution as the trajectory-first path.
     assert(storeSource.includes("if (phase === 'attack_player_selected' && selectedPlayerId && selectedTeamSide) {"));
     assert(storeSource.includes('resolveAttackTouchOutcome(lockedTouch, attackingTeam);'));
-    assert(stageSource.includes("if (qPhase === 'attack_player_selected') return t('quickDragAttackToLandingZone');"));
+    assert(stageSource.includes("if (qPhase === 'attack_player_selected') return isOneTeamScouting ? t('quickOneTeamAttackOrBlock') : t('quickDragAttackToLandingZone');"));
     // The opponent team is disabled (not just ignored) while the attacker is
     // being repositioned or the trajectory is being drawn.
     assert(stageSource.includes("quickFlow.phase === 'attack_player_selected' && flow.liveInputState.selectedTeamSide"));
