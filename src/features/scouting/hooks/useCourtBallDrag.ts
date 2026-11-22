@@ -205,7 +205,12 @@ export function useCourtBallDrag({
         return;
       }
 
-      const point = annotateCourtPosition(getRelativeTacticalViewportPoint(event, stageElement, orientation));
+      // A cancelled gesture carries no position (browsers report 0,0): end the drag where
+      // the finger last was instead of throwing the ball into the corner.
+      const lastPoint = dragDirectionRef.current?.end;
+      const point = event.type === 'pointercancel' && lastPoint
+        ? annotateCourtPosition(lastPoint)
+        : annotateCourtPosition(getRelativeTacticalViewportPoint(event, stageElement, orientation));
       const containingZone = snapZones.find((zone) => {
         return (
           point.x >= zone.bounds.x &&
