@@ -90,6 +90,19 @@ function findDuplicateMatches(incoming: MatchProject, existing: MatchProject[]):
   });
 }
 
+/**
+ * The technical reason of a failed import, shown after the translated message so a scout
+ * can report it (for example a full or blocked browser storage). Empty when unknown.
+ */
+export function describeImportError(error: unknown): string {
+  if (error instanceof Error || (error && typeof error === 'object' && 'message' in error)) {
+    const { name, message } = error as { name?: string; message?: string };
+    const text = [name && name !== 'Error' ? name : '', message ?? ''].filter(Boolean).join(': ').trim();
+    return text ? ` (${text.length > 240 ? `${text.slice(0, 240)}...` : text})` : '';
+  }
+  return typeof error === 'string' && error.trim() ? ` (${error.trim().slice(0, 240)})` : '';
+}
+
 export function LoadDataPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -757,7 +770,7 @@ export function LoadDataPage() {
       }
     } catch (error) {
       console.error('Error importing DataVolley file:', error);
-      setErrorMessage(t('dataVolleyImportFailed'));
+      setErrorMessage(`${t('dataVolleyImportFailed')}${describeImportError(error)}`);
     } finally {
       setIsImportingDataVolley(false);
     }
@@ -844,7 +857,7 @@ export function LoadDataPage() {
       }
     } catch (error) {
       console.error('Error parsing .ovs file:', error);
-      setErrorMessage(t('ovsImportFailed'));
+      setErrorMessage(`${t('ovsImportFailed')}${describeImportError(error)}`);
       resetOvsImport();
       resetOvsBackupImport();
     }
@@ -871,7 +884,7 @@ export function LoadDataPage() {
       } else if (error instanceof OvsImportBlockedError) {
         setErrorMessage(t('ovsImportBlocked'));
       } else {
-        setErrorMessage(t('ovsImportFailed'));
+        setErrorMessage(`${t('ovsImportFailed')}${describeImportError(error)}`);
       }
     } finally {
       setIsImportingOvs(false);
@@ -903,7 +916,7 @@ export function LoadDataPage() {
       }
     } catch (error) {
       console.error('Error importing .ovs backup:', error);
-      setErrorMessage(t('ovsBackupImportFailed'));
+      setErrorMessage(`${t('ovsBackupImportFailed')}${describeImportError(error)}`);
     } finally {
       setIsImportingOvsBackup(false);
     }
@@ -936,7 +949,7 @@ export function LoadDataPage() {
       } else if (error instanceof OvsImportBlockedError) {
         setErrorMessage(t('ovsImportBlocked'));
       } else {
-        setErrorMessage(t('ovsImportFailed'));
+        setErrorMessage(`${t('ovsImportFailed')}${describeImportError(error)}`);
       }
     } finally {
       setIsImportingOvsBackup(false);
