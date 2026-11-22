@@ -8000,43 +8000,6 @@
     position: relative;
 }
 
-.scouting-screen__attack-subtype {
-    position: absolute;
-    top: 0.4rem;
-    right: 0.5rem;
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.25rem 0.4rem;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.82);
-    color: #fff;
-    font-size: 0.78rem;
-}
-
-.scouting-screen__attack-subtype span {
-    padding: 0 0.3rem;
-    font-weight: 600;
-}
-
-.scouting-screen__attack-subtype button {
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 999px;
-    padding: 0.2rem 0.6rem;
-    background: transparent;
-    color: #fff;
-    font: inherit;
-    cursor: pointer;
-}
-
-.scouting-screen__attack-subtype button.is-selected {
-    background: #22c55e;
-    border-color: #22c55e;
-    color: #052e16;
-    font-weight: 700;
-}
-
 /* Live: a plain "Exit" instead of the menu icon, and an undo that stands out. */
 .live-exit-button {
     font-weight: 800;

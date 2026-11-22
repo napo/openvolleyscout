@@ -60,9 +60,6 @@ import { InputLevelChooser, type InputLevel } from '../components/InputLevelChoo
 import { buildQuickStartLineups, type QuickStartRequest } from '../model/quick-start';
 import { isUnscoutedTeam } from '../model/unscouted-team';
 import { TagZonePicker } from '../tagging/TagZonePicker';
-import { ATTACK_SUBTYPES, getAttackSubtype, type AttackSubtype } from '@src/domain/touch/types';
-
-const ATTACK_SUBTYPE_LABEL_KEY = { H: 'attackSubtypeHard', P: 'attackSubtypePlaced', T: 'attackSubtypeTip' } as const;
 import { OpponentAttackPanel, extractAttackStats, extractAttackEntries, extractServeStats } from '../components/OpponentAttackPanel';
 import type { ServePhaseInfo } from '../components/OpponentAttackPanel';
 import { CodeInputPanel, MatchCodeListPanel } from '../expert';
@@ -2906,28 +2903,8 @@ export function ScoutingPage() {
 
   // Attack subtype (hard / placed / tip) for the latest attack, one tap
   // after it is recorded: the touch in the log gets the DataVolley subtype.
-  const latestAttackEvent = (() => {
-    if (!liveMatch?.isSetStarted || inputMode === 'tag') return null;
-    const log = latestEventLog;
-    for (let index = log.length - 1; index >= 0; index -= 1) {
-      const event = log[index];
-      if (event.type === 'set_started') return null;
-      if (event.type === 'touch_recorded' && event.touch.skill === 'attack' && event.touch.source !== 'inferred') {
-        return event.touch.rallyNumber >= liveMatch.currentRallyNumber - 1 ? { index, touch: event.touch } : null;
-      }
-    }
-    return null;
-  })();
-  const setLatestAttackSubtype = (subtype: AttackSubtype) => {
-    if (!latestAttackEvent) return;
-    const log = [...latestEventLog];
-    const event = log[latestAttackEvent.index];
-    if (event.type !== 'touch_recorded') return;
-    // Hard is the default (as in DataVolley): tapping the chosen one again changes nothing.
-    if ((getAttackSubtype(event.touch) ?? 'H') === subtype) return;
-    log[latestAttackEvent.index] = { ...event, touch: { ...event.touch, attackSubtype: subtype } };
-    replaceLiveMatchEvents(log);
-  };
+  // The attack type (hard / placed / tip) is chosen on the toolbar when Attack is pressed,
+  // before the attack is drawn; no floating banner over the court afterwards.
 
   // Lineup rebuilt from the serves: when a scouted team is about to serve and
   // nobody is in its position 1, ask the server's number once per rally. The
@@ -3008,22 +2985,6 @@ export function ScoutingPage() {
                 onEnd={(zone) => setLatestTouchZone('endZoneCode', zone)}
                 onClose={() => setZoneSkippedTouchIds((current) => new Set(current).add(latestZoneEvent.touch.id))}
               />
-            ) : null}
-            {latestAttackEvent ? (
-              <div className="scouting-screen__attack-subtype" role="group" aria-label={t('attackSubtypeLabel')}>
-                <span>{t('attackSubtypeLabel')}</span>
-                {ATTACK_SUBTYPES.map((subtype) => (
-                  <button
-                    key={subtype}
-                    type="button"
-                    className={(getAttackSubtype(latestAttackEvent.touch) ?? 'H') === subtype ? 'is-selected' : ''}
-                    aria-pressed={(getAttackSubtype(latestAttackEvent.touch) ?? 'H') === subtype}
-                    onClick={() => setLatestAttackSubtype(subtype)}
-                  >
-                    {t(ATTACK_SUBTYPE_LABEL_KEY[subtype])}
-                  </button>
-                ))}
-              </div>
             ) : null}
     </>
   );
@@ -3112,7 +3073,7 @@ export function ScoutingPage() {
             <div className={`scouting-screen__court-area${isVideoDocked && isTagInputLiveRally ? ' scouting-screen__court-area--video-docked' : ''}${isTagInputLiveRally ? ' scouting-screen__court-area--tag' : ''}`}>
               {isTagInputLiveRally ? (
                 <TagInputPanel
-                  extra={latestZoneEvent || latestAttackEvent ? liveExtras : undefined}
+                  extra={latestZoneEvent ? liveExtras : undefined}
                   codeList={(
                     <MatchCodeListPanel
                       eventLog={latestEventLog}
