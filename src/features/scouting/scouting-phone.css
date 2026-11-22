@@ -292,16 +292,16 @@
     }
 
     .scouting-screen--phone .tag-input__who {
-        flex: 1 0 auto;
+        flex: 0 0 auto;
         min-height: 0;
         overflow: visible;
         gap: 0.3rem;
     }
 
     .scouting-screen--phone .tag-input__what {
-        flex: 0 1 auto;
+        flex: 1 1 0;
         min-height: 0;
-        overflow-y: auto;
+        overflow: hidden;
         gap: 0.3rem;
     }
 
@@ -310,9 +310,9 @@
     }
 
     /* The jersey numbers stay readable: the court never gets shorter than four
-       rows of buttons; on a very short screen the keys column scrolls instead. */
+       rows of buttons; the direction pad shrinks instead. */
     .scouting-screen--phone .tag-input__who > .tag-court {
-        flex: 1 0 auto;
+        flex: 0 0 auto;
         min-height: 11.5rem;
     }
 
@@ -438,8 +438,6 @@
 
     .scouting-screen--phone .tag-input .tag-zone-picker .tag-zone-picker__zone {
         width: auto;
-        height: 1.45rem;
-        font-size: 0.85rem;
     }
 
     .scouting-screen--phone .tag-input .tag-input__details-toggle {

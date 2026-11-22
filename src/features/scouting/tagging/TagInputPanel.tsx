@@ -298,6 +298,13 @@ export function TagInputPanel({
     setAssignError(false);
   };
 
+  // The direction pad opens after a play, whose details are already used: Details
+  // closes to give the pad its room, so the keys never scroll.
+  const hasExtra = Boolean(extra);
+  useEffect(() => {
+    if (hasExtra) setShowDetails(false);
+  }, [hasExtra]);
+
   // Every new tag (or a new rally) starts clean.
   useEffect(() => {
     setSelected(null);

@@ -1211,3 +1211,62 @@
         display: none;
     }
 }
+
+/* The input never scrolls, at any size: both columns keep to the screen, and the
+   room left under the evaluation keys goes to the direction pad (and the legend),
+   whose zones shrink to fit it. Only the legend may scroll inside its own box. */
+.tag-input > .tag-input__who,
+.tag-input > .tag-input__what {
+    overflow: hidden;
+}
+
+.tag-input__who > .tag-court {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.tag-court__half {
+    min-height: 0;
+    grid-auto-rows: minmax(0, 1fr);
+}
+
+.tag-input .tag-court .tag-court__player {
+    min-height: 2.2rem;
+    overflow: hidden;
+}
+
+.tag-input__what > .tag-flow__top {
+    flex: 1 1 0;
+    min-height: 0;
+    container-type: size;
+    overflow: hidden;
+}
+
+.tag-flow__top > .tag-flow__extra {
+    max-height: 100%;
+    min-width: 0;
+}
+
+.tag-flow__top > .tag-flow__legend {
+    max-height: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.tag-flow__top .tag-zone-picker {
+    /* Header, view choice, net and lines take about 6.2rem; the rest is shared by the zone rows. */
+    --tzp-h: clamp(0.9rem, calc((100cqh - 6.2rem) / var(--tzp-units, 3)), 2.2rem);
+    max-height: 100cqh;
+    box-sizing: border-box;
+}
+
+.tag-input .tag-flow__top .tag-zone-picker .tag-zone-picker__zone,
+.tag-input .tag-flow__top .tag-zone-picker .tag-zone-picker__zone--start {
+    height: var(--tzp-h);
+    font-size: min(1rem, calc(var(--tzp-h) * 0.6));
+}
+
+.tag-flow__top .tag-zone-picker__block {
+    grid-template-rows: repeat(2, calc(var(--tzp-h) * 0.85));
+    grid-template-columns: repeat(2, calc(var(--tzp-h) * 0.85));
+}

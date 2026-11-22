@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useTranslation } from '@src/i18n';
 import './tag-zone-picker.css';
 
@@ -116,7 +116,12 @@ interface TagZonePickerProps {
 export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onEnd, onClose }: TagZonePickerProps) {
   const { t } = useTranslation();
   const [savedRotation, setSavedRotation] = useState<TagZoneRotationSteps>(() => loadSavedRotation());
-  const [view, setView] = useState<TagZonePickerView>(() => loadSavedView());
+  const [chosenView, setView] = useState<TagZonePickerView>(() => loadSavedView());
+  // Upright phones have no height for the two courts one above the other.
+  const narrow = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    && window.matchMedia('(max-width: 640px)').matches;
+  const views = narrow ? VIEWS.filter((value) => value !== 'court-vertical') : VIEWS;
+  const view: TagZonePickerView = narrow && chosenView === 'court-vertical' ? 'court-horizontal' : chosenView;
   const rotation = getViewRotation(view, savedRotation);
 
   const handleRotate = () => {
@@ -221,11 +226,21 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
   const renderHalfB = (labelFirst: boolean) =>
     (skill === 'receive' ? renderArrivalHalf(bottomHalfRows, labelFirst) : renderStartHalf(bottomHalfRows, labelFirst));
 
+  // Height of the court in zone rows (a block of subzones counts as 1.75), so the CSS can
+  // size the zones to the room left on screen and the pad never scrolls.
+  const topIsArrival = skill !== 'receive';
+  const units = (rows: readonly (readonly number[])[], arrival: boolean) =>
+    rows.length * (arrival && variant === 'court' ? 1.75 : 1);
+  const topUnits = units(topHalfRows, topIsArrival);
+  const bottomUnits = units(bottomHalfRows, !topIsArrival);
+  const heightUnits = isHorizontal ? Math.max(topUnits, bottomUnits) : topUnits + bottomUnits;
+
   const firstHalf = topFirst ? renderHalfA(true) : renderHalfB(true);
   const secondHalf = topFirst ? renderHalfB(isHorizontal) : renderHalfA(isHorizontal);
 
   return (
-    <div className={`tag-zone-picker tag-zone-picker--${variant}${view === 'pad' ? '' : ' tag-zone-picker--court-look'}`} role="group" aria-label={t('tagZoneTitle')}>
+    <div className={`tag-zone-picker tag-zone-picker--${variant}${view === 'pad' ? '' : ' tag-zone-picker--court-look'}`} role="group" aria-label={t('tagZoneTitle')}
+      style={{ '--tzp-units': heightUnits } as CSSProperties}>
       <div className="tag-zone-picker__header">
         <strong>{t(titleKey)}</strong>
         <div className="tag-zone-picker__header-actions">
@@ -244,7 +259,7 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
         </div>
       </div>
       <div className="tag-zone-picker__views" role="group" aria-label={t('tagZoneViewLabel')}>
-        {VIEWS.map((value) => (
+        {views.map((value) => (
           <button key={value} type="button" className={view === value ? 'is-selected' : ''} aria-pressed={view === value} onClick={() => handleView(value)}>
             {t(viewLabelKey[value])}
           </button>
