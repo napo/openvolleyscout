@@ -110,7 +110,9 @@ export function DevLiveScoutingSmokePage() {
   const [currentRallyTouches, setCurrentRallyTouches] = useState<BallTouch[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>('Dev smoke: drag the ball to verify the arrow.');
   const homeTeam = useMemo(() => createTeam('home'), []);
-  const awayTeam = useMemo(() => createTeam('away'), []);
+  // #/dev/live-scouting-smoke?oneTeam: the away team is a name only (one-team scouting).
+  const oneTeam = typeof window !== 'undefined' && window.location.hash.includes('oneTeam');
+  const awayTeam = useMemo(() => (oneTeam ? { ...createTeam('away'), players: [] } : createTeam('away')), [oneTeam]);
   const homeStartingLineup = useMemo(() => createStartingLineup('home', homeTeam, 'right'), [homeTeam]);
   const awayStartingLineup = useMemo(() => createStartingLineup('away', awayTeam, 'left'), [awayTeam]);
   const homeLineup = useMemo(

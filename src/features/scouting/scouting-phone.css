@@ -678,4 +678,35 @@
     .phone-live-header .scouting-screen__input-mode-button {
         min-height: 1.95rem;
     }
+
+    /* Upright phone: every group of the touch toolbar has its own row, so the
+       attack's extra buttons (type, ball type, blockers) never cover the others. */
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-scouting-toolbar.live-scouting-toolbar--touch {
+        grid-template-columns: minmax(0, 1fr) max-content;
+        grid-template-rows: none;
+        grid-auto-rows: auto;
+        grid-template-areas:
+            "player actions"
+            "skills skills"
+            "evals evals";
+    }
+
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-scouting-toolbar.live-scouting-toolbar--touch:has(.live-scouting-toolbar__group--ball-type) {
+        grid-template-areas:
+            "player actions"
+            "skills skills"
+            "evals evals"
+            "balltype balltype";
+    }
+
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-scouting-toolbar.live-scouting-toolbar--touch:has(.live-scouting-toolbar__group--attack-subtype) {
+        grid-template-areas:
+            "player actions"
+            "skills skills"
+            "evals evals"
+            "subtype subtype"
+            "balltype balltype"
+            "numblockers numblockers";
+    }
+
 }

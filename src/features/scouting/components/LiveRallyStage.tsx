@@ -33,6 +33,9 @@ import type { SkillEvaluation } from '@src/domain/common/enums';
 import { RECEIVE_TO_SERVE_EVALUATION, SERVE_TO_RECEIVE_EVALUATION } from '../model/datavolley-flow';
 
 /** Serve ratings once the serve reached the opponent's court (a serve error never does). */
+/** One-team scouting records only the scouted team's serve, reception, attack and block. */
+const ONE_TEAM_SKILLS = ['serve', 'receive', 'attack', 'block'] as const;
+
 const SERVE_RATINGS_FOR_UNSCOUTED_RECEIVER: SkillEvaluation[] = ['-', '!', '+', '/', '#'];
 import {
   EXPECTED_COURT_MARKER_COUNT,
@@ -311,6 +314,7 @@ export function LiveRallyStage({
   };
   const isAwayUnscouted = isUnscoutedTeam(awayTeam);
   const isHomeUnscouted = isUnscoutedTeam(homeTeam);
+  const isOneTeamScouting = isHomeUnscouted !== isAwayUnscouted;
   const awayPlayersBase = useMemo(() => (
     isAwayUnscouted && awayDisplaySide ? [buildTeamMarker('away', awayTeam, awayDisplaySide)] : awayPlayersResolved
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -723,12 +727,14 @@ export function LiveRallyStage({
       // The opponent is not scouted: no tap on its players, only where its ball goes.
       const possessionUnscouted = quickFlow.possessionTeam === 'home' ? isHomeUnscouted : quickFlow.possessionTeam === 'away' ? isAwayUnscouted : false;
       if (possessionUnscouted) return `${possessionName} · ${t('quickUnscoutedPossessionHint')}`;
+      if (isOneTeamScouting) return t('quickOneTeamPickPlayer');
       return possessionName
         ? `${possessionName} · ${t('quickSelectNextPlayerOrDrag')}`
         : t('quickSelectNextPlayerOrDrag');
     }
-    if (qPhase === 'attack_player_selected') return t('quickDragAttackToLandingZone');
-    if (qPhase === 'attack_eval') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('quickSelectAttackResult');
+    if (qPhase === 'attack_player_selected') return isOneTeamScouting ? t('quickOneTeamAttackOrBlock') : t('quickDragAttackToLandingZone');
+    if (qPhase === 'attack_eval') return quickAttackOnNet ? (isOneTeamScouting ? t('quickOneTeamNetAttackHint') : t('quickBlockDeflectionHint')) : t('quickSelectAttackResult');
+    if (qPhase === 'block_eval' && isOneTeamScouting && quickFlow.pendingTouch?.skill === 'block') return t('quickOneTeamBlockEvalHint');
     if (qPhase === 'blocker_select') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('selectOpponentBlocker');
     if (qPhase === 'block_eval') {
       return quickFlow.evalChip?.options.includes('#')
@@ -895,14 +901,14 @@ export function LiveRallyStage({
           <LiveScoutingToolbar
             inputState={effectiveInputState}
             selectedPlayer={selectedToolbarPlayer}
-            controlsDisabled={quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'block_eval' && quickFlow.phase !== 'blocker_select' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'awaiting_player'}
+            controlsDisabled={quickFlow.phase !== 'reception_confirm' && !(isOneTeamScouting && quickFlow.phase === 'attack_player_selected') && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'block_eval' && quickFlow.phase !== 'blocker_select' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'awaiting_player'}
             skillEditable={!flow.forceSkill && quickFlow.phase !== 'block_eval' && quickFlow.phase !== 'blocker_select'}
             canUndo={canUndo}
             canRemoveLastTouch={canRemoveLastTouch}
             canOpenEvents={canOpenEvents}
             onSkillChange={flow.handleSkillChange}
             onEvaluationChange={handleToolbarEvaluationChange}
-            availableEvaluations={ratesServeForUnscoutedReceiver ? SERVE_RATINGS_FOR_UNSCOUTED_RECEIVER : quickFlow.phase === 'block_eval' ? quickFlow.evalChip?.options : quickFlow.phase === 'blocker_select' ? ['='] : null}
+            availableEvaluations={ratesServeForUnscoutedReceiver ? SERVE_RATINGS_FOR_UNSCOUTED_RECEIVER : isOneTeamScouting && quickFlow.phase === 'attack_eval' && quickAttackOnNet ? quickFlow.evalChip?.options : quickFlow.phase === 'block_eval' ? quickFlow.evalChip?.options : quickFlow.phase === 'blocker_select' ? ['='] : null}
             selectedBallTypeCode={selectedSkillBallTypeCode}
             onBallTypeCodeChange={handleBallTypeCodeChange}
             selectedNumBlockers={selectedNumBlockers}
@@ -915,6 +921,7 @@ export function LiveRallyStage({
             onOpenNote={onOpenNote}
             onOpenEvents={onOpenEvents ?? (() => undefined)}
             simple={simpleInput}
+            skills={isOneTeamScouting && simpleInput ? ONE_TEAM_SKILLS : undefined}
           />
           {sidePanelExtra}
         </div>

@@ -68,6 +68,8 @@ type LiveScoutingToolbarProps = {
   onOpenEvents: () => void;
   /** Touch layout: large evaluation bar, no DataVolley detail rows, fixed height. */
   simple?: boolean;
+  /** Only these skills on the toolbar (one-team scouting: serve, reception, attack, block). */
+  skills?: readonly SkillType[];
 };
 
 const EVAL_SYMBOL_KEY: Record<SkillEvaluation, string> = {
@@ -134,6 +136,7 @@ export function LiveScoutingToolbar({
   onOpenNote,
   onOpenEvents,
   simple = false,
+  skills,
 }: LiveScoutingToolbarProps) {
   const { t } = useTranslation();
   const snapshot = createLiveToolbarSnapshot({
@@ -188,7 +191,7 @@ export function LiveScoutingToolbar({
       </div>
 
       <div className="live-scouting-toolbar__group live-scouting-toolbar__group--skills" aria-label={t('skill')}>
-        {layout.visibleSkills.map((skill) => (
+        {layout.visibleSkills.filter((skill) => !skills || skills.includes(skill)).map((skill) => (
           <button
             key={skill}
             type="button"

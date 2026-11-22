@@ -3,6 +3,8 @@ import { predictAttackerPlayerId } from '../rally/predict-attacker';
 import { isTeamPlaceholderPlayerId } from '../../model/unscouted-team';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ScoutingZone } from '@src/domain/spatial';
+// Value import: relative on purpose (ts-node based flow validations cannot resolve @src/).
+import { findNearestScoutingZone } from '../../../../domain/spatial/helpers';
 import type { NumBlockers } from '@src/domain/touch/types';
 import {
   createBallTrajectory,
@@ -83,6 +85,11 @@ export type {
   SelectionRingColor,
 } from './quick-scout-flow-model';
 
+/** One-team: an attack stopped on the net is blocked or an error (net touch, invasion). */
+const ONE_TEAM_NET_ATTACK_EVAL_OPTIONS: SkillEvaluation[] = ['/', '='];
+/** One-team: a block chosen on its own, from point (#) to error/invasion (= /). */
+const ONE_TEAM_BLOCK_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
+
 // ─── Controller ───────────────────────────────────────────────────────────────
 
 export function useQuickScoutFlowController({
@@ -122,6 +129,24 @@ export function useQuickScoutFlowController({
   const [possessionTeam, setPossessionTeam] = useState<TeamSide | null>(null);
 
   const previousTouch = currentRallyTouches.at(-1);
+
+  // ── One-team scouting: the other team is a name only (one team marker) ─────
+  // Only the scouted team's touches are recorded (serve, reception, attack,
+  // block): after each of its touches that does not end the rally the ball
+  // comes back to its court, and the scout taps who plays it next.
+  const unscoutedSide: TeamSide | null = (['home', 'away'] as const).find((side) => {
+    const players = teamPlayersBySide[side] ?? [];
+    return players.length === 1 && isTeamPlaceholderPlayerId(players[0].playerId);
+  }) ?? null;
+  const scoutedOnlySide: TeamSide | null = unscoutedSide ? getOppositeTeamSide(unscoutedSide) : null;
+  const getOwnCourtCentre = useCallback((side: TeamSide): CourtCoordinate | null => {
+    const zones = (courtZones ?? []).filter((zone) => zone.kind === 'in_court' && zone.teamSide === side);
+    if (zones.length === 0) return null;
+    return {
+      x: zones.reduce((sum, zone) => sum + zone.center.x, 0) / zones.length,
+      y: zones.reduce((sum, zone) => sum + zone.center.y, 0) / zones.length,
+    };
+  }, [courtZones]);
 
   // ── Deferred inferred touches (e.g. a redrawn/post-reception SET) whose ball
   // type/tempo depends on the following attack, not yet known. Flushed (and
@@ -631,6 +656,22 @@ export function useQuickScoutFlowController({
   // the trajectory, in awaiting_player) and the player-first path (attacker tapped
   // first, trajectory drawn after, in attack_player_selected) so both stay consistent.
   const resolveAttackTouchOutcome = useCallback((lockedTouch: PendingTouch, teamSide: TeamSide) => {
+    // One-team scouting: an attack stopped on the net is blocked (/) or an error
+    // such as a net touch or invasion (=); the scout picks which, no blocker to tap.
+    if (
+      scoutedOnlySide === teamSide
+      && lockedTouch.destinationPoint
+      && isBallReleaseOnNet(lockedTouch.destinationPoint)
+      && lockedTouch.evaluation !== '#'
+    ) {
+      setPendingTouch({ ...lockedTouch, evaluation: '/' });
+      setSelectedPlayerId(lockedTouch.playerId ?? null);
+      setSelectedTeamSide(teamSide);
+      setAwaitingPlayerContext(null);
+      setEvalChip({ options: ONE_TEAM_NET_ATTACK_EVAL_OPTIONS, current: '/' });
+      setPhase('attack_eval');
+      return;
+    }
     if (lockedTouch.evaluation === '=' || lockedTouch.evaluation === '#') {
       // Terminal evaluation locked in before/at the tap: '=' attack error (geometric
       // out release or dialed in) → point to the opponent (C&S §4.4.3); '#' kill →
@@ -671,7 +712,7 @@ export function useQuickScoutFlowController({
     setAwaitingPlayerContext(null);
     setEvalChip({ options: ATTACK_EVAL_OPTIONS, current: lockedTouch.evaluation ?? ATTACK_DEFAULT_EVAL });
     setPhase('attack_eval');
-  }, [commitTouches, endRally]);
+  }, [commitTouches, endRally, scoutedOnlySide]);
 
   // ── Zone snap (ball drag endpoint) ────────────────────────────────────────
   const handleZoneSnap = useCallback((
@@ -1403,6 +1444,29 @@ export function useQuickScoutFlowController({
 
     if (!evalChip) return;
 
+    // One-team block (chosen instead of an attack): settle it on its own.
+    if (phase === 'block_eval' && !pendingBlockEval && pendingTouch?.skill === 'block') {
+      if (!evalChip.options.includes(evaluation)) return;
+      const blockTouch = applyModifiers({ ...updatePendingTouchEvaluation(pendingTouch, evaluation), pendingInference: false });
+      commitTouches([blockTouch]);
+      setPendingTouch(null);
+      setEvalChip(null);
+      setSelectedPlayerId(null);
+      setTeamTouchCount(0);
+      if (evaluation === '#' || evaluation === '=' || evaluation === '/') {
+        endRally(evaluation === '#' ? blockTouch.teamSide : getOppositeTeamSide(blockTouch.teamSide), `block_${evaluation}`);
+        setPhase('rally_ended');
+        setSelectedTeamSide(null);
+        setPossessionTeam(null);
+        return;
+      }
+      setSelectedTeamSide(blockTouch.teamSide);
+      setPossessionTeam(blockTouch.teamSide);
+      setPendingBallPosition(getOwnCourtCentre(blockTouch.teamSide));
+      setPhase('play_ready');
+      return;
+    }
+
     // Block chip (in block_eval phase): picking + or - settles the block.
     if (phase === 'block_eval') {
       if (evalChip.options.includes(evaluation)) commitPendingBlockEval(evaluation);
@@ -1532,6 +1596,27 @@ export function useQuickScoutFlowController({
         return;
       }
 
+      // One-team scouting: the unscouted opponent's blocker is never asked for.
+      if (scoutedOnlySide === updatedTouch.teamSide && (evaluation === '/' || evaluation === '!')) {
+        commitTouches([updatedTouch]);
+        setEvalChip(null);
+        setSelectedPlayerId(null);
+        setTeamTouchCount(0);
+        if (evaluation === '/') {
+          endRally(getOppositeTeamSide(updatedTouch.teamSide), 'attack_blocked');
+          setPhase('rally_ended');
+          setSelectedTeamSide(null);
+          setPossessionTeam(null);
+          return;
+        }
+        // A! blocked and covered: the scouted team plays on.
+        setSelectedTeamSide(updatedTouch.teamSide);
+        setPossessionTeam(updatedTouch.teamSide);
+        setPendingBallPosition(getOwnCourtCentre(updatedTouch.teamSide));
+        setPhase('play_ready');
+        return;
+      }
+
       if (evaluation === '/') {
         // Blocked for point - go to blocker player selection
         const blockerSel = createAttackBlockerSelection(updatedTouch);
@@ -1602,11 +1687,31 @@ export function useQuickScoutFlowController({
     courtZones,
     endRally,
     evalChip,
+    getOwnCourtCentre,
+    pendingBlockEval,
     pendingTouch,
     pendingTrajectory,
     phase,
     teamPlayersBySide,
   ]);
+
+  // ── One-team scouting: the ball always comes back to the scouted court ─────
+  // Whenever the flow would hand the ball to the unscouted team (after a serve, an
+  // attack kept in play, a block), or would assume a set after a reception, the
+  // scouted team plays next instead and the scout taps who.
+  useEffect(() => {
+    if (!scoutedOnlySide || phase !== 'play_ready') return;
+    const assumedSet = pendingTouch?.skill === 'set' && pendingTouch.source === 'inferred';
+    if (possessionTeam === scoutedOnlySide && !assumedSet) return;
+    if (possessionTeam !== scoutedOnlySide && possessionTeam !== unscoutedSide) return;
+    setPendingTouch(null);
+    setPendingTrajectory(null);
+    setSelectedPlayerId(null);
+    setSelectedTeamSide(scoutedOnlySide);
+    setTeamTouchCount(0);
+    setPossessionTeam(scoutedOnlySide);
+    setPendingBallPosition(getOwnCourtCentre(scoutedOnlySide));
+  }, [getOwnCourtCentre, pendingTouch, phase, possessionTeam, scoutedOnlySide, unscoutedSide]);
 
   // ── Ball type and blocker count ─────────────────────────────────────────────
   const handleBallTypeCodeChange = useCallback((code: DataVolleyBallTypeCode) => {
@@ -1833,6 +1938,26 @@ export function useQuickScoutFlowController({
       }));
     },
     handleSkillChange: (skill: SkillType) => {
+      // One-team scouting: the tapped player blocked instead of attacking.
+      if (scoutedOnlySide && skill === 'block' && phase === 'attack_player_selected' && selectedPlayerId && selectedTeamSide) {
+        const blocker = teamPlayersBySide[selectedTeamSide]?.find((player) => player.playerId === selectedPlayerId);
+        const ownZones = (courtZones ?? []).filter((zone) => zone.kind === 'in_court' && zone.teamSide === selectedTeamSide);
+        if (!blocker || ownZones.length === 0) return;
+        const zone = findNearestScoutingZone({ x: blocker.x, y: blocker.y }, ownZones);
+        setPendingTouch(applyModifiers({
+          playerId: selectedPlayerId,
+          teamSide: selectedTeamSide,
+          skill: 'block',
+          zone,
+          evaluation: '+',
+          source: 'explicit',
+          touchOrigin: 'live_scouting',
+        }));
+        setPendingTrajectory(null);
+        setEvalChip({ options: ONE_TEAM_BLOCK_EVAL_OPTIONS, current: '+' });
+        setPhase('block_eval');
+        return;
+      }
       if (!pendingTouch) return;
       const evaluation = getDefaultEvaluationForSkill(skill);
       const trajectory = pendingTouch.trajectory

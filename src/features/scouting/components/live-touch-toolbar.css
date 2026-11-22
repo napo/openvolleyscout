@@ -100,6 +100,38 @@
     font-weight: 800;
 }
 
+/* Attack selected: hard / placed / tip get a row of their own under the evaluations,
+   with the ball types and the blocker count beside them; without a place in the grid
+   they were dropped wherever there was room and covered the other buttons. */
+.live-rally-stage.live-rally-stage--simple:has(.live-scouting-toolbar__group--attack-subtype) {
+    --touch-toolbar-height: calc(var(--touch-toolbar-row-height) * 2 + var(--touch-eval-row-height) + 1rem);
+}
+
+.live-rally-stage--simple .live-scouting-toolbar.live-scouting-toolbar--touch:has(.live-scouting-toolbar__group--attack-subtype) {
+    grid-template-columns: minmax(7.5rem, 0.7fr) minmax(0, 1.8fr) auto max-content;
+    grid-template-rows: var(--touch-toolbar-row-height) var(--touch-eval-row-height) var(--touch-toolbar-row-height);
+    grid-template-areas:
+        "player skills actions actions"
+        "evals evals evals evals"
+        "subtype balltype numblockers numblockers";
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__group--attack-subtype {
+    grid-area: subtype;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 0.2rem;
+    flex-wrap: nowrap;
+    padding: 0;
+    min-width: 0;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--attack-subtype {
+    min-width: 0;
+    padding: 0 0.3rem;
+}
+
 /* Serve and attack ball types (H, M, Q…): small buttons, never a row of their own. */
 .live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__group--ball-type {
     grid-area: balltype;
