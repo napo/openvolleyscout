@@ -99,24 +99,13 @@ export function TabExportControl({ panelRef, title, matchLabel, tabId = 'generic
       const toUrl = (stats: SharedMatchStats) => (import.meta.env.DEV && isPublicWeb
         ? `${baseUrl.replace(/[#?].*$/, '')}#/stats-viewer/${encodeSharedStats(stats)}`
         : buildSharedStatsUrl(baseUrl, stats));
-      let url: string;
-      if (buildSnapshot) {
-        url = toUrl({
-          version: 3,
-          tabId,
-          title,
-          matchLabel,
-          snapshot: buildSnapshot(),
-          expiresAt,
-          generatedAt: now.getTime(),
-        });
-      } else {
+      const blocksUrl = async () => {
         const { extractSharedTabBlocks } = await import('./tab-export');
         const blocks = extractSharedTabBlocks(panel);
         if (blocks.length === 0) {
           throw new Error('Empty tab content');
         }
-        url = toUrl({
+        return toUrl({
           version: 2,
           tabId,
           title,
@@ -125,6 +114,26 @@ export function TabExportControl({ panelRef, title, matchLabel, tabId = 'generic
           expiresAt,
           generatedAt: now.getTime(),
         });
+      };
+      let url: string;
+      if (buildSnapshot) {
+        try {
+          url = toUrl({
+            version: 3,
+            tabId,
+            title,
+            matchLabel,
+            snapshot: buildSnapshot(),
+            expiresAt,
+            generatedAt: now.getTime(),
+          });
+        } catch (cause) {
+          // Too much data for a link (many matches): share the drawn page instead.
+          console.warn('Data link too large, sharing the drawn page:', cause);
+          url = await blocksUrl();
+        }
+      } else {
+        url = await blocksUrl();
       }
       setShareUrl(url);
     } catch (cause) {

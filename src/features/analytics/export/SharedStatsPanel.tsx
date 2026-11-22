@@ -70,9 +70,9 @@ export function SharedStatsPanel({ tabId, snapshot }: { tabId: SharedStatsTabId;
   if (!stats) return null;
   return (
     <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-      {tabId === 'team-performance' ? <TeamPerformanceDashboard stats={stats} />
-        : tabId === 'player-performance' ? <PlayerPerformanceDashboard stats={stats} readOnlyPlayers />
-        : tabId === 'sideout-study' ? <SideOutStudyPanel stats={stats} />
+      {tabId === 'team-performance' ? <TeamPerformanceDashboard stats={stats} lockedTeam={snapshot.lockedTeam} />
+        : tabId === 'player-performance' ? <PlayerPerformanceDashboard stats={stats} readOnlyPlayers lockedTeam={snapshot.lockedTeam} />
+        : tabId === 'sideout-study' ? <SideOutStudyPanel stats={stats} lockedTeam={snapshot.lockedTeam} />
         : tabId === 'cross-rotation' ? <CrossRotationAnalysisPanel stats={stats} />
         : null}
     </div>

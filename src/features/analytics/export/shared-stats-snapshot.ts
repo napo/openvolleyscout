@@ -26,6 +26,8 @@ export interface SharedStatsSnapshot {
   trends?: SharedTrendsSnapshot;
   filters: AdvancedFilters;
   selectedPlayerIds: string[];
+  /** Team data study: the page shows one team only (the studied one, as home). */
+  lockedTeam?: 'home' | 'away';
 }
 
 /** Wire form: each set's rallies are rebuilt from `rallyStats`, so they are not sent twice. */
@@ -39,6 +41,7 @@ export interface WireSnapshot {
   trends?: SharedTrendsSnapshot;
   filters: AdvancedFilters;
   selectedPlayerIds: string[];
+  lockedTeam?: 'home' | 'away';
 }
 
 function rallyHasPlayer(rally: RallyStats, playerIds: ReadonlySet<string>): boolean {
@@ -107,7 +110,8 @@ export function fromWireSnapshot(wire: WireSnapshot): SharedStatsSnapshot {
 
 export function isWireSnapshot(value: unknown): value is WireSnapshot {
   if (!value || typeof value !== 'object') return false;
-  const { stats, report, trends, filters, selectedPlayerIds } = value as Partial<WireSnapshot>;
+  const { stats, report, trends, filters, selectedPlayerIds, lockedTeam } = value as Partial<WireSnapshot>;
+  if (lockedTeam !== undefined && lockedTeam !== 'home' && lockedTeam !== 'away') return false;
   const validTrends = trends === undefined || (
     isTrendsSnapshot(trends) && typeof trends.teamLabel === 'string' && typeof trends.subTab === 'string'
     && typeof trends.seasonAxis === 'string' && Array.isArray(trends.priorityPlayerIds)

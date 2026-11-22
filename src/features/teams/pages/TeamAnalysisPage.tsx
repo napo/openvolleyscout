@@ -4,6 +4,7 @@ import { EfficiencyNote } from '@src/features/analytics/EfficiencyNote';
 import { SelectableTable } from '@src/components/SelectableTable';
 import { TeamReviewPanel } from '@src/features/teams/review/TeamReviewPanel';
 import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
+import { buildStatsSnapshot } from '@src/features/analytics/export/shared-stats-snapshot';
 import { buildSharedTrendsSnapshot } from '@src/features/analytics/export/shared-trends';
 import { useFilterStore } from '@src/features/analytics/stores/filter-store';
 import { TeamPlayByPlayPanel } from './TeamPlayByPlayPanel';
@@ -338,7 +339,14 @@ export function TeamAnalysisPage() {
               : `${teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' })} · ${t('selectedMatchesCount', { count: selectedMatches.length })}`
           }
           onBusyChange={setIsExportingTab}
-          buildSnapshot={activeTab === 'trends' && trendsEnabled ? () => {
+          buildSnapshot={(activeTab === 'team-performance' || activeTab === 'player-performance' || activeTab === 'sideout-study') ? () => {
+            // The aggregated figures of the selected matches, as the tab shows them.
+            const { filters, selectedPlayerIds } = useFilterStore.getState();
+            return {
+              ...buildStatsSnapshot(aggregatedStats, { filters, selectedPlayerIds, scopeToPlayers: activeTab === 'player-performance' }),
+              lockedTeam: 'home' as const,
+            };
+          } : activeTab === 'trends' && trendsEnabled ? () => {
             const trends = buildSharedTrendsSnapshot([{
               key: teamId ?? teamName ?? 'focus',
               label: teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' }),
