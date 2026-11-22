@@ -110,7 +110,6 @@ export interface SideOutStudyFilters {
   setterPosition: 'all' | number;
   setterPlayerId: 'all' | string;
   receptionEvaluations: SkillEvaluation[];
-  serveBallTypes: SideOutServeBallType[];
   attackEvaluations: SkillEvaluation[];
   attackBallTypes: SideOutAttackBallType[];
   /** DataVolley serve start zones kept (all five = no filter). */
@@ -130,7 +129,6 @@ export function createDefaultSideOutStudyFilters(team: TeamSide = 'home'): SideO
     setterPosition: 'all',
     setterPlayerId: 'all',
     receptionEvaluations: [...SIDEOUT_EVALUATIONS],
-    serveBallTypes: [...SIDEOUT_SERVE_BALL_TYPES],
     attackEvaluations: [...SIDEOUT_EVALUATIONS],
     attackBallTypes: [...SIDEOUT_ATTACK_BALL_TYPES],
     serveStartZones: [...SERVE_START_ZONES],
@@ -309,13 +307,6 @@ function matchesReceptionFilters(sequence: SideOutSequence, filters: SideOutStud
   if (
     filters.receptionEvaluations.length < SIDEOUT_EVALUATIONS.length
     && (!sequence.receive.evaluation || !filters.receptionEvaluations.includes(sequence.receive.evaluation))
-  ) {
-    return false;
-  }
-
-  if (
-    filters.serveBallTypes.length < SIDEOUT_SERVE_BALL_TYPES.length
-    && (!sequence.serveBallType || !filters.serveBallTypes.includes(sequence.serveBallType))
   ) {
     return false;
   }

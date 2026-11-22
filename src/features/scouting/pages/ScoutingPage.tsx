@@ -308,21 +308,23 @@ export function ScoutingPage() {
   // Any screen held upright (phone or tablet) gets the vertical court, so the
   // court uses the long side; in landscape a tablet keeps the scout's choice.
   // Back in landscape, the scout's own choice is restored (only if we changed it).
+  // Do not re-run when courtOrientation changes, so the corner rotate button works in portrait too.
   const isPortraitScreen = useMediaQuery('(orientation: portrait)');
   useEffect(() => {
     if (isSmartphonePortrait) return;
+    const currentOrientation = useCourtOrientationStore.getState().orientation;
     const AUTO_VERTICAL_KEY = 'openvolleyscout.courtAutoVertical';
     const readAuto = () => { try { return window.localStorage.getItem(AUTO_VERTICAL_KEY) === 'true'; } catch { return false; } };
     const writeAuto = (value: boolean) => { try { window.localStorage.setItem(AUTO_VERTICAL_KEY, String(value)); } catch { /* not restored */ } };
-    if (isPortraitScreen && courtOrientation === 'horizontal') {
+    if (isPortraitScreen && currentOrientation === 'horizontal') {
       writeAuto(true);
       setCourtOrientation('vertical');
       setCodeListCollapsed(true);
     } else if (!isPortraitScreen && readAuto()) {
       writeAuto(false);
-      if (courtOrientation === 'vertical') setCourtOrientation('horizontal');
+      if (currentOrientation === 'vertical') setCourtOrientation('horizontal');
     }
-  }, [isPortraitScreen, isSmartphonePortrait, courtOrientation, setCourtOrientation]);
+  }, [isPortraitScreen, isSmartphonePortrait, setCourtOrientation]);
 
   // On a phone the court follows the phone: vertical when held upright,
   // horizontal in landscape, so it always gets the long side of the screen.
@@ -2491,11 +2493,6 @@ export function ScoutingPage() {
   // Tags button pad takes the place of the court.
   const isTagInputLiveRally = inputMode === 'tag' && activeStage === 'live_rally';
   const useVerticalSidebar = isVerticalCourtLiveRally && !isTagInputLiveRally && hasVideoSidebarSpace;
-  // Vertical court on a wide screen without a video: the analysis panel fills the
-  // sidebar space the video would take, instead of staying a closed rail.
-  // Analysis is always the tab at the right edge (opening over the court), never a
-  // block in the sidebar that takes the room of the toolbar.
-  const analysisInSidebar = false;
   const isVideoDocked = useVerticalSidebar || (isTagInputLiveRally && !videoPanelCollapsed && hasVideoSidebarSpace);
   const videoHiddenReason: VideoHiddenReason | null = resolveVideoHiddenReason({
     isLiveRally: activeStage === 'live_rally',
@@ -2940,8 +2937,6 @@ export function ScoutingPage() {
   // sides means nothing with one team on the Tags pad; the vertical court only
   // where the ball is drawn on it (Court, Expert).
   const showSwapSides = !(inputMode === 'tag' && tagRecordTeams !== 'both');
-  // The court is turned from its own corner (in the court), not from the header.
-  const showOrientationToggle = false;
   const [showExitDialog, setShowExitDialog] = useState(false);
   const deleteAndRestart = async () => {
     if (!activeProject || !(await confirmAction(t('liveExitRestartConfirm')))) return;
@@ -3124,9 +3119,6 @@ export function ScoutingPage() {
                       keyboardShortcutsEnabled={renderCourtFirstLiveRally}
                       useSidebar={useVerticalSidebar || (isVerticalCourtLiveRally && isSmartphoneLandscape)}
                       instructionInSidebar={isVerticalCourtLiveRally && isSmartphoneLandscape}
-                      sidePanelExtra={analysisInSidebar && attackData ? (
-                        <OpponentAttackPanel home={attackData.home} away={attackData.away} servePhase={servePhase} embedded />
-                      ) : undefined}
                       videoPanel={videoHiddenReason ? undefined : (
                         <LiveScoutingVideoPanel
                           ref={liveVideoPanelRef}
@@ -3233,7 +3225,7 @@ export function ScoutingPage() {
             </div>
             {!isVerticalCourtLiveRally && inputLevel === 'detailed' && codeInputPanel}
           </div>
-          {attackData && !isTagInputLiveRally && !analysisInSidebar && (
+          {attackData && !isTagInputLiveRally && (
             <OpponentAttackPanel
               home={attackData.home}
               away={attackData.away}
@@ -3344,8 +3336,6 @@ export function ScoutingPage() {
             activeStage={activeStage}
             isOperationalStage={isOperationalStage}
             canEditLiveScore={canEditLiveScore}
-            showOrientationToggle={showOrientationToggle}
-            courtOrientation={courtOrientation}
             showSwapSides={showSwapSides}
             inputLevel={inputLevel}
             hideDetailedInput={isPhone}
@@ -3356,7 +3346,6 @@ export function ScoutingPage() {
             onOpenManageAction={openManageAction}
             onOpenManageActionFor={openManageActionFor}
             onOpenExitDialog={() => setShowExitDialog(true)}
-            onToggleCourtOrientation={() => setCourtOrientation(courtOrientation === 'vertical' ? 'horizontal' : 'vertical')}
             onSwapSides={() => {
               if (liveMatch) {
                 toggleDisplaySideSwapped(liveMatch.activeProjectId, liveMatch.currentSetNumber);

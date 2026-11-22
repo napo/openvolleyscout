@@ -52,8 +52,6 @@ function renderTopBar(overrides: Partial<ScoutingTopBarProps> = {}) {
     activeStage: 'live_rally',
     isOperationalStage: true,
     canEditLiveScore: true,
-    showOrientationToggle: true,
-    courtOrientation: 'horizontal',
     showSwapSides: true,
     inputLevel: 'court',
     simpleInput: false,
@@ -63,7 +61,6 @@ function renderTopBar(overrides: Partial<ScoutingTopBarProps> = {}) {
     onOpenManageAction: vi.fn(),
     onOpenManageActionFor: vi.fn(),
     onOpenExitDialog: vi.fn(),
-    onToggleCourtOrientation: vi.fn(),
     onSwapSides: vi.fn(),
     onOpenLiveHelp: vi.fn(),
     onSelectInputLevel: vi.fn(),
@@ -122,11 +119,9 @@ describe('ScoutingTopBar', () => {
     act(() => { manageBtn.click(); });
     expect(props.onOpenManageAction).toHaveBeenCalledTimes(1);
 
-    // Click swap sides and orientation buttons.
+    // Click swap sides button.
     act(() => { container.querySelector<HTMLButtonElement>('.scouting-screen__swap-sides-button')!.click(); });
     expect(props.onSwapSides).toHaveBeenCalledTimes(1);
-    act(() => { container.querySelector<HTMLButtonElement>('.scouting-screen__orientation-button')!.click(); });
-    expect(props.onToggleCourtOrientation).toHaveBeenCalledTimes(1);
 
     // Switch input mode to tag.
     const modeButtons = container.querySelectorAll<HTMLButtonElement>('.scouting-screen__input-mode-button');

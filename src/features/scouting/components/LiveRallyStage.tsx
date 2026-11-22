@@ -72,8 +72,6 @@ interface LiveRallyStageProps {
   /** False while the stage is kept mounted but hidden (events panel open): no Ctrl+Z / Backspace. */
   keyboardShortcutsEnabled?: boolean;
   videoPanel?: ReactNode;
-  /** Extra content under the controls in the sidebar (e.g. the analysis panel when there is no video). */
-  sidePanelExtra?: ReactNode;
   useSidebar?: boolean;
   instructionInSidebar?: boolean;
   awayTeam: Team;
@@ -152,7 +150,6 @@ function addReplacementLabels(
 export function LiveRallyStage({
   keyboardShortcutsEnabled = true,
   videoPanel,
-  sidePanelExtra,
   useSidebar = false,
   instructionInSidebar = false,
   awayTeam,
@@ -759,9 +756,6 @@ export function LiveRallyStage({
         : quickFlow.possessionTeam === 'away'
           ? awayTeam.name
           : '';
-      // The opponent is not scouted: no tap on its players, only where its ball goes.
-      const possessionUnscouted = quickFlow.possessionTeam === 'home' ? isHomeUnscouted : quickFlow.possessionTeam === 'away' ? isAwayUnscouted : false;
-      if (possessionUnscouted) return `${possessionName} · ${t('quickUnscoutedPossessionHint')}`;
       if (isOneTeamScouting) return t('quickOneTeamPickPlayer');
       return possessionName
         ? `${possessionName} · ${t('quickSelectNextPlayerOrDrag')}`
@@ -966,9 +960,9 @@ export function LiveRallyStage({
             onOpenNote={onOpenNote}
             onOpenEvents={onOpenEvents ?? (() => undefined)}
             simple={simpleInput}
-            skills={isOneTeamScouting && simpleInput ? ONE_TEAM_SKILLS : undefined}
+            skills={isOneTeamScouting ? ONE_TEAM_SKILLS : undefined}
+            availableSkills={isOneTeamScouting && quickFlow.phase === 'attack_player_selected' ? ['attack', 'block'] : null}
           />
-          {sidePanelExtra}
         </div>
       </div>
     </ScoutingStageFrame>

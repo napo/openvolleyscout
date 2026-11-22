@@ -264,7 +264,7 @@ describe('computeSideOutDistribution', () => {
     assert.ok(Math.abs((killsOnly.buckets.zone4.successRate ?? 0) - 1 / 2) < 1e-9);
   });
 
-  it('filters by serve ball height and setter position', () => {
+  it('filters by serve type (Q is jump spin) and setter position', () => {
     const rallies = [
       sideOutRally({ rallyNumber: 1, attackZone: '4', receiveBallType: 'H', setterPosition: 1 }),
       sideOutRally({ rallyNumber: 2, attackZone: '3', receiveBallType: 'Q', setterPosition: 1 }),
@@ -274,7 +274,7 @@ describe('computeSideOutDistribution', () => {
 
     const quickOnly = computeSideOutDistribution(sequences, {
       ...createDefaultSideOutStudyFilters('home'),
-      serveBallTypes: ['Q'],
+      serveTypes: ['jump_spin'],
     });
     assert.equal(quickOnly.totalSets, 2);
     assert.equal(quickOnly.buckets.zone3.matching, 1);

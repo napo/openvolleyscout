@@ -38,8 +38,6 @@ export interface ScoutingTopBarProps {
   activeStage: string;
   isOperationalStage: boolean;
   canEditLiveScore: boolean;
-  showOrientationToggle: boolean;
-  courtOrientation: 'horizontal' | 'vertical';
   showSwapSides: boolean;
   inputLevel: 'tag' | 'court' | 'detailed';
   simpleInput: boolean;
@@ -49,7 +47,6 @@ export interface ScoutingTopBarProps {
   onOpenManageAction: () => void;
   onOpenManageActionFor: (type: 'timeout' | 'substitution', teamSide: TeamSide) => void;
   onOpenExitDialog: () => void;
-  onToggleCourtOrientation: () => void;
   onSwapSides: () => void;
   onOpenLiveHelp: () => void;
   onSelectInputLevel: (level: 'tag' | 'court' | 'detailed') => void;
@@ -71,8 +68,6 @@ export function ScoutingTopBar({
   activeStage,
   isOperationalStage,
   canEditLiveScore,
-  showOrientationToggle,
-  courtOrientation,
   showSwapSides,
   inputLevel,
   simpleInput,
@@ -82,7 +77,6 @@ export function ScoutingTopBar({
   onOpenManageAction,
   onOpenManageActionFor,
   onOpenExitDialog,
-  onToggleCourtOrientation,
   onSwapSides,
   onOpenLiveHelp,
   onSelectInputLevel,
@@ -161,17 +155,6 @@ export function ScoutingTopBar({
               ⏏ {t('liveExit')}
             </button>
           )}
-          {showOrientationToggle ? (
-            <button
-              type="button"
-              className="btn-secondary btn-small scouting-screen__orientation-button"
-              onClick={onToggleCourtOrientation}
-              aria-label={t('toggleCourtOrientation')}
-              title={t('liveOrientationShort')}
-            >
-              <span aria-hidden="true">{courtOrientation === 'vertical' ? '↻' : '⟲'}</span>
-            </button>
-          ) : null}
 
           <div className="scouting-screen__scoreboard">
             <div className="scouting-screen__scoreboard-main">
