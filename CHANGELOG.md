@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.40.2 - 2026-11-22
+
+### Changed
+- When you scout only your own team in Expert mode, the skill bar now shows only Serve, Reception, Attack and Block, as in Court mode. After you choose the attacker, only Attack and Block can be pressed.
+- The team study now shares the Match report of a single selected match with the real scoresheet, like the Match analysis page. Experimental Trends views that cannot be sent as data are shared as a picture of the page.
+- The screenshots of the Court, Phone court, Tags and Expert tutorials in About have been redone, in Italian and English, so they show the current screen. The Tags tutorial now also shows the ball directions.
+
+### Fixed
+- On tablets held upright, the rotate button in the corner of the court now works. Before, the court went back to vertical right after turning it.
+- In Expert mode, a reception typed with both zones now draws the serve and records its start and arrival zones correctly. Before, the arrival zone was taken from the wrong place, which also affected the exported file.
+- In Tags, the direction picker now follows the phone when you turn it: held upright it hides the court with the teams one above the other, which does not fit.
+- Opening a new shared statistics link in the same page now shows the new data, without filters left over from the previous link.
+
 ## 0.40.1 - 2026-11-22
 
 ### Added

@@ -8,11 +8,11 @@ export const scoutingCourtPhoneSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourtPhone01",
     "pointer": {
       "x": 50,
-      "y": 66.6
+      "y": 64.7
     },
     "enPointer": {
       "x": 50,
-      "y": 66.6
+      "y": 64.7
     }
   },
   {
@@ -20,22 +20,22 @@ export const scoutingCourtPhoneSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourtPhone02",
     "drag": {
       "from": {
-        "x": 43.6,
-        "y": 71.4
+        "x": 46.6,
+        "y": 68.5
       },
       "to": {
-        "x": 36.4,
-        "y": 33.6
+        "x": 36.9,
+        "y": 33.3
       }
     },
     "enDrag": {
       "from": {
-        "x": 43.6,
-        "y": 71.4
+        "x": 46.6,
+        "y": 69.2
       },
       "to": {
-        "x": 36.4,
-        "y": 33.6
+        "x": 36.9,
+        "y": 33.7
       }
     }
   },
@@ -43,12 +43,12 @@ export const scoutingCourtPhoneSlides: ImageTutorialSlide[] = [
     "image": "court-phone-03",
     "captionKey": "tutorialCourtPhone03",
     "pointer": {
-      "x": 16.3,
-      "y": 38.4
+      "x": 17.7,
+      "y": 38.1
     },
     "enPointer": {
-      "x": 16.3,
-      "y": 38.9
+      "x": 17.7,
+      "y": 39.7
     }
   },
   {
@@ -68,22 +68,22 @@ export const scoutingCourtPhoneSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourtPhone05",
     "drag": {
       "from": {
-        "x": 26.1,
-        "y": 47.7
+        "x": 27.1,
+        "y": 48.7
       },
       "to": {
-        "x": 21.2,
-        "y": 69
+        "x": 22.4,
+        "y": 65.3
       }
     },
     "enDrag": {
       "from": {
-        "x": 26.1,
-        "y": 47.7
+        "x": 27.1,
+        "y": 48.7
       },
       "to": {
-        "x": 21.2,
-        "y": 69
+        "x": 22.4,
+        "y": 65.3
       }
     }
   },
@@ -91,12 +91,12 @@ export const scoutingCourtPhoneSlides: ImageTutorialSlide[] = [
     "image": "court-phone-06",
     "captionKey": "tutorialCourtPhone06",
     "pointer": {
-      "x": 43.5,
-      "y": 38.7
+      "x": 43.7,
+      "y": 39.6
     },
     "enPointer": {
-      "x": 43.5,
-      "y": 38.7
+      "x": 43.7,
+      "y": 40.5
     }
   },
   {
@@ -104,23 +104,23 @@ export const scoutingCourtPhoneSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourtPhone07",
     "pointer": {
       "x": 89.9,
-      "y": 84
+      "y": 83.8
     },
     "enPointer": {
       "x": 89.9,
-      "y": 84
+      "y": 83.8
     }
   },
   {
     "image": "court-phone-08",
     "captionKey": "tutorialCourtPhone08",
     "pointer": {
-      "x": 78.9,
-      "y": 33.7
+      "x": 77.7,
+      "y": 35.5
     },
     "enPointer": {
-      "x": 78.9,
-      "y": 31.8
+      "x": 77.7,
+      "y": 33.7
     }
   },
   {
@@ -128,22 +128,22 @@ export const scoutingCourtPhoneSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourtPhone09",
     "drag": {
       "from": {
-        "x": 43.6,
-        "y": 26
+        "x": 14.4,
+        "y": 27.2
       },
       "to": {
-        "x": 24,
-        "y": 63.8
+        "x": 25.1,
+        "y": 63.4
       }
     },
     "enDrag": {
       "from": {
-        "x": 43.6,
-        "y": 26.7
+        "x": 14.4,
+        "y": 27.9
       },
       "to": {
-        "x": 24,
-        "y": 64.8
+        "x": 25.1,
+        "y": 64.3
       }
     }
   },
@@ -151,12 +151,12 @@ export const scoutingCourtPhoneSlides: ImageTutorialSlide[] = [
     "image": "court-phone-10",
     "captionKey": "tutorialCourtPhone10",
     "pointer": {
-      "x": 16.7,
-      "y": 59.2
+      "x": 18.1,
+      "y": 58
     },
     "enPointer": {
-      "x": 16.7,
-      "y": 59.7
+      "x": 18.1,
+      "y": 59.6
     }
   },
   {

@@ -89,7 +89,10 @@ async function setupMatch() {
   rmSync(PROFILE, { recursive: true, force: true });
   const { ctx, page } = await openContext(null);
   await go(page, '/');
-  await page.evaluate((l) => localStorage.setItem('openvolleyscout.locale', l), LOC);
+  await page.evaluate(({ l, m }) => {
+    localStorage.setItem('openvolleyscout.locale', l);
+    if (m === 'tag') localStorage.setItem('openvolleyscout.preferences', JSON.stringify({ tagTrackDirections: true }));
+  }, { l: LOC, m: MODE });
   await page.reload(); await page.waitForTimeout(4000); // demo match and teams are imported
   await go(page, '/match');
   // The stories need both rosters and lineups: the full setup, not the one-page start.
@@ -175,7 +178,7 @@ const STORIES = {
     await tap(page, courtPlayer(page, 'away', 6), 'tutorialCourtPhone03');
     await tap(page, toolbarEval(page, '#'), 'tutorialCourtPhone04');
     box = await courtBox(page);
-    await drag(page, await ball(), at(box, 35, 78), 'tutorialCourtPhone05');
+    await drag(page, await ball(), at(box, 35, 72), 'tutorialCourtPhone05');
     await tap(page, courtPlayer(page, 'away', 10), 'tutorialCourtPhone06');
     await tap(page, toolbarEval(page, '#'), 'tutorialCourtPhone07');
     const confirm = page.getByRole('button', { name: LOC === 'it' ? /^Sì/ : /^Yes/ }).first();

@@ -8,22 +8,22 @@ export const scoutingDetailedSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialExpert01",
     "pointer": {
       "x": 50,
-      "y": 77.9
+      "y": 69.8
     },
     "enPointer": {
       "x": 50,
-      "y": 75.7
+      "y": 67.5
     }
   },
   {
     "image": "detailed-02",
     "captionKey": "tutorialExpert02",
     "pointer": {
-      "x": 52.1,
+      "x": 56.2,
       "y": 85.5
     },
     "enPointer": {
-      "x": 52.1,
+      "x": 56.2,
       "y": 85.5
     }
   },
@@ -31,11 +31,11 @@ export const scoutingDetailedSlides: ImageTutorialSlide[] = [
     "image": "detailed-03",
     "captionKey": "tutorialExpert03",
     "pointer": {
-      "x": 52.1,
+      "x": 56.2,
       "y": 89.9
     },
     "enPointer": {
-      "x": 52.1,
+      "x": 56.2,
       "y": 89.9
     }
   },
@@ -43,11 +43,11 @@ export const scoutingDetailedSlides: ImageTutorialSlide[] = [
     "image": "detailed-04",
     "captionKey": "tutorialExpert04",
     "pointer": {
-      "x": 85,
+      "x": 95.2,
       "y": 89.9
     },
     "enPointer": {
-      "x": 85,
+      "x": 95.2,
       "y": 89.9
     }
   },

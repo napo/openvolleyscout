@@ -8,11 +8,11 @@ export const scoutingCourtSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourt01",
     "pointer": {
       "x": 50,
-      "y": 66.2
+      "y": 58
     },
     "enPointer": {
       "x": 50,
-      "y": 63.9
+      "y": 55.8
     }
   },
   {
@@ -20,21 +20,21 @@ export const scoutingCourtSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourt02",
     "drag": {
       "from": {
-        "x": 6.1,
-        "y": 64.1
+        "x": 11.2,
+        "y": 67.8
       },
       "to": {
-        "x": 67.1,
+        "x": 75.1,
         "y": 37.7
       }
     },
     "enDrag": {
       "from": {
-        "x": 6.1,
-        "y": 64.1
+        "x": 11.2,
+        "y": 67.8
       },
       "to": {
-        "x": 67.1,
+        "x": 75.1,
         "y": 37.7
       }
     }
@@ -43,11 +43,11 @@ export const scoutingCourtSlides: ImageTutorialSlide[] = [
     "image": "court-03",
     "captionKey": "tutorialCourt03",
     "pointer": {
-      "x": 60.3,
+      "x": 65.3,
       "y": 27.3
     },
     "enPointer": {
-      "x": 60.3,
+      "x": 65.3,
       "y": 27.3
     }
   },
@@ -55,11 +55,11 @@ export const scoutingCourtSlides: ImageTutorialSlide[] = [
     "image": "court-04",
     "captionKey": "tutorialCourt04",
     "pointer": {
-      "x": 78.6,
+      "x": 87.6,
       "y": 94.9
     },
     "enPointer": {
-      "x": 78.6,
+      "x": 87.6,
       "y": 94.9
     }
   },
@@ -68,21 +68,21 @@ export const scoutingCourtSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourt05",
     "drag": {
       "from": {
-        "x": 45.8,
+        "x": 50.9,
         "y": 40.5
       },
       "to": {
-        "x": 19.1,
+        "x": 21.3,
         "y": 61.7
       }
     },
     "enDrag": {
       "from": {
-        "x": 45.8,
+        "x": 50.9,
         "y": 40.5
       },
       "to": {
-        "x": 19.1,
+        "x": 21.3,
         "y": 61.7
       }
     }
@@ -91,36 +91,36 @@ export const scoutingCourtSlides: ImageTutorialSlide[] = [
     "image": "court-06",
     "captionKey": "tutorialCourt06",
     "pointer": {
-      "x": 48.9,
-      "y": 63.9
+      "x": 53.4,
+      "y": 58.6
     },
     "enPointer": {
-      "x": 48.9,
-      "y": 63.9
+      "x": 53.4,
+      "y": 58.6
     }
   },
   {
     "image": "court-07",
     "captionKey": "tutorialCourt07",
     "pointer": {
-      "x": 61.6,
-      "y": 94.9
+      "x": 87.6,
+      "y": 87.9
     },
     "enPointer": {
-      "x": 61.6,
-      "y": 94.9
+      "x": 87.6,
+      "y": 87.9
     }
   },
   {
     "image": "court-08",
     "captionKey": "tutorialCourt08",
     "pointer": {
-      "x": 46.8,
-      "y": 19.9
+      "x": 51.9,
+      "y": 16.9
     },
     "enPointer": {
-      "x": 46.8,
-      "y": 16.9
+      "x": 48.2,
+      "y": 21.5
     }
   },
   {
@@ -128,21 +128,21 @@ export const scoutingCourtSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourt09",
     "drag": {
       "from": {
-        "x": 80.1,
-        "y": 64.1
+        "x": 85.2,
+        "y": 22.5
       },
       "to": {
-        "x": 19.1,
+        "x": 21.3,
         "y": 36.2
       }
     },
     "enDrag": {
       "from": {
-        "x": 80.1,
-        "y": 64.1
+        "x": 85.2,
+        "y": 22.5
       },
       "to": {
-        "x": 19.1,
+        "x": 21.3,
         "y": 36.2
       }
     }
@@ -151,11 +151,11 @@ export const scoutingCourtSlides: ImageTutorialSlide[] = [
     "image": "court-10",
     "captionKey": "tutorialCourt10",
     "pointer": {
-      "x": 26.3,
+      "x": 31.4,
       "y": 27.8
     },
     "enPointer": {
-      "x": 26.3,
+      "x": 31.4,
       "y": 27.8
     }
   },
@@ -163,11 +163,11 @@ export const scoutingCourtSlides: ImageTutorialSlide[] = [
     "image": "court-11",
     "captionKey": "tutorialCourt11",
     "pointer": {
-      "x": 64.4,
+      "x": 71.8,
       "y": 94.9
     },
     "enPointer": {
-      "x": 64.4,
+      "x": 71.8,
       "y": 94.9
     }
   },
@@ -175,11 +175,11 @@ export const scoutingCourtSlides: ImageTutorialSlide[] = [
     "image": "court-12",
     "captionKey": "tutorialCourt12",
     "pointer": {
-      "x": 71.5,
+      "x": 75.7,
       "y": 86.8
     },
     "enPointer": {
-      "x": 71.6,
+      "x": 75.9,
       "y": 86.8
     }
   },
