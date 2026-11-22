@@ -7730,6 +7730,8 @@
     min-width: 0;
     min-height: 0;
     gap: 0.35rem;
+    /* Padding inside the height: the court must not run past the bottom edge. */
+    box-sizing: border-box;
 }
 
 .live-rally-stage--vertical .live-rally-stage__court > .live-rally-stage__suggestion,
@@ -7748,7 +7750,8 @@
 }
 
 .scouting-stage__body--live-rally .live-rally-stage--vertical .live-rally-stage__court > .scouting-court {
-    flex: 1;
+    flex: 1 1 0;
+    min-height: 0;
     height: auto;
 }
 
@@ -8362,4 +8365,11 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
+}
+
+/* Vertical court: the server stands behind the end line, right at the court's
+   edge; let the marker show whole instead of being cut by the court frame. */
+.live-rally-stage--vertical .scouting-court,
+.live-rally-stage--vertical .scouting-court__surface--vertical {
+    overflow: visible;
 }
