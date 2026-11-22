@@ -8224,3 +8224,142 @@
     width: clamp(11rem, 14vw, 16rem) !important;
     max-width: 16rem;
 }
+
+/* Expert toolbar on tablets and computers: keys big enough to hit at match pace,
+   with the horizontal court as well as the vertical one (used next to the video). */
+.scouting-screen:not(.scouting-screen--phone) .live-scouting-toolbar:not(.live-scouting-toolbar--touch) :is(
+    .live-scouting-toolbar__button,
+    .live-scouting-toolbar__action,
+    .live-scouting-toolbar__select
+) {
+    min-height: 2.75rem;
+    height: auto;
+    min-width: 0;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.9rem;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__button--evaluation {
+    min-width: 2.9rem;
+    font-size: 1.3rem;
+    font-weight: 800;
+}
+
+/* Vertical court: the toolbar is a column beside the court; its keys fill the
+   column's width in rows instead of shrinking to fit one line. */
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage--vertical .live-scouting-toolbar:not(.live-scouting-toolbar--touch) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "player actions"
+        "skills skills"
+        "evals evals"
+        "balltype balltype";
+    gap: 0.4rem;
+    padding: 0.4rem;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage--vertical .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__player {
+    grid-area: player;
+    width: auto;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage--vertical .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__actions {
+    grid-area: actions;
+    width: auto;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage--vertical .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__group--skills {
+    grid-area: skills;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.3rem;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage--vertical .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__group--evaluations {
+    grid-area: evals;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.3rem;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage--vertical .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__group--evaluations .live-scouting-toolbar__button {
+    min-height: 3.2rem;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage--vertical .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__group--ball-type {
+    grid-area: balltype;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    width: auto;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage--vertical .live-scouting-toolbar:not(.live-scouting-toolbar--touch) :is(
+    .live-scouting-toolbar__group--combination,
+    .live-scouting-toolbar__group--num-blockers,
+    .live-scouting-toolbar__group--attack-subtype
+) {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+/* Horizontal court: two tidy rows under the court - player, skills, actions;
+   then the six evaluations and the ball type. */
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage:not(.live-rally-stage--vertical) .live-scouting-toolbar:not(.live-scouting-toolbar--touch) {
+    display: grid;
+    grid-template-columns: minmax(8rem, auto) minmax(0, 1fr) auto;
+    grid-template-areas:
+        "player skills actions"
+        "evals evals balltype";
+    align-items: stretch;
+    gap: 0.35rem 0.5rem;
+    padding: 0.35rem 0.5rem;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage:not(.live-rally-stage--vertical) .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__player {
+    grid-area: player;
+    width: auto;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage:not(.live-rally-stage--vertical) .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__group--skills {
+    grid-area: skills;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 0.3rem;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage:not(.live-rally-stage--vertical) .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__actions {
+    grid-area: actions;
+    width: auto;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage:not(.live-rally-stage--vertical) .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__group--evaluations {
+    grid-area: evals;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.3rem;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage:not(.live-rally-stage--vertical) .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__group--ball-type {
+    grid-area: balltype;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(3rem, 1fr);
+    gap: 0.3rem;
+    width: auto;
+}
+
+.scouting-screen:not(.scouting-screen--phone) .live-rally-stage:not(.live-rally-stage--vertical) .live-scouting-toolbar:not(.live-scouting-toolbar--touch) :is(
+    .live-scouting-toolbar__group--combination,
+    .live-scouting-toolbar__group--num-blockers,
+    .live-scouting-toolbar__group--attack-subtype
+) {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
