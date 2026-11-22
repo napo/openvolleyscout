@@ -72,6 +72,8 @@ type LiveScoutingToolbarProps = {
   simple?: boolean;
   /** Only these skills on the toolbar (one-team scouting: serve, reception, attack, block). */
   skills?: readonly SkillType[];
+  /** When set, only these skills are enabled on the toolbar; the rest stay visible but disabled. */
+  availableSkills?: readonly SkillType[] | null;
 };
 
 const EVAL_SYMBOL_KEY: Record<SkillEvaluation, string> = {
@@ -139,6 +141,7 @@ export function LiveScoutingToolbar({
   onOpenEvents,
   simple = false,
   skills,
+  availableSkills = null,
 }: LiveScoutingToolbarProps) {
   const { t } = useTranslation();
   const snapshot = createLiveToolbarSnapshot({
@@ -201,7 +204,7 @@ export function LiveScoutingToolbar({
             className={`live-scouting-toolbar__button live-scouting-toolbar__button--${
               layout.secondarySkills.includes(skill) ? 'secondary' : 'primary'
             }${selectedSkill === skill ? ' is-active' : ''}`}
-            disabled={snapshot.controlsDisabled || !snapshot.skillEditable}
+            disabled={snapshot.controlsDisabled || !snapshot.skillEditable || (availableSkills !== null && !availableSkills.includes(skill))}
             aria-pressed={selectedSkill === skill}
             onClick={() => onSkillChange(skill)}
           >

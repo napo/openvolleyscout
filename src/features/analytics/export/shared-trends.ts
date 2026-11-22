@@ -18,6 +18,8 @@ export function buildSharedTrendsSnapshot(teamOptions: readonly TrendsTeamChoice
   const view = useTrendsViewStore.getState();
   const option = teamOptions.find((candidate) => candidate.key === view.teamKey) ?? teamOptions[0];
   if (!option) return null;
+  // Only the two official sub-tabs carry a data snapshot; experimental sub-tabs fall back to v2 blocks.
+  if (view.subTab && view.subTab !== 'priorities' && view.subTab !== 'season-trend') return null;
   const subTab = view.subTab === 'season-trend' ? 'season-trend' : 'priorities';
   return {
     ...buildTrendsSnapshot(createLiveTrendsSource(option.matches, option.teamRef), view.priorityPlayerIds),

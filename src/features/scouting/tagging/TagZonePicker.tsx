@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from '@src/i18n';
+import { useMediaQuery } from '@src/lib/hooks/useMediaQuery';
 import './tag-zone-picker.css';
 
 /**
@@ -118,8 +119,7 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
   const [savedRotation, setSavedRotation] = useState<TagZoneRotationSteps>(() => loadSavedRotation());
   const [chosenView, setView] = useState<TagZonePickerView>(() => loadSavedView());
   // Upright phones have no height for the two courts one above the other.
-  const narrow = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    && window.matchMedia('(max-width: 640px)').matches;
+  const narrow = useMediaQuery('(max-width: 640px)');
   const views = narrow ? VIEWS.filter((value) => value !== 'court-vertical') : VIEWS;
   const view: TagZonePickerView = narrow && chosenView === 'court-vertical' ? 'court-horizontal' : chosenView;
   const rotation = getViewRotation(view, savedRotation);

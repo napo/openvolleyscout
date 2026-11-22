@@ -22,6 +22,7 @@ import type { MatchProject } from '@src/domain/match/types';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { MatchReportTable } from '@src/features/scouting/components/MatchReportTable';
+import { buildMatchTabellinoReport } from '@src/features/scouting/model/match-report';
 import { exportMatchReportPdf } from '@src/features/scouting/model/match-report-pdf';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
@@ -342,7 +343,20 @@ export function TeamAnalysisPage() {
               : `${teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' })} · ${t('selectedMatchesCount', { count: selectedMatches.length })}`
           }
           onBusyChange={setIsExportingTab}
-          buildSnapshot={activeTab === 'play-by-play' ? () => {
+          buildSnapshot={activeTab === 'report' && singleMatch && singleHomeTeam && singleAwayTeam && singleScoutingConfig && singleMatchStats ? () => ({
+            report: buildMatchTabellinoReport({
+              homeTeam: singleHomeTeam,
+              awayTeam: singleAwayTeam,
+              metadata: singleMatch.metadata,
+              scoutingConfig: singleScoutingConfig,
+              eventLog: singleMatch.events,
+              completedSets: singleCompletedSets,
+              stats: singleMatchStats,
+              lineupSnapshots: singleMatch.scoutingSession?.lineupSnapshots,
+            }),
+            filters: useFilterStore.getState().filters,
+            selectedPlayerIds: [],
+          }) : activeTab === 'play-by-play' ? () => {
             if (!playByPlayShareRef.current) throw new Error('No play by play on screen');
             return { playByPlay: playByPlayShareRef.current, filters: useFilterStore.getState().filters, selectedPlayerIds: [] };
           } : (activeTab === 'team-performance' || activeTab === 'player-performance' || activeTab === 'sideout-study') ? () => {

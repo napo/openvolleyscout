@@ -9,7 +9,8 @@ import { mapDataVolleyMatchToOvsProject, parseDataVolleyFile } from '@src/featur
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 import { createDefaultAdvancedFilters } from '../filters/advanced-filters';
 import { buildStatsSnapshot } from './shared-stats-snapshot';
-import { buildTrendsSnapshot, createLiveTrendsSource } from '../trends/trends-data-source';
+import { buildSharedTrendsSnapshot } from './shared-trends';
+import { buildTrendsSnapshot, createLiveTrendsSource, useTrendsViewStore } from '../trends/trends-data-source';
 import { buildMatchTabellinoReport } from '@src/features/scouting/model/match-report';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
@@ -94,5 +95,14 @@ describe('shared statistics snapshot', () => {
     </Routes></MemoryRouter></I18nProvider>);
     expect(document.querySelector('.priorities-panel')).toBeTruthy();
     expect(screen.getByText(teamRef.teamName)).toBeTruthy();
+  });
+
+  it('returns null for experimental Trends sub-tabs so sharing falls back to v2 blocks', () => {
+    const project = demoProject();
+    const teamName = getMatchTeamSnapshot(project, 'home').name;
+    useTrendsViewStore.setState({ subTab: 'competition', teamKey: 'home' });
+    const snapshot = buildSharedTrendsSnapshot([{ key: 'home', label: teamName, teamRef: { teamName }, matches: [project] }]);
+    expect(snapshot).toBeNull();
+    useTrendsViewStore.setState({ subTab: undefined, teamKey: undefined });
   });
 });

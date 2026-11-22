@@ -70,7 +70,7 @@ export function SharedStatsViewerPage() {
       </header>
 
       {stats.version === 3 ? (
-        <SharedStatsPanel tabId={stats.tabId} snapshot={stats.snapshot} />
+        <SharedStatsPanel key={payload} tabId={stats.tabId} snapshot={stats.snapshot} />
       ) : stats.version === 2 ? (
         <section className="shared-stats-viewer__content" data-tab-id={stats.tabId}>
           {stats.blocks.map((block, index) => {

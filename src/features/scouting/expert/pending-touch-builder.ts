@@ -266,7 +266,8 @@ function createInferredServeTouch(input: {
     inferenceReason: 'serve_from_reception',
     skillTypeCode: input.receiveCode.skillType,
     serveType: input.receiveCode.skillType,
-    endZoneCode: input.receiveCode.startZone ?? input.receiveCode.endZone,
+    startZoneCode: input.receiveCode.endZone ? input.receiveCode.startZone : undefined,
+    endZoneCode: input.receiveCode.endZone ?? input.receiveCode.startZone,
     // Typed reception with both zones: the serve is drawn from where it started to the receiver.
     ballDirection: input.receiveCode.startZone && input.receiveCode.endZone
       ? ballDirectionFromZoneCodes('serve', input.servingTeam, input.receiveCode.startZone, input.receiveCode.endZone, input.displaySides)
