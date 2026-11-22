@@ -7,7 +7,7 @@ import { SNAPSHOT_TABS } from '@src/features/analytics/export/SharedStatsPanel';
 import { useFilterStore } from '@src/features/analytics/stores/filter-store';
 import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
 import type { TranslationKey } from '@src/i18n';
-import { PlayByPlayPanel } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
+import { PlayByPlayPanel, type PlayByPlayShare } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { LoadingProgressBanner, yieldToUi, type LoadProgressState } from '@src/components/LoadingProgressBanner';
@@ -64,6 +64,8 @@ export function AnalysisPage() {
   const [statsView, setStatsView] = useState<StatsView>(() => (location.state as { view?: StatsView } | null)?.view ?? 'report');
   const [isExportingTab, setIsExportingTab] = useState(false);
   const exportPanelRef = useRef<HTMLDivElement>(null);
+  // The play by play on screen, for its share link.
+  const playByPlayShareRef = useRef<PlayByPlayShare | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportProgress, setExportProgress] = useState<LoadProgressState | null>(null);
   const [computeProgress, setComputeProgress] = useState<LoadProgressState | null>(null);
@@ -507,6 +509,10 @@ export function AnalysisPage() {
                     if (!trends) throw new Error('No team for the Trends tab');
                     return { trends, filters, selectedPlayerIds: [] };
                   }
+                  if (statsView === 'play-by-play') {
+                    if (!playByPlayShareRef.current) throw new Error('No play by play on screen');
+                    return { playByPlay: playByPlayShareRef.current, filters, selectedPlayerIds: [] };
+                  }
                   if (statsView === 'report' && matchReportInput) {
                     // The scoresheet only: no rallies, no events.
                     return { report: buildMatchTabellinoReport(matchReportInput), filters, selectedPlayerIds: [] };
@@ -518,7 +524,7 @@ export function AnalysisPage() {
               <StatsCaptureContext.Provider value={isExportingTab}><div ref={exportPanelRef}>
               {statsView === 'play-by-play' ? (
                 <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
-                  {homeTeam && awayTeam && matchStats ? <PlayByPlayPanel key={activeProject.metadata.id} homeTeam={homeTeam} awayTeam={awayTeam} stats={matchStats} eventLog={activeProject.events} metadata={activeProject.metadata} /> : null}
+                  {homeTeam && awayTeam && matchStats ? <PlayByPlayPanel key={activeProject.metadata.id} homeTeam={homeTeam} awayTeam={awayTeam} stats={matchStats} eventLog={activeProject.events} metadata={activeProject.metadata} shareRef={playByPlayShareRef} /> : null}
                 </div>
               ) : statsView === 'report' ? (
                 <div

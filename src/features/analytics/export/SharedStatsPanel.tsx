@@ -4,6 +4,7 @@ import { TeamPerformanceDashboard } from '../dashboard/TeamPerformanceDashboard'
 import { PlayerPerformanceDashboard } from '../dashboard/PlayerPerformanceDashboard';
 import { SideOutStudyPanel } from '../sideout/SideOutStudyPanel';
 import { CrossRotationAnalysisPanel } from '../cross-rotation/CrossRotationAnalysisPanel';
+import { PlayByPlayPanel } from '../play-by-play/PlayByPlayPanel';
 import { MatchReportView } from '@src/features/scouting/components/MatchReportTable';
 import '@src/features/scouting/scouting-screen.css';
 import { TrendsPanel } from '../trends/TrendsPanel';
@@ -21,6 +22,7 @@ export const SNAPSHOT_TABS: readonly SharedStatsTabId[] = [
   'player-performance',
   'sideout-study',
   'cross-rotation',
+  'play-by-play',
 ];
 
 /**
@@ -57,6 +59,21 @@ export function SharedStatsPanel({ tabId, snapshot }: { tabId: SharedStatsTabId;
             teamOptions={[{ key: 'shared', label: snapshot.trends.teamLabel, teamRef: {}, matches: [] }]}
           />
         </TrendsSourceContext.Provider>
+      </div>
+    ) : null;
+  }
+  if (tabId === 'play-by-play') {
+    const pbp = snapshot.playByPlay;
+    return pbp ? (
+      <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
+        <PlayByPlayPanel
+          homeTeam={pbp.homeTeam}
+          awayTeam={pbp.awayTeam}
+          metadata={pbp.metadata}
+          precomputedSets={pbp.sets}
+          initialReference={pbp.reference}
+          initialSet={pbp.setNumber}
+        />
       </div>
     ) : null;
   }

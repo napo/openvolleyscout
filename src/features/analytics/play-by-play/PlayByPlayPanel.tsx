@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type MutableRefObject } from 'react';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { Team } from '@src/domain/roster/types';
 import type { MatchEvent } from '@src/domain/events/types';
@@ -6,13 +6,27 @@ import type { MatchMetadata } from '@src/domain/match/types';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { useTranslation } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
-import { buildPlayByPlay } from './play-by-play';
+import { buildPlayByPlay, type PlayByPlaySet } from './play-by-play';
 import { playByPlayDetail, playByPlayServer } from './play-by-play-labels';
 import { buildPlayByPlayChartSvg } from './play-by-play-chart';
 import './play-by-play.css';
 
-export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata, initialSet, initialReference = 'home' }: {
-  homeTeam: Team; awayTeam: Team; stats: MatchStats; eventLog: readonly MatchEvent[]; metadata?: MatchMetadata | null; initialSet?: number; initialReference?: TeamSide;
+/** What a shared link carries for this tab: the built timeline and the choices on screen. */
+export interface PlayByPlayShare {
+  sets: PlayByPlaySet[];
+  homeTeam: Team;
+  awayTeam: Team;
+  metadata?: MatchMetadata | null;
+  reference: TeamSide;
+  setNumber: number;
+}
+
+export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata, initialSet, initialReference = 'home', precomputedSets, shareRef }: {
+  homeTeam: Team; awayTeam: Team; stats?: MatchStats; eventLog?: readonly MatchEvent[]; metadata?: MatchMetadata | null; initialSet?: number; initialReference?: TeamSide;
+  /** Shared viewer: the timeline already built by the sender. */
+  precomputedSets?: PlayByPlaySet[];
+  /** Filled with what is on screen, for the share link. */
+  shareRef?: MutableRefObject<PlayByPlayShare | null>;
 }) {
   const { t } = useTranslation();
   const [reference, setReference] = useState<TeamSide>(initialReference);
@@ -20,9 +34,12 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
   const sets = useMemo(() => {
+    if (precomputedSets) return precomputedSets;
+    if (!stats || !eventLog) return [];
     const roles = new Map([...homeTeam.players, ...awayTeam.players].map((player) => [player.id, player.role]));
     return buildPlayByPlay(stats, eventLog, (playerId) => roles.get(playerId));
-  }, [stats, eventLog, homeTeam, awayTeam]);
+  }, [precomputedSets, stats, eventLog, homeTeam, awayTeam]);
+  if (shareRef) shareRef.current = { sets, homeTeam, awayTeam, metadata, reference, setNumber };
   const teams = { home: homeTeam, away: awayTeam };
   const options = { reference, setNumber };
   const visibleSets = sets.filter((set) => !setNumber || set.setNumber === setNumber);

@@ -4,6 +4,7 @@ import type { AdvancedFilters } from '../filters/advanced-filters';
 import type { MatchTabellinoReport } from '@src/features/scouting/model/match-report';
 import { isTrendsSnapshot, type TrendsSnapshot, type TrendsViewSubTab } from '../trends/trends-data-source';
 import type { RadarAxisId } from '../radar/model/radar-metrics';
+import type { PlayByPlayShare } from '../play-by-play/PlayByPlayPanel';
 
 /** Trends tab: precomputed results for the selected team, plus the choices on screen. */
 export interface SharedTrendsSnapshot extends TrendsSnapshot {
@@ -24,6 +25,8 @@ export interface SharedStatsSnapshot {
   /** Match report tab: the scoresheet exactly as the tab draws it. */
   report?: MatchTabellinoReport;
   trends?: SharedTrendsSnapshot;
+  /** Play by play tab: the built timeline of one match. */
+  playByPlay?: PlayByPlayShare;
   filters: AdvancedFilters;
   selectedPlayerIds: string[];
   /** Team data study: the page shows one team only (the studied one, as home). */
@@ -39,6 +42,7 @@ export interface WireSnapshot {
   stats?: WireStats;
   report?: MatchTabellinoReport;
   trends?: SharedTrendsSnapshot;
+  playByPlay?: PlayByPlayShare;
   filters: AdvancedFilters;
   selectedPlayerIds: string[];
   lockedTeam?: 'home' | 'away';
@@ -110,7 +114,15 @@ export function fromWireSnapshot(wire: WireSnapshot): SharedStatsSnapshot {
 
 export function isWireSnapshot(value: unknown): value is WireSnapshot {
   if (!value || typeof value !== 'object') return false;
-  const { stats, report, trends, filters, selectedPlayerIds, lockedTeam } = value as Partial<WireSnapshot>;
+  const { stats, report, trends, playByPlay, filters, selectedPlayerIds, lockedTeam } = value as Partial<WireSnapshot>;
+  const validPlayByPlay = playByPlay === undefined || Boolean(
+    playByPlay && typeof playByPlay === 'object' && Array.isArray(playByPlay.sets)
+    && playByPlay.sets.every((set) => set && Array.isArray(set.rows))
+    && playByPlay.homeTeam && Array.isArray(playByPlay.homeTeam.players)
+    && playByPlay.awayTeam && Array.isArray(playByPlay.awayTeam.players)
+    && (playByPlay.reference === 'home' || playByPlay.reference === 'away') && typeof playByPlay.setNumber === 'number',
+  );
+  if (!validPlayByPlay) return false;
   if (lockedTeam !== undefined && lockedTeam !== 'home' && lockedTeam !== 'away') return false;
   const validTrends = trends === undefined || (
     isTrendsSnapshot(trends) && typeof trends.teamLabel === 'string' && typeof trends.subTab === 'string'
@@ -128,7 +140,7 @@ export function isWireSnapshot(value: unknown): value is WireSnapshot {
     && stats.quickStats && Array.isArray(stats.quickStats.players),
   );
   return Boolean(
-    validReport && validStats && validTrends && (stats !== undefined || report !== undefined || trends !== undefined)
+    validReport && validStats && validTrends && (stats !== undefined || report !== undefined || trends !== undefined || playByPlay !== undefined)
     && filters && typeof filters === 'object' && Array.isArray(filters.evaluations)
     && Array.isArray(selectedPlayerIds) && selectedPlayerIds.every((id) => typeof id === 'string'),
   );

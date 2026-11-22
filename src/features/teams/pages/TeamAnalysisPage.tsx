@@ -1,3 +1,4 @@
+import type { PlayByPlayShare } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
 import { StatsCaptureContext } from '@src/features/analytics/export/stats-capture-context';
 import { LoadingProgressBanner, yieldToUi, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { EfficiencyNote } from '@src/features/analytics/EfficiencyNote';
@@ -71,6 +72,8 @@ export function TeamAnalysisPage() {
   const [activeTab, setActiveTab] = useState<AnalysisTab>('team-performance');
   const [isExportingTab, setIsExportingTab] = useState(false);
   const exportPanelRef = useRef<HTMLDivElement>(null);
+  // The play by play on screen, for its share link.
+  const playByPlayShareRef = useRef<PlayByPlayShare | null>(null);
 
   useEffect(() => {
     if (!trendsEnabled && activeTab === 'trends') {
@@ -339,7 +342,10 @@ export function TeamAnalysisPage() {
               : `${teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' })} · ${t('selectedMatchesCount', { count: selectedMatches.length })}`
           }
           onBusyChange={setIsExportingTab}
-          buildSnapshot={(activeTab === 'team-performance' || activeTab === 'player-performance' || activeTab === 'sideout-study') ? () => {
+          buildSnapshot={activeTab === 'play-by-play' ? () => {
+            if (!playByPlayShareRef.current) throw new Error('No play by play on screen');
+            return { playByPlay: playByPlayShareRef.current, filters: useFilterStore.getState().filters, selectedPlayerIds: [] };
+          } : (activeTab === 'team-performance' || activeTab === 'player-performance' || activeTab === 'sideout-study') ? () => {
             // The aggregated figures of the selected matches, as the tab shows them.
             const { filters, selectedPlayerIds } = useFilterStore.getState();
             return {
@@ -388,7 +394,7 @@ export function TeamAnalysisPage() {
         </div>
       ) : activeTab === 'play-by-play' ? (
         <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
-          <TeamPlayByPlayPanel projects={selectedMatches} focusTeamId={teamId} focusTeamName={teamName} />
+          <TeamPlayByPlayPanel projects={selectedMatches} focusTeamId={teamId} focusTeamName={teamName} shareRef={playByPlayShareRef} />
         </div>
       ) : activeTab === 'team-performance' ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">

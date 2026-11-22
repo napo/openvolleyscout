@@ -1,15 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type MutableRefObject } from 'react';
 import type { MatchProject } from '@src/domain/match/types';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import { useTranslation } from '@src/i18n';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
-import { PlayByPlayPanel } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
+import { PlayByPlayPanel, type PlayByPlayShare } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
 import { getFocusTeamSide } from '../model/team-match-filter';
 
 /** Timelines belong to individual matches; never merge rally numbers across matches. */
-export function TeamPlayByPlayPanel({ projects, focusTeamId, focusTeamName }: {
+export function TeamPlayByPlayPanel({ projects, focusTeamId, focusTeamName, shareRef }: {
   projects: readonly MatchProject[]; focusTeamId?: string; focusTeamName?: string;
+  shareRef?: MutableRefObject<PlayByPlayShare | null>;
 }) {
   const { t } = useTranslation();
   // Most recent first; open on the latest match with at least one point, not on an empty one.
@@ -35,6 +36,6 @@ export function TeamPlayByPlayPanel({ projects, focusTeamId, focusTeamName }: {
     <PlayByPlayPanel key={`${project.metadata.id}:${focusTeamId ?? focusTeamName ?? ''}`}
       homeTeam={getMatchTeamSnapshot(project, 'home')} awayTeam={getMatchTeamSnapshot(project, 'away')}
       stats={stats} eventLog={project.events} metadata={project.metadata}
-      initialReference={getFocusTeamSide(project, focusTeamId, focusTeamName)} />
+      initialReference={getFocusTeamSide(project, focusTeamId, focusTeamName)} shareRef={shareRef} />
   </div>;
 }
