@@ -88,10 +88,12 @@ body {
 
 .app-root {
     min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .standard-app-shell {
     min-height: 100vh;
+    min-height: 100dvh;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-columns: minmax(0, 1fr);
@@ -104,6 +106,7 @@ body {
 
 .scouting-app-shell {
     min-height: 100vh;
+    min-height: 100dvh;
     height: 100dvh;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
@@ -684,6 +687,7 @@ input {
 
 .app-page-screen {
     min-height: calc(100vh - 72px);
+    min-height: calc(100dvh - 72px);
     background: var(--color-background-light);
     padding: var(--space-xl);
 }
@@ -707,6 +711,7 @@ input {
     border: 1px solid rgba(15, 23, 42, 0.06);
     box-shadow: var(--shadow-md);
     min-height: calc(100vh - 72px - (2 * var(--space-xl)));
+    min-height: calc(100dvh - 72px - (2 * var(--space-xl)));
     max-height: none;
 }
 
@@ -765,6 +770,7 @@ input {
 
 .match-setup-page {
     min-height: 100vh;
+    min-height: 100dvh;
     background: var(--color-background-light);
     padding: var(--space-xl);
     display: flex;
@@ -777,6 +783,7 @@ input {
 
 .match-setup-page--with-nav {
     min-height: calc(100vh - 72px);
+    min-height: calc(100dvh - 72px);
     padding-top: var(--space-xl);
 }
 
@@ -2256,6 +2263,7 @@ input {
 .teams-page {
     padding: var(--space-xl);
     min-height: 100vh;
+    min-height: 100dvh;
     background: var(--color-background);
 }
 
@@ -3483,6 +3491,7 @@ input {
     }
     .app-page-card {
         min-height: calc(100vh - 72px - (2 * var(--space-md)));
+        min-height: calc(100dvh - 72px - (2 * var(--space-md)));
         max-height: none;
     }
     .app-page-card__header,
