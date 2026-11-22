@@ -9,7 +9,6 @@ import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import {
   SIDEOUT_ATTACK_BALL_TYPES,
   SIDEOUT_EVALUATIONS,
-  SIDEOUT_SERVE_BALL_TYPES,
   SIDEOUT_SETTER_POSITIONS,
   computeSideOutDistribution,
   computeSideOutDistributionByCall,
@@ -23,7 +22,6 @@ import {
   type SideOutDistributionResult,
   type SideOutDistributionTarget,
   type SideOutSequence,
-  type SideOutServeBallType,
   type SideOutStudyFilters,
 } from './sideout-distribution';
 import './sideout-study.css';
@@ -334,30 +332,6 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
                   })}
                 >
                   {t(SERVE_TYPE_LABEL_KEYS[serveType])}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        <fieldset className={`ovs-filter-group${filters.serveBallTypes.length > 0 && filters.serveBallTypes.length < SIDEOUT_SERVE_BALL_TYPES.length ? ' is-filtered' : ''}`}>
-          <legend className="ovs-filter-group__title">{t('sideOutFilterServeBallType')}</legend>
-          <div className="ovs-filter-chips">
-            {SIDEOUT_SERVE_BALL_TYPES.map((ballType) => {
-              const active = filters.serveBallTypes.includes(ballType);
-              return (
-                <button
-                  key={ballType}
-                  type="button"
-                  className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                  title={t(BALL_TYPE_LABEL_KEYS[ballType])}
-                  aria-pressed={active}
-                  onClick={() => setFilters({
-                    ...filters,
-                    serveBallTypes: toggleValue<SideOutServeBallType>(filters.serveBallTypes, ballType, !active),
-                  })}
-                >
-                  {ballType}
                 </button>
               );
             })}
