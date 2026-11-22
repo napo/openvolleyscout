@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.40.1 - 2026-11-22
+
+### Added
+- Shared statistics links now redraw the real page also for the Match report (the full scoresheet), Trends (Priorities and Season trend), Play-by-play and the Team data study tabs (Team, Player, Side-out study). The person who opens the link can still change filters, set and reference team. When a team study with many matches is too large for a link, the page is shared as a picture, as before.
+- Scouting only your own team in Court mode: you rate your serve instead of the opponent's reception, and you record only your team's touches (reception, set, attack, block). Choosing your attacker switches the court to the attack layout.
+- In Expert mode, a code line with start and end zones is now drawn on the court as an arrow when you confirm it, like a ball you dragged.
+- The court can be turned between horizontal and vertical with a button in its top-right corner during scouting, and the screen adapts at once. The option has been removed from Settings; phones still follow the way you hold them.
+- In Tags, the direction picker offers three views: Grid (as before), Court with the teams left and right, and Court with one team above the other, drawn like a real volleyball court. Your choice is remembered.
+- The Match page now lets you change the details of the open match (for example the date) or start a new match with new teams.
+
+### Changed
+- The Tags pad and the scouting screen always fit the screen: nothing scrolls except the list of entered codes. In Tags the direction picker shrinks to the space left, and Details closes by itself when the picker opens after a play.
+- On smartphones the evaluation legend of Tags opens in its own window from a Legend button, the player keys show number and role on one line, and Expert mode is not offered (Court mode is used instead).
+- The Analysis panel during scouting is now a narrow tab on the right edge, closed at the start; opened, it floats over the court instead of taking a column.
+- Evaluation keys always show their colours, also before they can be tapped, and the Expert toolbar has large keys with both the horizontal and the vertical court, including next to the video.
+- Serve start zones on the court are square, and the attack type (hard, placed, tip) appears only after pressing Attack, without covering other keys.
+- In the Side-out study filters, the serve H/M/Q chips have been removed because they repeated Serve type (H float, M jump float, Q jump spin). Use Serve type for the same selection.
+
+### Fixed
+- With the vertical court in Expert mode the court was hidden behind the code bar; it is shown again, with the code bar as a column beside it.
+- The server behind the end line is no longer cut off at the bottom of the vertical court.
+- On phones in Court mode, dragging the ball works again, and on iPhone the scouting pages no longer need scrolling.
+- When a match import fails, the message now also says why.
+
 ## 0.40.0 - 2026-11-21
 
 ### Added
