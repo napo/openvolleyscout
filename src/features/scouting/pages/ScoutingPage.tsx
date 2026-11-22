@@ -298,6 +298,11 @@ export function ScoutingPage() {
   }, []);
 
   const isPhone = isSmartphonePortrait || isSmartphoneLandscape;
+  // Expert input (the full DataVolley code entry) is not offered on smartphones: a
+  // phone left on Expert, or opened on it, switches to Court.
+  useEffect(() => {
+    if (isPhone && inputMode !== 'tag' && !simpleInput) setSimpleInput(true);
+  }, [inputMode, isPhone, setSimpleInput, simpleInput]);
 
   // Any screen held upright (phone or tablet) gets the vertical court, so the
   // court uses the long side; in landscape a tablet keeps the scout's choice.
@@ -2424,7 +2429,7 @@ export function ScoutingPage() {
                 ['tag', 'inputModeTag', 'inputModeTagHint'],
                 ['court', 'inputModeCourt', 'inputModeCourtHint'],
                 ['detailed', 'inputModeDetailed', 'inputModeDetailedHint'],
-              ] as const).map(([level, labelKey, hintKey]) => (
+              ] as const).filter(([level]) => !(isPhone && level === 'detailed')).map(([level, labelKey, hintKey]) => (
                 <button
                   key={level}
                   type="button"
@@ -3338,6 +3343,7 @@ export function ScoutingPage() {
             courtOrientation={courtOrientation}
             showSwapSides={showSwapSides}
             inputLevel={inputLevel}
+            hideDetailedInput={isPhone}
             simpleInput={simpleInput}
             dataVolleyRallyCode={dataVolleyRallyCode}
             onManualPoint={handleManualPoint}
@@ -3441,7 +3447,8 @@ export function ScoutingPage() {
         />
         {activeStage === 'live_rally' && !inputLevelChosen && !showOnboarding ? (
           <InputLevelChooser
-            recommended={isTouchOnlyDevice() ? 'court' : 'detailed'}
+            recommended={isTouchOnlyDevice() || isPhone ? 'court' : 'detailed'}
+            hideDetailed={isPhone}
             onChoose={selectInputLevel}
           />
         ) : null}

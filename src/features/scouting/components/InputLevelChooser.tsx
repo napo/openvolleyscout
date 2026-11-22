@@ -13,6 +13,8 @@ const LEVELS: ReadonlyArray<{ level: InputLevel; labelKey: TranslationKey; hintK
 interface InputLevelChooserProps {
   recommended: InputLevel;
   onChoose: (level: InputLevel) => void;
+  /** Smartphones: Expert input is not offered. */
+  hideDetailed?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ interface InputLevelChooserProps {
  * wants to enter. The court stays the default; Tags is an extra, lighter way
  * in. The choice can be changed at any time from the scouting header.
  */
-export function InputLevelChooser({ recommended, onChoose }: InputLevelChooserProps) {
+export function InputLevelChooser({ recommended, onChoose, hideDetailed = false }: InputLevelChooserProps) {
   const { t } = useTranslation();
 
   return (
@@ -30,7 +32,7 @@ export function InputLevelChooser({ recommended, onChoose }: InputLevelChooserPr
         <h2 id="input-level-chooser-title" className="input-level-chooser__title">{t('inputLevelChooserTitle')}</h2>
         <p className="input-level-chooser__description">{t('inputLevelChooserDescription')}</p>
         <div className="input-level-chooser__options">
-          {LEVELS.map(({ level, labelKey, hintKey, warningKey }) => (
+          {LEVELS.filter(({ level }) => !(hideDetailed && level === 'detailed')).map(({ level, labelKey, hintKey, warningKey }) => (
             <button
               key={level}
               type="button"

@@ -53,6 +53,8 @@ export interface ScoutingTopBarProps {
   onSwapSides: () => void;
   onOpenLiveHelp: () => void;
   onSelectInputLevel: (level: 'tag' | 'court' | 'detailed') => void;
+  /** Smartphones: Expert input is not offered. */
+  hideDetailedInput?: boolean;
 }
 
 function getSetterPosition(lineup: ActiveLineup | null | undefined): number | null {
@@ -84,6 +86,7 @@ export function ScoutingTopBar({
   onSwapSides,
   onOpenLiveHelp,
   onSelectInputLevel,
+  hideDetailedInput = false,
 }: ScoutingTopBarProps) {
   const { t } = useTranslation();
   const leftSetterPos = getSetterPosition(leftTeam.lineup);
@@ -308,7 +311,7 @@ export function ScoutingTopBar({
               ['tag', 'inputModeTag', 'inputModeTagHint'],
               ['court', 'inputModeCourt', 'inputModeCourtHint'],
               ['detailed', 'inputModeDetailed', 'inputModeDetailedHint'],
-            ] as const).map(([level, labelKey, hintKey]) => (
+            ] as const).filter(([level]) => !(hideDetailedInput && level === 'detailed')).map(([level, labelKey, hintKey]) => (
               <button
                 key={level}
                 type="button"
