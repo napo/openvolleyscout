@@ -33,6 +33,10 @@ and statistics, synchronises actions with the match video and builds tactical
 reports on the next opponent. It works in the browser and as an app for
 Windows, macOS, Linux and Android, also offline in the gym.
 
+OpenVolleyScout was born through **vibe coding**: its code has been written
+with AI programming assistants, guided, reviewed and tested on court by the
+author together with coaches and scouts.
+
 Your data stays on your device. There are no accounts and no tracking; if you
 want the same archive on several devices, connect your own Google Drive,
 OneDrive or Dropbox.
@@ -176,8 +180,9 @@ German (Deutsch), Spanish (Español), Romanian (Română), Slovenian (Slovenšč
 Turkish (Türkçe), Chinese (中文), Arabic (العربية) and Japanese (日本語). The
 language is chosen in Settings.
 
-Some translations may contain mistakes or words that a coach would never use.
-**Help us improve them!** If you speak one of these languages, or would like
+English and Italian are written by the authors; the other translations were
+prepared with the help of AI tools and may contain mistakes or words that a
+coach would never use. **Help us improve them!** If you speak one of these languages, or would like
 to add a new one:
 
 - open an [issue](https://github.com/napo/openvolleyscout/issues) with the

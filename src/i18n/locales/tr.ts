@@ -2965,4 +2965,5 @@ export const tr = {
   backupReminderDownload: "Arşivi indir",
   cloudSyncPrivacyLink: "Gizlilik politikası",
   aboutLogoCredit: "Logo, yapay zekâ araçlarının desteğiyle Maurizio Napolitano ve Fabio d'Amico tarafından tasarlandı.",
+  aboutVibeCoding: "OpenVolleyScout vibe coding ile doğdu: kodu, yazar tarafından antrenörler ve scout'larla birlikte yönlendirilen, gözden geçirilen ve sahada test edilen yapay zekâ programlama asistanlarıyla yazıldı.",
 };

@@ -2969,4 +2969,5 @@ export const zh = {
   backupReminderDownload: "下载存档",
   cloudSyncPrivacyLink: "隐私政策",
   aboutLogoCredit: "标志由 Maurizio Napolitano 和 Fabio d'Amico 在人工智能工具的辅助下设计。",
+  aboutVibeCoding: "OpenVolleyScout 诞生于 vibe coding：代码由人工智能编程助手编写，并由作者与教练和球探一起指导、审查并在球场上测试。",
 };

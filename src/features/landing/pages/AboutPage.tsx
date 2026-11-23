@@ -132,6 +132,7 @@ export function AboutPage() {
             <section className="about-page__section">
               <h2 className="about-page__section-title">{APP_METADATA.name}</h2>
               <p className="about-page__text">{t('aboutProjectDescription')}</p>
+              <p className="about-page__text">{t('aboutVibeCoding')}</p>
               <div className="about-page__badges">
                 <span className="about-badge about-badge--status">{t('aboutStatusActiveDevelopment')}</span>
                 <span className="about-badge about-badge--license">{APP_METADATA.license}</span>

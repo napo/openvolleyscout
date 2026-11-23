@@ -2971,4 +2971,5 @@ export const ar = {
   backupReminderDownload: "نزّل الأرشيف",
   cloudSyncPrivacyLink: "سياسة الخصوصية",
   aboutLogoCredit: "صمّم الشعار Maurizio Napolitano وFabio d'Amico بدعم من أدوات الذكاء الاصطناعي.",
+  aboutVibeCoding: "وُلد OpenVolleyScout عبر البرمجة بالإيحاء (vibe coding): كُتبت شيفرته بمساعدي برمجة يعتمدون على الذكاء الاصطناعي، يوجّههم المؤلف ويراجعهم ويختبرهم في الملعب مع المدربين والكشافين.",
 };

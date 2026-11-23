@@ -2950,4 +2950,5 @@ export const ja = {
   backupReminderDownload: "アーカイブをダウンロード",
   cloudSyncPrivacyLink: "プライバシーポリシー",
   aboutLogoCredit: "ロゴは Maurizio Napolitano と Fabio d'Amico が AI ツールの支援を受けてデザインしました。",
+  aboutVibeCoding: "OpenVolleyScout はバイブコーディングから生まれました。コードは AI プログラミングアシスタントで書かれ、作者がコーチやスカウトとともに方向づけ、確認し、コートで試しています。",
 };

@@ -2969,4 +2969,5 @@ export const sl = {
   backupReminderDownload: "Prenesi arhiv",
   cloudSyncPrivacyLink: "Pravilnik o zasebnosti",
   aboutLogoCredit: "Logotip sta oblikovala Maurizio Napolitano in Fabio d'Amico s pomočjo orodij umetne inteligence.",
+  aboutVibeCoding: "OpenVolleyScout je nastal z vibe codingom: koda je napisana s pomočniki za programiranje na osnovi umetne inteligence, ki jih je avtor skupaj s trenerji in skavti vodil, preverjal in preizkušal na igrišču.",
 };

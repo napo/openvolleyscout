@@ -2974,4 +2974,5 @@ export const it = {
   backupReminderDownload: "Scarica l'archivio",
   cloudSyncPrivacyLink: "Informativa sulla privacy",
   aboutLogoCredit: "Il logo è stato progettato da Maurizio Napolitano e Fabio d'Amico con il supporto di strumenti di intelligenza artificiale.",
+  aboutVibeCoding: "OpenVolleyScout è nato in vibe coding: il codice è stato scritto con assistenti di programmazione basati sull'intelligenza artificiale, guidati, controllati e messi alla prova sul campo dall'autore insieme ad allenatori e scout.",
 };

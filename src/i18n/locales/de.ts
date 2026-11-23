@@ -2969,4 +2969,5 @@ export const de = {
   backupReminderDownload: "Archiv herunterladen",
   cloudSyncPrivacyLink: "Datenschutzerklärung",
   aboutLogoCredit: "Das Logo wurde von Maurizio Napolitano und Fabio d'Amico mit Unterstützung von KI-Werkzeugen gestaltet.",
+  aboutVibeCoding: "OpenVolleyScout ist durch Vibe Coding entstanden: Der Code wurde mit KI-Programmierassistenten geschrieben, vom Autor zusammen mit Trainern und Scouts gesteuert, geprüft und in der Halle getestet.",
 };

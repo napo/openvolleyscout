@@ -2971,4 +2971,5 @@ export const ro = {
   backupReminderDownload: "Descarcă arhiva",
   cloudSyncPrivacyLink: "Politica de confidențialitate",
   aboutLogoCredit: "Logoul a fost proiectat de Maurizio Napolitano și Fabio d'Amico cu sprijinul unor instrumente de inteligență artificială.",
+  aboutVibeCoding: "OpenVolleyScout s-a născut prin vibe coding: codul a fost scris cu asistenți de programare bazați pe inteligență artificială, ghidați, verificați și testați pe teren de autor împreună cu antrenori și scouteri.",
 };
