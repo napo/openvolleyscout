@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { createEmptyMatchProject } from '@src/domain/match/factories';
+import { createDefaultMatchVideoAnalysis } from '@src/domain/video/types';
 import { applySetupVideoLink } from './MatchSetupPage';
 
 describe('video link typed while preparing the match', () => {
@@ -16,9 +17,10 @@ describe('video link typed while preparing the match', () => {
 
   it('leaves the match without video when the field is empty, and never replaces a local file', () => {
     const project = createEmptyMatchProject();
+    project.videoAnalysis ??= createDefaultMatchVideoAnalysis();
     applySetupVideoLink(project, '  ');
     expect(project.videoAnalysis?.source).toBeUndefined();
-    project.videoAnalysis = { ...project.videoAnalysis!, source: { kind: 'file', path: '/v/m.mp4' } } as never;
+    project.videoAnalysis = { ...project.videoAnalysis!, source: { kind: 'file', path: '/v/m.mp4' } };
     applySetupVideoLink(project, 'https://youtu.be/dQw4w9WgXcQ');
     expect(project.videoAnalysis?.source?.kind).toBe('file');
     applySetupVideoLink(project, '');
