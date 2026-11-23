@@ -365,11 +365,23 @@
   }
 }
 
-/* The match video (link or file) takes a whole row of the details grid. */
-.quick-start__field--wide {
-  grid-column: 1 / -1;
+
+/* The match video stays in view, between the team and the optional details. */
+.quick-start__video {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-border, #e2e7f0);
+  border-radius: 0.9rem;
+  background: var(--color-surface, #fff);
 }
 
-.quick-start__field--wide .setup-video-field__or .btn-small {
-  width: auto;
+.quick-start__video h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+
+.quick-start__video-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #64748b);
 }

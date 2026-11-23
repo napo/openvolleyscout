@@ -242,7 +242,20 @@ export function QuickMatchStart({
           <h2><span className="quick-start__index">1</span>{t('quickStartTeamQuestion')}</h2>
           <MatchTeamSelection {...homeTeamProps} />
           {details && onDetailChange ? (
-            <details className="quick-start__details" open={details.videoUrlError ? true : undefined}>
+            <div className="quick-start__video">
+              <h3>{t('matchVideoLink')}</h3>
+              <SetupVideoField
+                url={details.videoUrl}
+                file={details.videoFile}
+                error={details.videoUrlError}
+                onUrlChange={(value) => onDetailChange('videoUrl', value)}
+                onFileChange={(file) => onVideoFileChange?.(file)}
+              />
+              <p className="quick-start__video-hint">{t('matchVideoLinkHint')}</p>
+            </div>
+          ) : null}
+          {details && onDetailChange ? (
+            <details className="quick-start__details">
               <summary>{t('quickStartMatchDetails')}</summary>
               <div className="quick-start__details-grid">
                 <label className="quick-start__field">
@@ -261,16 +274,6 @@ export function QuickMatchStart({
                   <span>{t('venue')}</span>
                   <input type="text" value={details.venue} placeholder={t('venuePlaceholder')} onChange={(event) => onDetailChange('venue', event.target.value)} />
                 </label>
-                <div className="quick-start__field quick-start__field--wide">
-                  <span>{t('matchVideoLink')}</span>
-                  <SetupVideoField
-                    url={details.videoUrl}
-                    file={details.videoFile}
-                    error={details.videoUrlError}
-                    onUrlChange={(value) => onDetailChange('videoUrl', value)}
-                    onFileChange={(file) => onVideoFileChange?.(file)}
-                  />
-                </div>
               </div>
             </details>
           ) : null}
