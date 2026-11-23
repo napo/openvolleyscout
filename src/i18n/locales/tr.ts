@@ -1460,6 +1460,8 @@ export const tr = {
   videoCodeInvalid: 'Geçersiz DataVolley kodu',
   videoReopenStored: 'Kaydedilen videoyu yeniden aç',
   videoReopenStoredHint: 'OVS daha önce seçilen dosyayı hatırlar: tarayıcı yeniden açmadan önce onay isteyecektir.',
+  liveVideoReopenHint: "Tarayıcı {{name}} dosyasını yeniden açmak için izin istiyor.",
+  liveVideoRelinkHint: "Tarayıcı {{name}} dosyasını kendisi yeniden açamıyor: dosyayı yeniden seçin. Senkronizasyon korunur.",
   videoPresent: 'Video ✓',
   videoMissing: 'Video yok',
   liveVideoHiddenSmallScreen: "Bu küçük ekranda video ve web kamerası kullanılamaz.",

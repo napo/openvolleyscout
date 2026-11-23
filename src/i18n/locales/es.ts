@@ -1466,6 +1466,8 @@ export const es = {
   videoCodeInvalid: 'Código DataVolley no válido',
   videoReopenStored: 'Volver a abrir el vídeo guardado',
   videoReopenStoredHint: 'OVS recuerda el archivo elegido anteriormente: el navegador pedirá confirmación antes de volver a abrirlo.',
+  liveVideoReopenHint: "El navegador pide permiso para volver a abrir {{name}}.",
+  liveVideoRelinkHint: "El navegador no puede volver a abrir {{name}} por sí solo: elígelo de nuevo. La sincronización se mantiene.",
   videoPresent: 'Vídeo ✓',
   videoMissing: 'Sin vídeo',
   liveVideoHiddenSmallScreen: "El vídeo y la webcam no están disponibles en esta pantalla pequeña.",

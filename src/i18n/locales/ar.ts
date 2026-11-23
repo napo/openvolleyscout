@@ -1466,6 +1466,8 @@ export const ar = {
   videoCodeInvalid: 'رمز DataVolley غير صالح',
   videoReopenStored: 'إعادة فتح الفيديو المحفوظ',
   videoReopenStoredHint: 'يتذكر OVS الملف المختار سابقًا: سيطلب المتصفح تأكيدًا قبل إعادة فتحه.',
+  liveVideoReopenHint: "يطلب المتصفح الإذن لإعادة فتح {{name}}.",
+  liveVideoRelinkHint: "لا يستطيع المتصفح إعادة فتح {{name}} بنفسه: اختره مرة أخرى. تبقى المزامنة.",
   videoPresent: 'الفيديو ✓',
   videoMissing: 'لا يوجد فيديو',
   liveVideoHiddenSmallScreen: "الفيديو وكاميرا الويب غير متاحين على هذه الشاشة الصغيرة.",

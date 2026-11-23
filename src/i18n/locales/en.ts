@@ -1504,6 +1504,8 @@ export const en = {
   videoCodeInvalid: 'Invalid DataVolley code',
   videoReopenStored: 'Reopen saved video',
   videoReopenStoredHint: 'OVS remembers the previously chosen file: the browser will ask for confirmation before reopening it.',
+  liveVideoReopenHint: "The browser asks for permission to reopen {{name}}.",
+  liveVideoRelinkHint: "The browser cannot reopen {{name}} by itself: choose it again. The sync stays.",
   videoPresent: 'Video ✓',
   videoMissing: 'No video',
   liveVideoHiddenSmallScreen: "Video and webcam are not available on this small screen.",

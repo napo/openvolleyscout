@@ -16,7 +16,10 @@ import { useAppStore } from '@src/app/store/app-store';
 import type { MatchProject } from '@src/domain/match/types';
 import type { MatchVideoAnalysis, MatchVideoSource } from '@src/domain/video/types';
 import { createDefaultMatchVideoAnalysis, getFilePath, getVideoSourceKey } from '@src/domain/video/types';
-import { VideoPlayerView, type VideoPlayerHandle } from '@src/features/analysis/video/VideoPlayerView';
+import { VideoPlayerView, resolveLocalVideoUrl, type VideoPlayerHandle } from '@src/features/analysis/video/VideoPlayerView';
+import { loadVideoFileHandle, saveVideoFileHandle, supportsFileSystemAccess } from '@src/features/analysis/video/file-handle-store';
+import { cloudSyncController } from '@src/features/sync/cloud/archive-adapter';
+import { findCloudVideo } from '@src/features/sync/cloud/video-upload';
 import { YouTubeFramePlayer } from '@src/features/analysis/video/YouTubeFramePlayer';
 import { parseYouTubeVideoId } from '@src/features/analysis/video/youtube';
 import { useTranslation } from '@src/i18n';
@@ -202,6 +205,9 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     const [geometry, setGeometry] = useState<PanelGeometry>(readStoredGeometry);
     const [dragState, setDragState] = useState<DragState | null>(null);
     const [fileObjectUrl, setFileObjectUrl] = useState<string | null>(null);
+    /** Browser: the remembered file still needs the user's OK to be read again. */
+    const [storedHandle, setStoredHandle] = useState<FileSystemFileHandle | null>(null);
+    const relinkInputRef = useRef<HTMLInputElement>(null);
     const [youtubeUrlDraft, setYoutubeUrlDraft] = useState('');
     const [youtubeUrlError, setYoutubeUrlError] = useState(false);
     const [isPlayable, setIsPlayable] = useState(false);
@@ -440,6 +446,74 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       });
     };
     useLayoutEffect(() => () => flushPositionRef.current(), []);
+
+    // A local file chosen in the match setup (or earlier here) is known only by its
+    // name in the browser: reopen the remembered file, or stream the cloud copy.
+    useEffect(() => {
+      setStoredHandle(null);
+      if (source?.kind !== 'file' || resolveLocalVideoUrl(source.path, fileObjectUrl)) return undefined;
+      let cancelled = false;
+      void (async () => {
+        const handle = await loadVideoFileHandle(project.metadata.id).catch(() => null);
+        if (cancelled) return;
+        if (handle) {
+          const permission = await handle.queryPermission?.({ mode: 'read' }) ?? 'prompt';
+          if (cancelled) return;
+          if (permission === 'granted') {
+            const file = await handle.getFile().catch(() => null);
+            if (file && !cancelled) {
+              setFileObjectUrl(URL.createObjectURL(file));
+              return;
+            }
+          } else {
+            setStoredHandle(handle);
+          }
+        }
+        if (cloudSyncController.status.state === 'off') return;
+        const found = await findCloudVideo(project.metadata.id).catch(() => null);
+        if (!found || cancelled) return;
+        const url = await found.storage.videoStreamUrl(found.file).catch(() => null);
+        if (url && !cancelled) setFileObjectUrl(url);
+      })();
+      return () => { cancelled = true; };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sourceKey, project.metadata.id]);
+
+    const reopenStoredVideo = async () => {
+      if (!storedHandle) return;
+      const permission = await storedHandle.requestPermission?.({ mode: 'read' }) ?? 'denied';
+      if (permission !== 'granted') return;
+      const file = await storedHandle.getFile().catch(() => null);
+      setStoredHandle(null);
+      if (file) setFileObjectUrl(URL.createObjectURL(file));
+    };
+
+    /** The same match video found again on this device: the sync points stay. */
+    const relinkFile = (file: File | null, handle?: FileSystemFileHandle) => {
+      if (!file) return;
+      if (fileObjectUrl?.startsWith('blob:')) URL.revokeObjectURL(fileObjectUrl);
+      setFileObjectUrl(URL.createObjectURL(file));
+      setStoredHandle(null);
+      if (handle) void saveVideoFileHandle(project.metadata.id, handle).catch(() => undefined);
+      if (source?.kind === 'file' && source.fileName === file.name) return;
+      persistVideoAnalysis({ source: { kind: 'file', path: getFilePath(file), fileName: file.name } });
+    };
+
+    const pickRelinkFile = async () => {
+      if (supportsFileSystemAccess() && window.showOpenFilePicker) {
+        try {
+          const [handle] = await window.showOpenFilePicker({
+            multiple: false,
+            types: [{ description: 'Video', accept: { 'video/*': ['.mp4', '.webm', '.mkv', '.mov', '.avi', '.m4v', '.ogv'] } }],
+          });
+          relinkFile(await handle.getFile(), handle);
+        } catch {
+          // Picker dismissed.
+        }
+        return;
+      }
+      relinkInputRef.current?.click();
+    };
 
     const handleFileSelected = (file: File | null) => {
       if (!file) return;
@@ -858,7 +932,32 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
               ) : (
                 <>
                   {playerView}
-                  {!isPlayable && <p className="live-video-panel__hint">{t('videoMissing')}</p>}
+                  {!isPlayable && (
+                    source.kind === 'file' && !isTauri() && !fileObjectUrl ? (
+                      <div className="live-video-panel__relink">
+                        <p className="live-video-panel__hint">
+                          {t(storedHandle ? 'liveVideoReopenHint' : 'liveVideoRelinkHint', { name: source.fileName ?? source.path })}
+                        </p>
+                        {storedHandle ? (
+                          <button type="button" className="btn-primary btn-small" onClick={() => void reopenStoredVideo()}>
+                            {t('videoReopenStored')}
+                          </button>
+                        ) : null}
+                        <button type="button" className="btn-secondary btn-small" onClick={() => void pickRelinkFile()}>
+                          {t('videoRelink')}
+                        </button>
+                        <input
+                          ref={relinkInputRef}
+                          type="file"
+                          accept="video/*"
+                          hidden
+                          onChange={(event) => { relinkFile(event.target.files?.[0] ?? null); event.target.value = ''; }}
+                        />
+                      </div>
+                    ) : (
+                      <p className="live-video-panel__hint">{t('videoMissing')}</p>
+                    )
+                  )}
                 </>
               )}
               {isWebcamSource && webcamStream.error && (

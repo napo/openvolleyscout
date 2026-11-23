@@ -1464,6 +1464,8 @@ export const zh = {
   videoCodeInvalid: '无效的 DataVolley 代码',
   videoReopenStored: '重新打开已保存的视频',
   videoReopenStoredHint: 'OVS 会记住之前选择的文件：浏览器在重新打开前会请求确认。',
+  liveVideoReopenHint: "浏览器请求重新打开 {{name}} 的权限。",
+  liveVideoRelinkHint: "浏览器无法自行重新打开 {{name}}：请重新选择该文件。同步会保留。",
   videoPresent: '视频 ✓',
   videoMissing: '无视频',
   liveVideoHiddenSmallScreen: "在此小屏幕上无法使用视频和摄像头。",

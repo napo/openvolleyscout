@@ -1464,6 +1464,8 @@ export const de = {
   videoCodeInvalid: 'Ungültiger DataVolley-Code',
   videoReopenStored: 'Gespeichertes Video erneut öffnen',
   videoReopenStoredHint: 'OVS merkt sich die zuvor gewählte Datei: Der Browser fragt vor dem erneuten Öffnen um Bestätigung.',
+  liveVideoReopenHint: "Der Browser fragt nach der Erlaubnis, {{name}} wieder zu öffnen.",
+  liveVideoRelinkHint: "Der Browser kann {{name}} nicht selbst wieder öffnen: Wähle die Datei erneut. Die Synchronisation bleibt.",
   videoPresent: 'Video ✓',
   videoMissing: 'Kein Video',
   liveVideoHiddenSmallScreen: "Video und Webcam sind auf diesem kleinen Bildschirm nicht verfügbar.",

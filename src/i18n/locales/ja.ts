@@ -1462,6 +1462,8 @@ export const ja = {
   videoCodeInvalid: "DataVolley コードが正しくありません",
   videoReopenStored: "保存した動画を開き直す",
   videoReopenStoredHint: "前に選んだファイルを覚えています。開き直す前にブラウザが確認します。",
+  liveVideoReopenHint: "{{name}} を再度開くためにブラウザが許可を求めています。",
+  liveVideoRelinkHint: "ブラウザは {{name}} を自動で再度開けません。もう一度選択してください。同期はそのままです。",
   videoPresent: "動画 ✓",
   videoMissing: "動画なし",
   liveVideoHiddenSmallScreen: "この小さな画面では動画とウェブカメラは使用できません。",

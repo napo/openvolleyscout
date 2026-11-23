@@ -1466,6 +1466,8 @@ export const ro = {
   videoCodeInvalid: 'Cod DataVolley invalid',
   videoReopenStored: 'Redeschide videoclipul salvat',
   videoReopenStoredHint: 'OVS reține fișierul ales anterior: browserul va cere confirmare înainte de a-l redeschide.',
+  liveVideoReopenHint: "Browserul cere permisiunea de a redeschide {{name}}.",
+  liveVideoRelinkHint: "Browserul nu poate redeschide singur {{name}}: alege-l din nou. Sincronizarea rămâne.",
   videoPresent: 'Video ✓',
   videoMissing: 'Fără video',
   liveVideoHiddenSmallScreen: "Video și camera web nu sunt disponibile pe acest ecran mic.",

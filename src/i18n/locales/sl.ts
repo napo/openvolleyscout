@@ -1464,6 +1464,8 @@ export const sl = {
   videoCodeInvalid: 'Neveljavna DataVolley koda',
   videoReopenStored: 'Znova odpri shranjeni video',
   videoReopenStoredHint: 'OVS si zapomni prej izbrano datoteko: brskalnik bo pred ponovnim odpiranjem zahteval potrditev.',
+  liveVideoReopenHint: "Brskalnik prosi za dovoljenje, da znova odpre {{name}}.",
+  liveVideoRelinkHint: "Brskalnik {{name}} ne more znova odpreti sam: izberi ga znova. Sinhronizacija ostane.",
   videoPresent: 'Video ✓',
   videoMissing: 'Ni videa',
   liveVideoHiddenSmallScreen: "Video in spletna kamera na tem majhnem zaslonu nista na voljo.",
