@@ -2985,6 +2985,7 @@ export const sl = {
   cloudSyncVideosUpload: "Naloži {{count}} videov",
   cloudSyncVideosUploadHelp: "Nalaganje teče, dokler je aplikacija odprta. Če se prekine, se nadaljuje tam, kjer je ostalo.",
   videoOpenFromCloud: "Glej iz oblaka",
+  videoUploadToCloud: "Naloži v oblak",
   videoOpenFromCloudHint: "Ta video je v tvojem oblaku: lahko ga gledaš brez prenosa.",
   videoOpenFromCloudError: "Videa ni bilo mogoče odpreti iz oblaka. Preveri povezavo in poskusi znova.",
   videoDownloadFromCloud: "Prenesi na to napravo",

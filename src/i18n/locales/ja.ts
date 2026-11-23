@@ -2966,6 +2966,7 @@ export const ja = {
   cloudSyncVideosUpload: "動画 {{count}} 本をアップロード",
   cloudSyncVideosUploadHelp: "アプリを開いている間はアップロードが続きます。中断した場合は、途中から再開します。",
   videoOpenFromCloud: "クラウドから視聴",
+  videoUploadToCloud: "クラウドにアップロード",
   videoOpenFromCloudHint: "この動画はクラウドにあります。ダウンロードせずに視聴できます。",
   videoOpenFromCloudError: "クラウドから動画を開けませんでした。接続を確認してもう一度お試しください。",
   videoDownloadFromCloud: "このデバイスにダウンロード",

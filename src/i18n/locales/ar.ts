@@ -2987,6 +2987,7 @@ export const ar = {
   cloudSyncVideosUpload: "رفع {{count}} فيديو",
   cloudSyncVideosUploadHelp: "يستمر الرفع ما دام التطبيق مفتوحاً. إذا توقف، يستأنف من حيث توقف.",
   videoOpenFromCloud: "المشاهدة من السحابة",
+  videoUploadToCloud: "الرفع إلى السحابة",
   videoOpenFromCloudHint: "هذا الفيديو موجود في سحابتك: يمكنك مشاهدته دون تنزيله.",
   videoOpenFromCloudError: "تعذر فتح الفيديو من السحابة. تحقق من الاتصال وحاول مرة أخرى.",
   videoDownloadFromCloud: "التنزيل على هذا الجهاز",

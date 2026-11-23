@@ -151,6 +151,7 @@ import '../scouting-tablet.css';
 import { resolveActionVideoSeconds } from '../live/video/action-video-time';
 import { confirmAction } from '@src/components/confirm-dialog';
 import { useDismissedVideoNotices } from './use-dismissed-video-notices';
+import { askToUploadAfterScouting, askToUploadMatchVideo } from '@src/features/sync/cloud/CloudVideoUploadPrompt';
 import { createLiberoMessages, getLiberoProposalPriority, getManageActionEventLabel as getManageActionEventLabelFor } from './libero-messages';
 
 import {
@@ -175,6 +176,14 @@ export function ScoutingPage() {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
+  const scoutedMatchId = activeProject?.metadata.id;
+  // The match video on this computer: offer to send it to the cloud when
+  // scouting starts and when it is left (not after deleting the match).
+  useEffect(() => {
+    if (!scoutedMatchId) return undefined;
+    void askToUploadMatchVideo(scoutedMatchId);
+    return () => askToUploadAfterScouting(scoutedMatchId);
+  }, [scoutedMatchId]);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const closeProject = useAppStore((state) => state.closeProject);
   const simpleInput = useAppStore((state) => state.simpleInput);

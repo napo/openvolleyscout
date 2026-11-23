@@ -75,7 +75,8 @@ import {
   supportsFileSystemAccess,
 } from './file-handle-store';
 import { resolveRemoteVideoSource, remoteVideoUrlErrorKey, type RemoteVideoUrlError } from './remote-video-url';
-import { findCloudVideo } from '@src/features/sync/cloud/video-upload';
+import { canUploadVideos, findCloudVideo } from '@src/features/sync/cloud/video-upload';
+import { askToUploadMatchVideo } from '@src/features/sync/cloud/CloudVideoUploadPrompt';
 import { downloadCloudVideo } from '@src/features/sync/cloud/video-download';
 import { formatBytes } from '@src/features/sync/cloud/video-sync';
 import { cloudSyncController } from '@src/features/sync/cloud/archive-adapter';
@@ -1710,6 +1711,12 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
                   aria-expanded={isReplacingWithYoutube}
                 >
                   {t('videoReplaceWithYoutube')}
+                </button>
+              ) : null}
+              {source.kind === 'file' && !videoAnalysis.cloudCopy && cloudCopy === 'none'
+                && cloudSyncController.status.state !== 'off' && canUploadVideos() ? (
+                <button type="button" className="btn-secondary" onClick={() => void askToUploadMatchVideo(project.metadata.id, true)}>
+                  {t('videoUploadToCloud')}
                 </button>
               ) : null}
               <button type="button" className="btn-secondary" onClick={handleRemoveSource}>

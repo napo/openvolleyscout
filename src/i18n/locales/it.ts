@@ -2990,6 +2990,7 @@ export const it = {
   cloudSyncVideosUpload: "Carica {{count}} video",
   cloudSyncVideosUploadHelp: "Il caricamento va avanti finché l'app resta aperta. Se si interrompe, riparte da dove era arrivato.",
   videoOpenFromCloud: "Guarda dal cloud",
+  videoUploadToCloud: "Carica sul cloud",
   videoOpenFromCloudHint: "Questo video è nel tuo cloud: puoi guardarlo senza scaricarlo.",
   videoOpenFromCloudError: "Impossibile aprire il video dal cloud. Controlla la connessione e riprova.",
   videoDownloadFromCloud: "Scarica sul dispositivo",

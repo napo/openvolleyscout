@@ -2987,6 +2987,7 @@ export const ro = {
   cloudSyncVideosUpload: "Încarcă {{count}} videoclipuri",
   cloudSyncVideosUploadHelp: "Încărcarea continuă cât timp aplicația rămâne deschisă. Dacă se întrerupe, reia de unde a rămas.",
   videoOpenFromCloud: "Vezi din cloud",
+  videoUploadToCloud: "Încarcă în cloud",
   videoOpenFromCloudHint: "Acest videoclip este în cloud-ul tău: îl poți vedea fără să-l descarci.",
   videoOpenFromCloudError: "Videoclipul nu a putut fi deschis din cloud. Verifică conexiunea și încearcă din nou.",
   videoDownloadFromCloud: "Descarcă pe acest dispozitiv",

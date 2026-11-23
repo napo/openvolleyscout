@@ -2985,6 +2985,7 @@ export const de = {
   cloudSyncVideosUpload: "{{count}} Videos hochladen",
   cloudSyncVideosUploadHelp: "Das Hochladen läuft, solange die App geöffnet bleibt. Wird es unterbrochen, geht es dort weiter, wo es stand.",
   videoOpenFromCloud: "Aus der Cloud ansehen",
+  videoUploadToCloud: "In die Cloud hochladen",
   videoOpenFromCloudHint: "Dieses Video ist in deiner Cloud: Du kannst es ansehen, ohne es herunterzuladen.",
   videoOpenFromCloudError: "Das Video konnte nicht aus der Cloud geöffnet werden. Prüfe die Verbindung und versuche es erneut.",
   videoDownloadFromCloud: "Auf dieses Gerät herunterladen",

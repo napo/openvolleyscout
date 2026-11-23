@@ -19,7 +19,8 @@ import { createDefaultMatchVideoAnalysis, getFilePath, getVideoSourceKey } from 
 import { VideoPlayerView, resolveLocalVideoUrl, type VideoPlayerHandle } from '@src/features/analysis/video/VideoPlayerView';
 import { getSessionVideoFile, loadVideoFileHandle, rememberSessionVideoFile, saveVideoFileHandle, supportsFileSystemAccess } from '@src/features/analysis/video/file-handle-store';
 import { cloudSyncController } from '@src/features/sync/cloud/archive-adapter';
-import { findCloudVideo } from '@src/features/sync/cloud/video-upload';
+import { canUploadVideos, findCloudVideo } from '@src/features/sync/cloud/video-upload';
+import { askToUploadMatchVideo } from '@src/features/sync/cloud/CloudVideoUploadPrompt';
 import { YouTubeFramePlayer } from '@src/features/analysis/video/YouTubeFramePlayer';
 import { parseYouTubeVideoId } from '@src/features/analysis/video/youtube';
 import { useTranslation } from '@src/i18n';
@@ -996,6 +997,12 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
                   </button>
                 )
               )}
+              {source.kind === 'file' && !videoAnalysis.cloudCopy
+                && cloudSyncController.status.state !== 'off' && canUploadVideos() ? (
+                <button type="button" className="btn-secondary btn-small" onClick={() => void askToUploadMatchVideo(project.metadata.id, true)}>
+                  {t('videoUploadToCloud')}
+                </button>
+              ) : null}
               <button type="button" className="btn-secondary btn-small live-video-panel__remove" onClick={handleRemoveSource}>
                 {t('videoRemoveSource')}
               </button>

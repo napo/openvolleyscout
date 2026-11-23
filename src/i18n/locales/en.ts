@@ -2990,6 +2990,7 @@ export const en = {
   cloudSyncVideosUpload: "Upload {{count}} videos",
   cloudSyncVideosUploadHelp: "The upload goes on while the app stays open. If it stops, it resumes from where it got to.",
   videoOpenFromCloud: "Watch from the cloud",
+  videoUploadToCloud: "Upload to the cloud",
   videoOpenFromCloudHint: "This video is in your cloud: you can watch it without downloading it.",
   videoOpenFromCloudError: "Could not open the video from the cloud. Check the connection and try again.",
   videoDownloadFromCloud: "Download to this device",

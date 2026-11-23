@@ -2981,6 +2981,7 @@ export const tr = {
   cloudSyncVideosUpload: "{{count}} video yükle",
   cloudSyncVideosUploadHelp: "Yükleme, uygulama açık kaldığı sürece devam eder. Kesilirse kaldığı yerden sürer.",
   videoOpenFromCloud: "Buluttan izle",
+  videoUploadToCloud: "Buluta yükle",
   videoOpenFromCloudHint: "Bu video bulutunuzda: indirmeden izleyebilirsiniz.",
   videoOpenFromCloudError: "Video buluttan açılamadı. Bağlantıyı kontrol edip tekrar deneyin.",
   videoDownloadFromCloud: "Bu cihaza indir",

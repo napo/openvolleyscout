@@ -268,3 +268,12 @@ export async function findCloudVideo(matchId: string): Promise<{ storage: VideoS
   const file = files.reduce((best, next) => (next.size > best.size ? next : best));
   return { storage, file };
 }
+
+/** Removes the cloud copy of a deleted match's video and any unfinished upload. */
+export async function deleteCloudVideoOfMatch(matchId: string): Promise<void> {
+  writeSession(matchId, null);
+  const storage = await cloudSyncController.videoStorage();
+  if (!storage) return;
+  const files = (await storage.listVideos()).filter((file) => file.matchId === matchId);
+  for (const file of files) await storage.trashVideo(file);
+}

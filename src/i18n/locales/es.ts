@@ -2987,6 +2987,7 @@ export const es = {
   cloudSyncVideosUpload: "Subir {{count}} vídeos",
   cloudSyncVideosUploadHelp: "La subida continúa mientras la app siga abierta. Si se interrumpe, se reanuda desde donde se quedó.",
   videoOpenFromCloud: "Ver desde la nube",
+  videoUploadToCloud: "Subir a la nube",
   videoOpenFromCloudHint: "Este vídeo está en tu nube: puedes verlo sin descargarlo.",
   videoOpenFromCloudError: "No se pudo abrir el vídeo desde la nube. Comprueba la conexión e inténtalo de nuevo.",
   videoDownloadFromCloud: "Descargar en este dispositivo",

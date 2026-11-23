@@ -21,3 +21,17 @@ export function subscribeDataChanges(listener: ChangeListener): () => void {
   changeListeners.add(listener);
   return () => changeListeners.delete(listener);
 }
+
+type DeletionListener = (matchId: string) => void;
+
+const deletionListeners = new Set<DeletionListener>();
+
+/** A match deleted on this device by the user (not by cloud sync). */
+export function notifyMatchDeleted(matchId: string): void {
+  for (const listener of deletionListeners) listener(matchId);
+}
+
+export function subscribeMatchDeletions(listener: DeletionListener): () => void {
+  deletionListeners.add(listener);
+  return () => deletionListeners.delete(listener);
+}

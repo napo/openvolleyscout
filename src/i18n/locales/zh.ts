@@ -2985,6 +2985,7 @@ export const zh = {
   cloudSyncVideosUpload: "上传 {{count}} 个视频",
   cloudSyncVideosUploadHelp: "只要应用保持打开，上传就会继续。如果中断，会从中断处继续。",
   videoOpenFromCloud: "从云端观看",
+  videoUploadToCloud: "上传到云端",
   videoOpenFromCloudHint: "此视频在你的云端：无需下载即可观看。",
   videoOpenFromCloudError: "无法从云端打开视频。请检查网络后重试。",
   videoDownloadFromCloud: "下载到此设备",

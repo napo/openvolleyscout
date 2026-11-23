@@ -13,7 +13,7 @@ import {
 
 export type { MatchSummaryRecord };
 import { cloneEntity, withRepositoryError } from './shared';
-import { notifyLocalDataChanged } from '@src/features/sync/cloud/local-change-bus';
+import { notifyLocalDataChanged, notifyMatchDeleted } from '@src/features/sync/cloud/local-change-bus';
 
 const REPOSITORY_NAME = 'matchRepository';
 
@@ -77,6 +77,7 @@ export const matchRepository = {
     return withRepositoryError(REPOSITORY_NAME, 'delete match project', async () => {
       await deleteMatchProject(projectId);
       notifyLocalDataChanged();
+      notifyMatchDeleted(projectId);
     });
   },
 };
