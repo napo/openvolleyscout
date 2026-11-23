@@ -2968,6 +2968,7 @@ export const ja = {
   videoOpenFromCloud: "クラウドから視聴",
   videoUploadToCloud: "クラウドにアップロード",
   videoOpenFromCloudHint: "この動画はクラウドにあります。ダウンロードせずに視聴できます。",
+  videoCloudDownloadOnlyHint: "動画は Google ドライブにあります。ドライブはサイト外でのストリーミングを許可していません。このデバイスにダウンロードしてください（Chrome、Edge、またはデスクトップアプリ）。",
   videoOpenFromCloudError: "クラウドから動画を開けませんでした。接続を確認してもう一度お試しください。",
   videoDownloadFromCloud: "このデバイスにダウンロード",
   videoDownloadFromCloudConfirm: "動画（{{size}}）をこのデバイスにダウンロードしますか？",

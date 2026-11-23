@@ -78,7 +78,11 @@ export interface VideoStorage {
   /** Bytes the service already has for this session, or null when the session expired. */
   videoUploadOffset(session: string, size: number, knownOffset: number): Promise<number | null>;
   uploadVideoChunk(session: string, offset: number, bytes: Uint8Array, size: number): Promise<VideoChunkResult>;
+  /** False when the service only serves the file with an Authorization header (Google Drive): no streaming. */
+  readonly canStream: boolean;
   /** A link the video player can open directly (short-lived on some services). */
   videoStreamUrl(file: CloudVideoFile): Promise<string>;
+  /** The request that downloads the whole file. */
+  videoDownloadRequest(file: CloudVideoFile): Promise<{ url: string; headers?: Record<string, string> }>;
   trashVideo(file: CloudVideoFile): Promise<void>;
 }

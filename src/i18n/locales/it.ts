@@ -2992,6 +2992,7 @@ export const it = {
   videoOpenFromCloud: "Guarda dal cloud",
   videoUploadToCloud: "Carica sul cloud",
   videoOpenFromCloudHint: "Questo video è nel tuo cloud: puoi guardarlo senza scaricarlo.",
+  videoCloudDownloadOnlyHint: "Il video è nel tuo Google Drive. Drive non permette di guardarlo in streaming fuori dal suo sito: scaricalo sul dispositivo (da Chrome, Edge o dall'app per computer).",
   videoOpenFromCloudError: "Impossibile aprire il video dal cloud. Controlla la connessione e riprova.",
   videoDownloadFromCloud: "Scarica sul dispositivo",
   videoDownloadFromCloudConfirm: "Scaricare il video ({{size}}) su questo dispositivo?",

@@ -189,6 +189,12 @@ export class DropboxClient implements RemoteStorage, VideoStorage {
     return ((await (await this.rpc('get_temporary_link', { path: file.id })).json()) as { link: string }).link;
   }
 
+  readonly canStream = true;
+
+  async videoDownloadRequest(file: CloudVideoFile): Promise<{ url: string; headers?: Record<string, string> }> {
+    return { url: await this.videoStreamUrl(file) };
+  }
+
   async trashVideo(file: CloudVideoFile): Promise<void> {
     await this.rpc('delete_v2', { path: file.id });
   }

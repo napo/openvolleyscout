@@ -179,6 +179,12 @@ export class OneDriveClient implements RemoteStorage, VideoStorage {
     return item['@microsoft.graph.downloadUrl'];
   }
 
+  readonly canStream = true;
+
+  async videoDownloadRequest(file: CloudVideoFile): Promise<{ url: string; headers?: Record<string, string> }> {
+    return { url: await this.videoStreamUrl(file) };
+  }
+
   async trashVideo(file: CloudVideoFile): Promise<void> {
     await this.request(`${GRAPH}/items/${file.id}`, { method: 'DELETE' });
   }

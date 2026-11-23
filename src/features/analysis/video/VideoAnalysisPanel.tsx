@@ -75,7 +75,7 @@ import {
   supportsFileSystemAccess,
 } from './file-handle-store';
 import { resolveRemoteVideoSource, remoteVideoUrlErrorKey, type RemoteVideoUrlError } from './remote-video-url';
-import { canUploadVideos, findCloudVideo } from '@src/features/sync/cloud/video-upload';
+import { canUploadVideos, checkReplacedVideo, findCloudVideo } from '@src/features/sync/cloud/video-upload';
 import { askToUploadMatchVideo } from '@src/features/sync/cloud/CloudVideoUploadPrompt';
 import { downloadCloudVideo } from '@src/features/sync/cloud/video-download';
 import { formatBytes } from '@src/features/sync/cloud/video-sync';
@@ -146,7 +146,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const [videoError, setVideoError] = useState(false);
   useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
   const [storedHandle, setStoredHandle] = useState<FileSystemFileHandle | null>(null);
-  const [cloudCopy, setCloudCopy] = useState<'none' | 'available' | 'opening' | 'streaming' | 'failed'>('none');
+  const [cloudCopy, setCloudCopy] = useState<'none' | 'available' | 'download-only' | 'opening' | 'streaming' | 'failed'>('none');
   const [cloudDownload, setCloudDownload] = useState<{ received: number; size: number } | null>(null);
   const [cloudDownloadMessage, setCloudDownloadMessage] = useState<'browser' | 'failed' | null>(null);
   const streamingFromCloudRef = useRef(false);
@@ -329,10 +329,10 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
       // Re-linking the same video: keep existing sync points.
       return;
     }
-    persistVideoAnalysis({
+    void persistVideoAnalysis({
       source: { kind: 'file', path: candidatePath, fileName: file.name },
       syncPoints: source?.kind === 'file' || keepSync ? videoAnalysis.syncPoints : [],
-    });
+    }).then(() => checkReplacedVideo(project.metadata.id, file.size));
     if (keepSync) startAligning();
   };
 
@@ -354,10 +354,10 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
       // Re-linking the same video: keep existing sync points.
       return;
     }
-    persistVideoAnalysis({
+    void persistVideoAnalysis({
       source: { kind: 'file', path, fileName },
       syncPoints: source?.kind === 'file' || keepSync ? videoAnalysis.syncPoints : [],
-    });
+    }).then(() => checkReplacedVideo(project.metadata.id, null, path));
     if (keepSync) startAligning();
   };
 
@@ -407,7 +407,10 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     if (source?.kind !== 'file' || cloudSyncController.status.state === 'off') return undefined;
     let cancelled = false;
     void findCloudVideo(project.metadata.id)
-      .then((found) => { if (!cancelled && found) setCloudCopy('available'); })
+      .then((found) => {
+        if (cancelled || !found) return;
+        setCloudCopy(found.storage.canStream ? 'available' : 'download-only');
+      })
       .catch(() => undefined);
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -448,9 +451,9 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
       const size = found.file.size;
       if (!(await confirmAction(t('videoDownloadFromCloudConfirm', { size: formatBytes(size, locale) })))) return;
       const fileName = (source?.kind === 'file' && source.fileName) || found.file.name.replace(/^[^_]*__/, '');
-      const url = await found.storage.videoStreamUrl(found.file);
+      const request = await found.storage.videoDownloadRequest(found.file);
       setCloudDownload({ received: 0, size });
-      const result = await downloadCloudVideo(url, fileName, (received) => setCloudDownload({ received, size }));
+      const result = await downloadCloudVideo(request, fileName, (received) => setCloudDownload({ received, size }));
       setCloudDownload(null);
       if (result.kind === 'path') {
         streamingFromCloudRef.current = false;
@@ -1036,9 +1039,11 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
       <div className="video-analysis__missing-actions">
         {cloudCopy !== 'none' ? (
           <>
-            <button type="button" className="btn-primary" disabled={cloudCopy === 'opening'} onClick={() => void openCloudCopy()}>
-              {t('videoOpenFromCloud')}
-            </button>
+            {cloudCopy !== 'download-only' ? (
+              <button type="button" className="btn-primary" disabled={cloudCopy === 'opening'} onClick={() => void openCloudCopy()}>
+                {t('videoOpenFromCloud')}
+              </button>
+            ) : null}
             <button type="button" className="btn-secondary" disabled={cloudDownload !== null} onClick={() => void downloadCloudCopy()}>
               {t('videoDownloadFromCloud')}
             </button>
@@ -1058,6 +1063,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
       </div>
       {storedHandle ? <p className="video-analysis__hint">{t('videoReopenStoredHint')}</p> : null}
       {cloudCopy === 'available' ? <p className="video-analysis__hint">{t('videoOpenFromCloudHint')}</p> : null}
+      {cloudCopy === 'download-only' ? <p className="video-analysis__hint">{t('videoCloudDownloadOnlyHint')}</p> : null}
       {cloudCopy === 'failed' ? <p className="video-analysis__error">{t('videoOpenFromCloudError')}</p> : null}
       <p className="video-analysis__notice">{t('videoSourceNotice')}</p>
     </div>

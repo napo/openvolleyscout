@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createDefaultMatchVideoAnalysis, type MatchVideoSource } from '@src/domain/video/types';
 import { rememberSessionVideoFile, saveVideoFileHandle } from '@src/features/analysis/video/file-handle-store';
+import { checkReplacedVideo } from '@src/features/sync/cloud/video-upload';
 import { SetupVideoField, type SetupVideoFile } from '../components/SetupVideoField';
 import { remoteVideoUrlErrorKey, resolveRemoteVideoSource } from '@src/features/analysis/video/remote-video-url';
 import { useNavigate } from 'react-router-dom';
@@ -686,6 +687,7 @@ export function MatchSetupPage() {
       applySetupVideo(project, formData.videoUrl, videoFile);
       if (videoFile?.handle) void saveVideoFileHandle(project.metadata.id, videoFile.handle).catch(() => undefined);
       if (videoFile?.file) rememberSessionVideoFile(project.metadata.id, videoFile.file);
+      const replacedVideo = videoFile ? { size: videoFile.size ?? null, path: videoFile.path } : null;
       project.updatedAt = Date.now();
 
       // An opponent left unnamed is "Opponent", never saved in the team archive.
@@ -718,6 +720,7 @@ export function MatchSetupPage() {
         : await matchRepository.create(normalizedProject);
 
       setActiveProject(persistedProject);
+      if (replacedVideo) void checkReplacedVideo(persistedProject.metadata.id, replacedVideo.size, replacedVideo.path);
       // Saving changes to an existing match (a date, a venue) goes back to the match list.
       if (options?.stay) navigate('/load-data');
       else navigate('/scouting', scoutingState ? { state: scoutingState } : undefined);

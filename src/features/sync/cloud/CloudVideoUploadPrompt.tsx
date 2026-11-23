@@ -41,6 +41,8 @@ function dismissForever(matchId: string): void {
 
 interface Question {
   video: LocalVideoMatch;
+  /** The file the user picked in the question, used for the upload. */
+  picked?: File;
   size: number | null;
   free: number | null;
   manual: boolean;
@@ -130,7 +132,7 @@ export function CloudVideoUploadPrompt() {
     setQuestion(null);
     const measured = typeof size === 'number' ? size : await measureVideoFile(video, true).catch(() => null);
     if (typeof measured !== 'number' || measured === 0) return;
-    const read = await createChunkReader(video).catch(() => null);
+    const read = await createChunkReader(video, question.picked).catch(() => null);
     if (read) videoUploadQueue.enqueue([{ video, size: measured, read }]);
   };
 
@@ -175,7 +177,7 @@ export function CloudVideoUploadPrompt() {
                 event.target.value = '';
                 if (!picked) return;
                 rememberSessionVideoFile(video.matchId, picked);
-                setQuestion({ ...question, video: { ...video, fileName: picked.name }, size: picked.size });
+                setQuestion({ ...question, video: { ...video, fileName: picked.name }, size: picked.size, picked });
               }}
             />
           </p>

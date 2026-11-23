@@ -206,9 +206,15 @@ export class DriveClient implements RemoteStorage, VideoStorage {
     };
   }
 
-  /** Drive needs the token on the request; the player cannot send headers, so it goes in the link (valid about an hour). */
-  async videoStreamUrl(file: CloudVideoFile): Promise<string> {
-    return `${API}/${file.id}?${new URLSearchParams({ alt: 'media', access_token: this.accessToken })}`;
+  /** Drive serves file contents only with the token in an Authorization header, which a video player cannot send. */
+  readonly canStream = false;
+
+  async videoStreamUrl(): Promise<string> {
+    throw new StorageError(0, 'streaming not supported');
+  }
+
+  async videoDownloadRequest(file: CloudVideoFile): Promise<{ url: string; headers?: Record<string, string> }> {
+    return { url: `${API}/${file.id}?alt=media`, headers: { Authorization: `Bearer ${this.accessToken}` } };
   }
 
   trashVideo(file: CloudVideoFile): Promise<void> {

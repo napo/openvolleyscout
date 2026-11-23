@@ -2983,6 +2983,7 @@ export const tr = {
   videoOpenFromCloud: "Buluttan izle",
   videoUploadToCloud: "Buluta yükle",
   videoOpenFromCloudHint: "Bu video bulutunuzda: indirmeden izleyebilirsiniz.",
+  videoCloudDownloadOnlyHint: "Video Google Drive'ınızda. Drive kendi sitesi dışında akışla izlemeye izin vermiyor: videoyu bu cihaza indirin (Chrome, Edge veya masaüstü uygulamasıyla).",
   videoOpenFromCloudError: "Video buluttan açılamadı. Bağlantıyı kontrol edip tekrar deneyin.",
   videoDownloadFromCloud: "Bu cihaza indir",
   videoDownloadFromCloudConfirm: "Video ({{size}}) bu cihaza indirilsin mi?",

@@ -72,15 +72,15 @@ export async function createChunkReader(video: LocalVideoMatch, chosen?: File): 
   if (chosen) {
     return async (offset, length) => new Uint8Array(await chosen.slice(offset, offset + length).arrayBuffer());
   }
+  const sessionFile = getSessionVideoFile(video.matchId, video.fileName);
+  if (sessionFile) {
+    return async (offset, length) => new Uint8Array(await sessionFile.slice(offset, offset + length).arrayBuffer());
+  }
   if (isTauriRuntime() && syncPlatform() === 'desktop') {
     const { invoke } = await import('@tauri-apps/api/core');
     return async (offset, length) => new Uint8Array(
       await invoke<ArrayBuffer>('read_video_chunk', { path: video.path, offset, length }),
     );
-  }
-  const sessionFile = getSessionVideoFile(video.matchId, video.fileName);
-  if (sessionFile) {
-    return async (offset, length) => new Uint8Array(await sessionFile.slice(offset, offset + length).arrayBuffer());
   }
   const handle = await loadVideoFileHandle(video.matchId).catch(() => null);
   if (!handle || (await handle.queryPermission?.({ mode: 'read' })) !== 'granted') return null;
@@ -121,8 +121,27 @@ export async function uploadOneVideo(
   writeSession(video.matchId, { provider, session, offset, size });
   onProgress(offset);
 
+  // The service already has every byte (the last answer was lost): find the file.
+  const finishIfComplete = async (): Promise<CloudVideoFile | null> => {
+    if (offset < size) return null;
+    const files = await storage.listVideos();
+    const file = files.find((entry) => entry.matchId === video.matchId && entry.size === size)
+      ?? files.find((entry) => entry.matchId === video.matchId);
+    if (!file) return null;
+    writeSession(video.matchId, null);
+    onProgress(size);
+    return file;
+  };
+
   let failures = 0;
   while (!shouldStop()) {
+    const complete = await finishIfComplete();
+    if (complete) return complete;
+    if (offset >= size) {
+      // Every byte sent but no file: the session is unusable, start again next time.
+      writeSession(video.matchId, null);
+      throw new Error('upload: no file after the last byte');
+    }
     try {
       const bytes = await read(offset, Math.min(VIDEO_CHUNK_BYTES, size - offset));
       const result = await storage.uploadVideoChunk(session, offset, bytes, size);
@@ -137,7 +156,11 @@ export async function uploadOneVideo(
       onProgress(offset);
     } catch (error) {
       failures += 1;
-      if (failures > RETRIES) throw error;
+      if (failures > RETRIES) {
+        // A session that keeps failing (expired, unknown) must not be resumed again.
+        writeSession(video.matchId, null);
+        throw error;
+      }
       await new Promise((resolve) => setTimeout(resolve, 2000 * failures));
       const confirmed = await storage.videoUploadOffset(session, size, offset).catch(() => offset);
       if (confirmed === null) throw error;
@@ -166,12 +189,53 @@ export async function recordCloudCopy(matchId: string, provider: string, file: C
   if (useAppStore.getState().activeProject?.metadata.id === matchId) useAppStore.getState().setActiveProject(saved);
 }
 
+/** The video of a match is no longer in the cloud (removed, or replaced by another file). */
+export async function clearCloudCopy(matchId: string): Promise<void> {
+  const store = useAppStore.getState();
+  const open = store.activeProject?.metadata.id === matchId ? store.activeProject : null;
+  const project = open ?? await matchRepository.getById(matchId);
+  if (!project?.videoAnalysis?.cloudCopy) return;
+  const { cloudCopy: _removed, ...videoAnalysis } = project.videoAnalysis;
+  const saved = await matchRepository.update({
+    ...project,
+    videoAnalysis: { ...videoAnalysis, updatedAt: Date.now() },
+    updatedAt: Date.now(),
+  });
+  if (useAppStore.getState().activeProject?.metadata.id === matchId) useAppStore.getState().setActiveProject(saved);
+}
+
+/**
+ * The match now points to another local file. If its size differs from the
+ * video in the cloud, it is a different video: the cloud copy would play with
+ * the new sync points, so it is removed and the match no longer says "in the
+ * cloud". Same size (a moved or renamed copy, or the downloaded copy): kept.
+ */
+export async function checkReplacedVideo(matchId: string, newSize?: number | null, newPath?: string): Promise<void> {
+  try {
+    let size = newSize ?? null;
+    if (size === null && newPath && isTauriRuntime() && syncPlatform() === 'desktop') {
+      const { invoke } = await import('@tauri-apps/api/core');
+      size = await invoke<number | null>('video_file_size', { path: newPath }).catch(() => null);
+    }
+    if (size === null) return;
+    const store = useAppStore.getState();
+    const project = store.activeProject?.metadata.id === matchId ? store.activeProject : await matchRepository.getById(matchId);
+    const cloudCopy = project?.videoAnalysis?.cloudCopy;
+    if (!cloudCopy || cloudCopy.size === size) return;
+    await deleteCloudVideoOfMatch(matchId);
+    await clearCloudCopy(matchId);
+  } catch (error) {
+    console.warn('Could not check the replaced video against the cloud copy', error);
+  }
+}
+
 class VideoUploadQueue {
   private states = new Map<string, VideoUploadState>();
   private readonly listeners = new Set<Listener>();
   private queue: VideoUploadJob[] = [];
   private running = false;
-  private stopRequested = false;
+  /** Bumped by Stop: a job started before it stops after its chunk. */
+  private generation = 0;
 
   get current(): ReadonlyMap<string, VideoUploadState> {
     return this.states;
@@ -186,9 +250,20 @@ class VideoUploadQueue {
     return () => this.listeners.delete(listener);
   }
 
+  private emit() {
+    for (const listener of this.listeners) listener(this.states);
+  }
+
   private set(matchId: string, state: VideoUploadState) {
     this.states = new Map(this.states).set(matchId, state);
-    for (const listener of this.listeners) listener(this.states);
+    this.emit();
+  }
+
+  private remove(matchIds: readonly string[]) {
+    const next = new Map(this.states);
+    for (const matchId of matchIds) next.delete(matchId);
+    this.states = next;
+    this.emit();
   }
 
   /** Adds videos to the queue and starts sending them if it is not already. */
@@ -204,23 +279,22 @@ class VideoUploadQueue {
 
   /** Stops after the chunk being sent; what was sent is kept for the next start. */
   stop(): void {
-    this.stopRequested = true;
-    for (const job of this.queue) this.states.delete(job.video.matchId);
+    this.generation += 1;
+    const dropped = this.queue.map((job) => job.video.matchId);
     this.queue = [];
-    for (const listener of this.listeners) listener(this.states);
+    this.remove(dropped);
   }
 
   private async run(): Promise<void> {
     if (this.running) return;
     this.running = true;
-    this.stopRequested = false;
     try {
-      while (this.queue.length > 0 && !this.stopRequested) {
-        const job = this.queue[0];
+      while (this.queue.length > 0) {
+        const job = this.queue.shift()!;
+        const generation = this.generation;
         const storage = await cloudSyncController.videoStorage();
         if (!storage) {
           this.set(job.video.matchId, { status: 'error', sent: 0, size: job.size });
-          this.queue.shift();
           continue;
         }
         const provider = cloudSyncController.status.provider;
@@ -231,22 +305,22 @@ class VideoUploadQueue {
             provider,
             job,
             (sent) => this.set(job.video.matchId, { status: 'uploading', sent, size: job.size }),
-            () => this.stopRequested,
+            () => this.generation !== generation,
           );
           if (file) {
             await recordCloudCopy(job.video.matchId, provider, file).catch((error) => console.warn('Could not mark the video as uploaded', error));
             this.set(job.video.matchId, { status: 'done', sent: job.size, size: job.size });
+          } else {
+            this.remove([job.video.matchId]);
           }
-          else this.states.delete(job.video.matchId);
         } catch (error) {
           console.warn('Could not upload the video', error);
           this.set(job.video.matchId, { status: 'error', sent: 0, size: job.size });
         }
-        this.queue.shift();
       }
     } finally {
       this.running = false;
-      for (const listener of this.listeners) listener(this.states);
+      this.emit();
     }
   }
 }

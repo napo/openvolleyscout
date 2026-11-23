@@ -14,7 +14,7 @@ import { cloudSyncController } from './archive-adapter';
 import { SERVICE_NAME_KEY } from './CloudSyncCard';
 import { useCloudSyncStatus } from './controller';
 import type { CloudVideoFile, SpaceUsage } from './storage';
-import { canUploadVideos, createChunkReader, useVideoUploads, videoUploadQueue, type VideoUploadJob } from './video-upload';
+import { canUploadVideos, clearCloudCopy, createChunkReader, useVideoUploads, videoUploadQueue, type VideoUploadJob } from './video-upload';
 import {
   estimateVideoSpace,
   formatBytes,
@@ -132,6 +132,7 @@ export function CloudSyncVideoSettings() {
     if (!file || !(await confirmAction(t('cloudSyncVideosRemoveConfirm', { name: video.fileName })))) return;
     const storage = await cloudSyncController.videoStorage();
     await storage?.trashVideo(file).catch(() => undefined);
+    await clearCloudCopy(video.matchId).catch(() => undefined);
     setRefresh((value) => value + 1);
   };
 

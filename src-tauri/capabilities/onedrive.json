@@ -11,7 +11,8 @@
         { "url": "https://graph.microsoft.com/*" },
         { "url": "https://*.1drv.com/*" },
         { "url": "https://*.microsoftpersonalcontent.com/*" },
-        { "url": "https://*.sharepoint.com/*" }
+        { "url": "https://*.sharepoint.com/*" },
+        { "url": "https://api.onedrive.com/*" }
       ]
     }
   ]

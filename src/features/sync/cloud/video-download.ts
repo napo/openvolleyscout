@@ -38,10 +38,11 @@ async function readStream(response: Response, onChunk: (bytes: Uint8Array) => Pr
 }
 
 export async function downloadCloudVideo(
-  url: string,
+  request: string | { url: string; headers?: Record<string, string> },
   fileName: string,
   onProgress: (received: number) => void,
 ): Promise<VideoDownloadResult> {
+  const { url, headers } = typeof request === 'string' ? { url: request, headers: undefined } : request;
   if (isTauriRuntime() && syncPlatform() === 'desktop') {
     const [{ save }, { writeFile }] = await Promise.all([import('@tauri-apps/plugin-dialog'), import('@tauri-apps/plugin-fs')]);
     const path = await save({ defaultPath: fileName });
@@ -62,7 +63,7 @@ export async function downloadCloudVideo(
       pending = [];
       pendingBytes = 0;
     };
-    await readStream(await fetchFn(url), async (bytes) => {
+    await readStream(await fetchFn(url, headers ? { headers } : undefined), async (bytes) => {
       pending.push(bytes);
       pendingBytes += bytes.length;
       if (pendingBytes >= WRITE_BYTES) await flush();
@@ -82,7 +83,7 @@ export async function downloadCloudVideo(
     const writable = await handle.createWritable();
     const writer = writable.getWriter();
     try {
-      await readStream(await fetch(url), (bytes) => writer.write(bytes), onProgress);
+      await readStream(await fetch(url, headers ? { headers } : undefined), (bytes) => writer.write(bytes), onProgress);
       await writer.close();
     } catch (error) {
       await writer.abort().catch(() => undefined);
@@ -91,6 +92,8 @@ export async function downloadCloudVideo(
     return { kind: 'handle', handle };
   }
 
+  // A plain browser download cannot send the Authorization header (Google Drive).
+  if (headers) throw new Error('download: needs a browser that can save files (Chrome, Edge)');
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;

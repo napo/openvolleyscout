@@ -31,7 +31,9 @@ function fakeStorage(failAt: number | null = null) {
       if (end < size) return { done: false, offset: end };
       return { done: true, file: { id: 'f1', matchId: 'm1', name: cloudVideoName('m1', 'match.mp4'), size } as CloudVideoFile };
     },
+    canStream: true,
     videoStreamUrl: async () => '',
+    videoDownloadRequest: async () => ({ url: '' }),
     trashVideo: async () => undefined,
   };
   return storage;
@@ -100,5 +102,37 @@ describe('chunk answers of the services', () => {
     expect(await dropbox.uploadVideoChunk(session, 0, new Uint8Array(10), 30)).toEqual({ done: false, offset: 4 });
     expect((await dropbox.uploadVideoChunk(session, 10, new Uint8Array(10), 20)).done).toBe(true);
     expect(fetchFn.mock.calls[1][0]).toContain('upload_session/finish');
+  });
+});
+
+describe('review fixes', () => {
+  it('finishes when the cloud already has every byte (lost last answer)', async () => {
+    const storage = fakeStorage();
+    const done = { id: 'f9', matchId: 'm1', name: 'm1__match.mp4', size: SIZE };
+    storage.listVideos = async () => [done];
+    storage.videoUploadOffset = async () => SIZE;
+    localStorage.setItem('openvolleyscout.sync.videoUploads', JSON.stringify({ m1: { provider: 'google-drive', session: 's1', offset: SIZE, size: SIZE } }));
+    const file = await uploadOneVideo(storage, 'google-drive', { video, size: SIZE, read }, () => undefined);
+    expect(file).toEqual(done);
+    expect(storage.starts()).toBe(0);
+  });
+
+  it('forgets a session that keeps failing', async () => {
+    vi.useFakeTimers();
+    const storage = fakeStorage();
+    storage.uploadVideoChunk = async () => { throw new Error('gone'); };
+    storage.videoUploadOffset = async (_s, _size, known) => known;
+    const promise = uploadOneVideo(storage, 'dropbox', { video, size: SIZE, read }, () => undefined).catch((error) => error);
+    await vi.runAllTimersAsync();
+    expect(await promise).toBeInstanceOf(Error);
+    expect(localStorage.getItem('openvolleyscout.sync.videoUploads')).toBe('{}');
+    vi.useRealTimers();
+  });
+
+  it('Google Drive downloads with the token in the Authorization header and never streams', async () => {
+    const drive = new DriveClient('tok', vi.fn());
+    expect(drive.canStream).toBe(false);
+    expect(await drive.videoDownloadRequest({ id: 'g1', matchId: 'm1', name: 'x', size: 1 }))
+      .toEqual({ url: 'https://www.googleapis.com/drive/v3/files/g1?alt=media', headers: { Authorization: 'Bearer tok' } });
   });
 });

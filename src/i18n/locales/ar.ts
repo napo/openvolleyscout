@@ -2989,6 +2989,7 @@ export const ar = {
   videoOpenFromCloud: "المشاهدة من السحابة",
   videoUploadToCloud: "الرفع إلى السحابة",
   videoOpenFromCloudHint: "هذا الفيديو موجود في سحابتك: يمكنك مشاهدته دون تنزيله.",
+  videoCloudDownloadOnlyHint: "الفيديو موجود في Google Drive. لا يسمح Drive بمشاهدته عبر البث خارج موقعه: نزّله على هذا الجهاز (من Chrome أو Edge أو تطبيق الكمبيوتر).",
   videoOpenFromCloudError: "تعذر فتح الفيديو من السحابة. تحقق من الاتصال وحاول مرة أخرى.",
   videoDownloadFromCloud: "التنزيل على هذا الجهاز",
   videoDownloadFromCloudConfirm: "هل تريد تنزيل الفيديو ({{size}}) على هذا الجهاز؟",

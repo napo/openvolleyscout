@@ -8,7 +8,8 @@
       "identifier": "http:default",
       "allow": [
         { "url": "https://api.dropboxapi.com/*" },
-        { "url": "https://content.dropboxapi.com/*" }
+        { "url": "https://content.dropboxapi.com/*" },
+        { "url": "https://*.dropboxusercontent.com/*" }
       ]
     }
   ]
