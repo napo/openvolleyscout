@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.42.0 - 2026-11-23
+
+### Added
+- The match video can be set when you create a match, in the quick and in the full setup: paste a link (YouTube, Dropbox, OneDrive, Google Drive) or pick a file on your computer, also by dropping it on the field. It stays optional and can still be added later, while scouting or in Video analysis.
+- Match videos in your own cloud. If cloud synchronisation is on, the app can upload the video file of a match to your Google Drive, OneDrive or Dropbox. It tells you how big the video is and how much free space you have. It asks when you start scouting a match and when you leave it, and there is an Upload to the cloud button next to the video. Your other devices then play the video from the cloud without downloading it, and Download to this device saves a copy when you want one.
+- In Settings, under Cloud synchronisation, the new Videos section chooses on each device whether to include the videos (on for computers, off for phones and tablets, which never upload), lists the matches with a video file and their sizes, and shows the progress. An interrupted upload continues where it stopped.
+- Deleting a match also removes its video from your cloud.
+- Video analysis now also opens OneDrive and Google Drive share links. Google Drive sometimes refuses to play large files outside its own site: in that case download the video and open it as a file.
+- The Data list has a Video column that shows whether a match has a video (file, YouTube, link or camera, and whether it is in the cloud). The Video analysis tab of a match shows a dot when a video is linked.
+- In Systems, the reception editor warns when your saved base reception system differs from the app's one, lists the rotations, and Restore the base system puts the app's positions back (name and team stay).
+- While scouting, a small note on the court tells you when the receiving team's reception system has irregular positions in the current rotation, so you can check it in Systems. You can close it.
+
+### Changed
+- Team data study selects the team's match by itself when it is the only one.
+- An exported match file (.ovs) now also carries the reception and defence systems used for the two teams, so a match sent with a problem report can be understood straight away. Importing a match never changes your systems.
+- The first time you open this version, the match list is rebuilt once to show the new Video column: with many matches it can take a few seconds. Your matches are not changed.
+
+### Fixed
+- Court input with the vertical court: Hard, Placed and Tip, and the number of blockers, were cut off the toolbar since 0.40.1. They are back in a row under the evaluations while Attack is selected.
+- Live scouting showed a black video when the video file had been chosen in the match setup in the browser. It now reopens the file (Chrome and Edge may ask your permission once with Reopen video). In Firefox and Safari the file plays until you close the page; after that, use Relink and the sync points stay.
+
 ## 0.41.1 - 2026-11-23
 
 ### Fixed
