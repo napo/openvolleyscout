@@ -18,8 +18,8 @@ describe('stats-share-link', () => {
   };
 
   it('round-trips a shared match statistics payload through URL encoding', () => {
-    const url = buildSharedStatsUrl('https://napo.github.io/openvolleyscout/', sample);
-    expect(url.startsWith('https://napo.github.io/openvolleyscout/stats-viewer/#1.')).toBe(true);
+    const url = buildSharedStatsUrl('https://scout.volleyserve.it/', sample);
+    expect(url.startsWith('https://scout.volleyserve.it/stats-viewer/#1.')).toBe(true);
     const payload = url.split('/stats-viewer/#')[1] ?? '';
     expect(decodeSharedStats(payload)).toEqual(sample);
   });
@@ -61,8 +61,8 @@ describe('stats-share-link', () => {
         { kind: 'image', dataUrl: 'data:image/png;base64,iVBORw0KGgo=', alt: 'Heatmap' },
       ],
     };
-    const url = buildSharedStatsUrl('https://napo.github.io/openvolleyscout/', v2);
-    expect(url.startsWith('https://napo.github.io/openvolleyscout/stats-viewer/#2.')).toBe(true);
+    const url = buildSharedStatsUrl('https://scout.volleyserve.it/', v2);
+    expect(url.startsWith('https://scout.volleyserve.it/stats-viewer/#2.')).toBe(true);
     const payload = url.split('/stats-viewer/#')[1] ?? '';
     expect(decodeSharedStats(payload)).toEqual(v2);
 

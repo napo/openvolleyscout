@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<!--
   Social preview (1280 × 640) for the site and the repository.
   Rendered to public/social-preview.png: see README.md next to this file.
 -->
@@ -20,28 +23,30 @@
         background: linear-gradient(135deg, #f8fafc 0%, #e8f0fb 100%);
         color: #0b1b33;
       }
-      .band { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: #002554; }
-      .band::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: #1a73e8; }
+      .band { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: #0b3d91; }
+      .band::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: #2ec4e6; }
       .cover {
         position: absolute;
         left: 56px;
         top: 40px;
         width: 330px;
-        filter: drop-shadow(0 14px 30px rgba(0, 37, 84, 0.22));
+        filter: drop-shadow(0 14px 30px rgba(11, 61, 145, 0.22));
       }
-      .text { position: absolute; left: 60px; top: 382px; width: 560px; }
+      .text { position: absolute; left: 60px; top: 366px; width: 560px; }
       p { margin: 0; font-size: 26px; line-height: 1.4; font-weight: 700; color: #1f2937; }
       .chips { display: flex; gap: 12px; margin-top: 26px; }
-      .chip { padding: 9px 18px; border-radius: 999px; background: #002554; color: #fff; font-size: 18px; font-weight: 700; }
+      .chip { padding: 9px 18px; border-radius: 999px; background: #0b3d91; color: #fff; font-size: 18px; font-weight: 700; }
+      .site { margin-top: 22px; font-size: 22px; font-weight: 700; color: #0b3d91; }
+      .site::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 10px; border-radius: 50%; background: #2ec4e6; vertical-align: middle; }
       .shot {
         position: absolute;
         left: 640px;
         top: 80px;
         width: 760px;
         border-radius: 14px;
-        box-shadow: 0 24px 60px rgba(0, 37, 84, 0.28);
+        box-shadow: 0 24px 60px rgba(11, 61, 145, 0.28);
         transform: rotate(-3deg);
-        border: 1px solid rgba(0, 37, 84, 0.12);
+        border: 1px solid rgba(11, 61, 145, 0.12);
       }
     </style>
   </head>
@@ -55,6 +60,7 @@
         <span class="chip">Statistics</span>
         <span class="chip">Video</span>
       </div>
+      <div class="site">scout.volleyserve.it</div>
     </div>
     <img class="shot" src="og-app.png" alt="" />
   </body>

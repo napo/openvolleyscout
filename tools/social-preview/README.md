@@ -1,20 +1,23 @@
-# Social preview
+# Social previews
 
-`public/social-preview.png` (1280 × 640) is the image shown when the site or
-the repository is shared. It is rendered from `social-preview.html` at
-1280 × 640, with these files copied next to it:
+Images shown when a link is shared (1280 × 640), rendered from HTML:
 
-- `og-cover.png`: `src/assets/openvolleyscout-logo.png` (the cover image);
-- `og-app.png`: a 2× screenshot of live scouting (Court input, horizontal
-  court, English), cropped to the court and the toolbar;
-- `Ubuntu-Regular.ttf` and `Ubuntu-Bold.ttf` from `src/assets/fonts/ubuntu`.
+- `social-preview.html` -> `public/social-preview.png`: the site, the repository
+  and tutorial links without their own image;
+- `social-preview-stats.html` -> `public/social-preview-stats.png`: shared
+  statistics links (`stats-viewer/`).
 
-Then:
+Both use the brand colours of the logo (`#0b3d91`, `#2ec4e6`) and show the
+address `scout.volleyserve.it`. Render them with:
 
 ```
-node tools/social-preview/render.mjs /abs/path/social-preview.html public/social-preview.png
+tools/social-preview/build.sh
 ```
 
-(`CHROME=/path/to/chrome` to use a specific browser.)
+(`CHROME=/path/to/chrome` to use a specific browser.) The script copies next
+to the pages the Ubuntu fonts, the logo (`og-cover.png`), the app icon
+(`og-icon.png`), the live-scouting tutorial screenshot `court-05.png`
+(`og-app.png`) and `og-stats.png` (the Player performance card of the demo
+match, kept in this folder).
 
-On GitHub the same image is set by hand in *Settings → General → Social preview*.
+On GitHub the site image is set by hand in *Settings → General → Social preview*.

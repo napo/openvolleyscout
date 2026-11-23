@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom';
 import { AppNavigation } from '../components/AppNavigation';
 import { UpdateChecker } from '../components/UpdateChecker';
 import { PwaUpdateBanner } from '../components/PwaUpdateBanner';
-import { DomainMoveNotice } from '../components/DomainMoveNotice';
 
 export function StandardAppShell({ children }: { children?: ReactNode }) {
   return (
@@ -11,7 +10,6 @@ export function StandardAppShell({ children }: { children?: ReactNode }) {
       <UpdateChecker />
       <PwaUpdateBanner />
       <AppNavigation />
-      <DomainMoveNotice />
       <main className="standard-app-shell__content">
         {children ?? <Outlet />}
       </main>

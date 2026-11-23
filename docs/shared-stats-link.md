@@ -159,7 +159,7 @@ const snapshot: SharedMatchStatsV2 = {
 2. Deflate (level 9) + base64url + prefix `2.`:
 
 ```text
-https://napo.github.io/openvolleyscout/stats-viewer/#2.<deflated-base64url-payload>
+https://scout.volleyserve.it/stats-viewer/#2.<deflated-base64url-payload>
 ```
 
 3. Opening that URL serves `stats-viewer/index.html` (showing the `social-preview-stats.png` card in chat apps) and redirects browsers to `#/stats-viewer/2.<deflated-base64url-payload>`, where `SharedStatsViewerPage` renders the "Side-out study" badge, heading, and responsive HTML table.

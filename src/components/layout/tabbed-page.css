@@ -7,8 +7,7 @@
     overflow: hidden;
 }
 
-.standard-app-shell:has(.tabbed-page) > .app-header,
-.standard-app-shell:has(.tabbed-page) > .domain-move-notice {
+.standard-app-shell:has(.tabbed-page) > .app-header {
     flex-shrink: 0;
 }
 

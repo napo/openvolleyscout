@@ -55,9 +55,9 @@ function statsViewerPreviewPage(): Plugin {
 }
 
 export default defineConfig({
-  // Web base path: '/openvolleyscout/' on napo.github.io until the move; set OVS_WEB_BASE=/
+  // Web base path: the app is served at the root of https://scout.volleyserve.it (OVS_WEB_BASE overrides it)
   // (or change the default) when the app is served from the root of its own domain.
-  base: isTauri ? './' : (process.env.OVS_WEB_BASE ?? '/openvolleyscout/'),
+  base: isTauri ? './' : (process.env.OVS_WEB_BASE ?? '/'),
   plugins: [
     react(),
     // Web build only: installable on tablet/phone home screens and usable
@@ -93,7 +93,7 @@ export default defineConfig({
               // reports: fetched on first use, then kept for offline use.
               // The social preview is only for shared links, never needed offline.
               // Tutorial screenshots load when a tutorial is opened, not on install.
-              globIgnores: ['**/NotoSans*.ttf', '**/social-preview.png', '**/social-preview-stats.png', '**/tutorials/**'],
+              globIgnores: ['**/NotoSans*.ttf', '**/social-preview.png', '**/social-preview-stats.png', '**/tutorials/**', '**/oauth-callback.html'],
               runtimeCaching: [
                 {
                   urlPattern: /\/NotoSans[^/]*\.ttf$/,
@@ -104,8 +104,8 @@ export default defineConfig({
               // The main bundle is a few MB; the default 2 MiB limit would skip it.
               maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
               navigateFallback: 'index.html',
-              // Shared tutorial links have their own pages (they redirect into the app).
-              navigateFallbackDenylist: [/\/tutorial\//, /\/stats-viewer\//],
+              // Shared tutorial links, OAuth callback and privacy policy have their own pages (must not fall back to index.html).
+              navigateFallbackDenylist: [/\/tutorial\//, /\/stats-viewer\//, /\/oauth-callback\.html/, /\/privacy\.html/],
             },
           }),
         ]),

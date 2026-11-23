@@ -1,0 +1,61 @@
+<!doctype html>
+<!--
+  SPDX-License-Identifier: AGPL-3.0-or-later
+  Social preview (1280 × 640) of shared statistics links (stats-viewer page).
+  Rendered to public/social-preview-stats.png: see README.md next to this file.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face { font-family: 'Ubuntu'; font-weight: 400; src: url('Ubuntu-Regular.ttf'); }
+      @font-face { font-family: 'Ubuntu'; font-weight: 700; src: url('Ubuntu-Bold.ttf'); }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body {
+        width: 1280px;
+        height: 640px;
+        overflow: hidden;
+        position: relative;
+        font-family: 'Ubuntu', sans-serif;
+        background: linear-gradient(135deg, #f8fafc 0%, #e8f0fb 100%);
+        color: #0b1b33;
+      }
+      .band { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: #0b3d91; }
+      .band::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: #2ec4e6; }
+      .brand { position: absolute; left: 60px; top: 56px; display: flex; align-items: center; gap: 24px; }
+      .brand img { width: 120px; height: 120px; filter: drop-shadow(0 10px 22px rgba(11, 61, 145, 0.22)); }
+      .brand .name { font-size: 40px; font-weight: 700; color: #0b3d91; }
+      .brand .tag { font-size: 20px; color: #334155; margin-top: 4px; }
+      .text { position: absolute; left: 60px; top: 236px; width: 560px; }
+      h1 { margin: 0; font-size: 64px; line-height: 1.05; color: #0b1b33; }
+      p { margin: 22px 0 0; font-size: 26px; line-height: 1.4; color: #1f2937; }
+      .chips { display: flex; gap: 12px; margin-top: 28px; }
+      .chip { padding: 9px 18px; border-radius: 999px; background: #0b3d91; color: #fff; font-size: 18px; font-weight: 700; }
+      .site { margin-top: 22px; font-size: 22px; font-weight: 700; color: #0b3d91; }
+      .site::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 10px; border-radius: 50%; background: #2ec4e6; vertical-align: middle; }
+      .card { position: absolute; left: 640px; top: 0; width: 640px; height: 640px; }
+    </style>
+  </head>
+  <body>
+    <div class="band"></div>
+    <div class="brand">
+      <img src="og-icon.png" alt="" />
+      <div>
+        <div class="name">OpenVolleyScout</div>
+        <div class="tag">volleyball scouting, open source</div>
+      </div>
+    </div>
+    <div class="text">
+      <h1>Shared statistics</h1>
+      <p>Open the match charts straight from the link, on any device.</p>
+      <div class="chips">
+        <span class="chip">Statistics</span>
+        <span class="chip">Players</span>
+        <span class="chip">Teams</span>
+      </div>
+      <div class="site">scout.volleyserve.it</div>
+    </div>
+    <img class="card" src="og-stats.png" alt="" />
+  </body>
+</html>

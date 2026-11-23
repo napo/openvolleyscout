@@ -1,0 +1,154 @@
+<!doctype html>
+<!--
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy - OpenVolleyScout</title>
+    <meta name="description" content="Informativa sulla privacy di OpenVolleyScout / OpenVolleyScout privacy policy" />
+    <link rel="icon" href="favicon.ico" sizes="any" />
+    <style>
+      :root { color-scheme: light; --blue: #0b3d91; --cyan: #2ec4e6; --text: #1f2937; --muted: #475569; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif; color: var(--text); background: #f6f8fc; line-height: 1.6; }
+      header { background: #fff; border-bottom: 1px solid #dbe3f0; }
+      .wrap { max-width: 50rem; margin: 0 auto; padding: 1.25rem; }
+      header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+      .brand { display: flex; align-items: center; gap: 0.6rem; color: var(--blue); font-weight: 700; font-size: 1.15rem; text-decoration: none; }
+      .brand img { width: 2rem; height: 2rem; }
+      nav a { margin-left: 0.8rem; color: var(--blue); font-weight: 600; text-decoration: none; }
+      main { background: #fff; border: 1px solid #dbe3f0; border-radius: 0.9rem; margin: 1.5rem auto; }
+      h1 { color: var(--blue); margin: 0 0 0.25rem; font-size: 1.9rem; line-height: 1.2; }
+      h2 { color: var(--blue); margin: 2rem 0 0.5rem; font-size: 1.2rem; }
+      .updated { color: var(--muted); margin: 0 0 1.5rem; }
+      .lead { font-size: 1.05rem; padding: 0.8rem 1rem; border-left: 4px solid var(--cyan); background: #eef7fb; border-radius: 0 0.5rem 0.5rem 0; }
+      ul { padding-left: 1.3rem; }
+      li { margin: 0.25rem 0; }
+      a { color: var(--blue); }
+      hr { border: 0; border-top: 1px solid #dbe3f0; margin: 3rem 0; }
+      footer { color: var(--muted); font-size: 0.9rem; text-align: center; padding-bottom: 2rem; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <a class="brand" href="./"><img src="favicon.png" alt="" />OpenVolleyScout</a>
+        <nav><a href="#it">Italiano</a><a href="#en" lang="en">English</a></nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section id="it">
+        <h1>Informativa sulla privacy</h1>
+        <p class="updated">Ultimo aggiornamento: 23 novembre 2026</p>
+
+        <p class="lead">OpenVolleyScout non ha un server proprio, non chiede di creare un account e non raccoglie dati di chi lo usa. Le partite, le squadre e le statistiche restano sul tuo dispositivo, e vanno nel tuo spazio cloud solo se lo colleghi tu.</p>
+
+        <h2>Chi siamo</h2>
+        <p>OpenVolleyScout è un software libero (GNU AGPL v3 or later (AGPL-3.0-or-later)) per la rilevazione e l'analisi delle partite di pallavolo, sviluppato da napo. Funziona come sito web all'indirizzo <a href="https://scout.volleyserve.it">scout.volleyserve.it</a> e come app per Windows, macOS, Linux e Android. Il codice è pubblico su <a href="https://github.com/napo/openvolleyscout">GitHub</a>.</p>
+
+        <h2>Dove restano i tuoi dati</h2>
+        <ul>
+          <li>Partite, squadre, rose, competizioni, sistemi di gioco, report e impostazioni sono salvati <strong>solo sul tuo dispositivo</strong>: nel browser (sul sito web) o nella memoria dell'app installata.</li>
+          <li>Nessuno, nemmeno lo sviluppatore, può vederli o recuperarli. Se cancelli i dati del browser o disinstalli l'app senza un backup o senza la sincronizzazione, vanno persi.</li>
+          <li>Il backup (file <code>.ovs</code>) lo scarichi tu e lo conservi dove preferisci.</li>
+        </ul>
+
+        <h2>Sincronizzazione con il tuo cloud (facoltativa)</h2>
+        <p>Puoi collegare <strong>Google Drive</strong>, <strong>Microsoft OneDrive</strong> o <strong>Dropbox</strong> per avere lo stesso archivio su più dispositivi. Succede solo se lo scegli tu, e puoi scollegare in qualsiasi momento.</p>
+        <ul>
+          <li><strong>Cosa viene salvato:</strong> un file <code>OpenVolleyScout.ovs</code> con il tuo archivio, nel tuo spazio cloud. Il file contiene anche, per far funzionare la sincronizzazione, l'elenco dei dispositivi collegati (il nome che dai al dispositivo, il sistema operativo con la versione, la versione di OpenVolleyScout, la data dell'ultima sincronizzazione) e quale dispositivo sta rilevando una partita.</li>
+          <li><strong>Accesso limitato:</strong> su Google Drive l'app usa il permesso <code>drive.file</code> e vede solo la cartella e il file che crea lei, non gli altri tuoi file. Su Dropbox e OneDrive usa la cartella riservata all'app.</li>
+          <li><strong>Nessun intermediario:</strong> i dati vanno direttamente dal tuo dispositivo al tuo cloud. I codici di accesso (token) restano sul tuo dispositivo e non vengono mai inviati allo sviluppatore.</li>
+          <li><strong>Scollegare:</strong> «Scollega» cancella i codici di accesso dal dispositivo e revoca il permesso; se lo chiedi, sposta il file nel cestino del tuo cloud. I dati sul dispositivo restano.</li>
+          <li>Per i dati salvati nel tuo cloud valgono le condizioni del servizio che hai scelto: <a href="https://policies.google.com/privacy">Google</a>, <a href="https://privacy.microsoft.com/">Microsoft</a>, <a href="https://www.dropbox.com/privacy">Dropbox</a>.</li>
+        </ul>
+        <p>L'uso delle informazioni ricevute dalle API di Google rispetta le <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, compresi i requisiti di uso limitato (Limited Use): i dati di Google Drive servono solo a sincronizzare il tuo archivio, non vengono trasferiti a terzi, non vengono usati per pubblicità e nessuna persona li legge.</p>
+
+        <h2>Video</h2>
+        <p>Nell'analisi video puoi collegare un video di <strong>YouTube</strong> o un link (per esempio <strong>Dropbox</strong>). Il video viene caricato direttamente da quel servizio, che può usare cookie e registrare la visione secondo le proprie regole (<a href="https://policies.google.com/privacy">Google/YouTube</a>, <a href="https://www.dropbox.com/privacy">Dropbox</a>). I video aperti come file dal dispositivo non escono dal dispositivo.</p>
+
+        <h2>Link condivisi</h2>
+        <p>Quando condividi statistiche, report o playlist, i dati sono contenuti nel link stesso, dopo il simbolo <code>#</code>, che il browser non invia al server. Li vede solo chi riceve il link. Se condividi tramite WhatsApp o altre app, vale la privacy di quel servizio.</p>
+
+        <h2>Aggiornamenti e sito</h2>
+        <ul>
+          <li>Il sito è pubblicato tramite <strong>GitHub Pages</strong>. Come ogni server web, GitHub può registrare dati tecnici delle richieste (per esempio l'indirizzo IP) per sicurezza e funzionamento: vedi la <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">privacy di GitHub</a>.</li>
+          <li>Le app installate e il sito controllano se esiste una nuova versione interrogando GitHub, e da lì scaricano gli aggiornamenti.</li>
+        </ul>
+
+        <h2>Cosa non facciamo</h2>
+        <ul>
+          <li>Nessun account, nessuna registrazione.</li>
+          <li>Nessuna statistica di utilizzo, nessun sistema di tracciamento, nessuna pubblicità.</li>
+          <li>Nessuna vendita o cessione di dati: lo sviluppatore non riceve i tuoi dati.</li>
+        </ul>
+
+        <h2>Minori</h2>
+        <p>OpenVolleyScout può contenere nomi di atleti, anche minorenni, inseriti da chi lo usa. Restano sul dispositivo (o nel cloud di chi li ha inseriti): chi registra i dati è responsabile di farlo nel rispetto delle norme applicabili e del consenso delle persone interessate.</p>
+
+        <h2>Modifiche e contatti</h2>
+        <p>Se questa informativa cambia, la nuova versione sarà pubblicata su questa pagina con la data aggiornata. Per domande o richieste apri una segnalazione su <a href="https://github.com/napo/openvolleyscout/issues">GitHub</a>.</p>
+      </section>
+
+      <hr />
+
+      <section id="en" lang="en">
+        <h1>Privacy policy</h1>
+        <p class="updated">Last updated: 23 November 2026</p>
+
+        <p class="lead">OpenVolleyScout has no server of its own, needs no account and collects no data about its users. Matches, teams and statistics stay on your device, and go to your own cloud storage only if you connect it.</p>
+
+        <h2>Who we are</h2>
+        <p>OpenVolleyScout is free software (GNU AGPL v3 or later (AGPL-3.0-or-later)) for scouting and analysing volleyball matches, developed by napo. It runs as a website at <a href="https://scout.volleyserve.it">scout.volleyserve.it</a> and as an app for Windows, macOS, Linux and Android. The code is public on <a href="https://github.com/napo/openvolleyscout">GitHub</a>.</p>
+
+        <h2>Where your data stays</h2>
+        <ul>
+          <li>Matches, teams, rosters, competitions, playing systems, reports and settings are stored <strong>only on your device</strong>: in the browser (on the website) or in the installed app's storage.</li>
+          <li>No one, not even the developer, can see or recover them. If you clear the browser data or uninstall the app without a backup or synchronisation, they are lost.</li>
+          <li>You download the backup (<code>.ovs</code> file) yourself and keep it wherever you like.</li>
+        </ul>
+
+        <h2>Synchronisation with your cloud (optional)</h2>
+        <p>You can connect <strong>Google Drive</strong>, <strong>Microsoft OneDrive</strong> or <strong>Dropbox</strong> to have the same archive on several devices. This happens only if you choose it, and you can disconnect at any time.</p>
+        <ul>
+          <li><strong>What is stored:</strong> an <code>OpenVolleyScout.ovs</code> file with your archive, in your cloud storage. To make synchronisation work, the file also holds the list of connected devices (the name you give the device, the operating system and its version, the OpenVolleyScout version, the last synchronisation time) and which device is scouting a match.</li>
+          <li><strong>Limited access:</strong> on Google Drive the app uses the <code>drive.file</code> permission and sees only the folder and file it creates, not your other files. On Dropbox and OneDrive it uses the app's own folder.</li>
+          <li><strong>No intermediary:</strong> data travels directly from your device to your cloud. Access codes (tokens) stay on your device and are never sent to the developer.</li>
+          <li><strong>Disconnecting:</strong> “Disconnect” deletes the access codes from the device and revokes the permission; if you ask, it moves the file to your cloud's bin. The data on the device stays.</li>
+          <li>Data stored in your cloud is subject to the terms of the service you chose: <a href="https://policies.google.com/privacy">Google</a>, <a href="https://privacy.microsoft.com/">Microsoft</a>, <a href="https://www.dropbox.com/privacy">Dropbox</a>.</li>
+        </ul>
+        <p>OpenVolleyScout's use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements: Google Drive data is used only to synchronise your archive, is not transferred to third parties, is not used for advertising and is not read by any person.</p>
+
+        <h2>Video</h2>
+        <p>In video analysis you can link a <strong>YouTube</strong> video or a link (for example <strong>Dropbox</strong>). The video is loaded directly from that service, which may use cookies and record the viewing under its own rules (<a href="https://policies.google.com/privacy">Google/YouTube</a>, <a href="https://www.dropbox.com/privacy">Dropbox</a>). Videos opened as files from the device never leave it.</p>
+
+        <h2>Shared links</h2>
+        <p>When you share statistics, reports or playlists, the data is inside the link itself, after the <code>#</code> sign, which the browser does not send to the server. Only people who receive the link can see it. If you share through WhatsApp or other apps, that service's privacy terms apply.</p>
+
+        <h2>Updates and website</h2>
+        <ul>
+          <li>The website is published through <strong>GitHub Pages</strong>. Like any web server, GitHub may log technical request data (for example the IP address) for security and operation: see <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>.</li>
+          <li>The installed apps and the website check for a new version by asking GitHub, and download updates from there.</li>
+        </ul>
+
+        <h2>What we do not do</h2>
+        <ul>
+          <li>No accounts, no sign-up.</li>
+          <li>No usage statistics, no tracking, no advertising.</li>
+          <li>No selling or sharing of data: the developer does not receive your data.</li>
+        </ul>
+
+        <h2>Minors</h2>
+        <p>OpenVolleyScout may contain names of athletes, including minors, entered by its users. They stay on the device (or in the cloud of whoever entered them): whoever records the data is responsible for doing so in line with the applicable rules and the consent of the people concerned.</p>
+
+        <h2>Changes and contact</h2>
+        <p>If this policy changes, the new version will be published on this page with the updated date. For questions or requests, open an issue on <a href="https://github.com/napo/openvolleyscout/issues">GitHub</a>.</p>
+      </section>
+    </main>
+
+    <footer>OpenVolleyScout · GNU AGPL v3 or later (AGPL-3.0-or-later)</footer>
+  </body>
+</html>

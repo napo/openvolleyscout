@@ -1587,7 +1587,7 @@
   terminal: `xattr -dr com.apple.quarantine /Applications/OpenVolleyScout.app`.
   Automatic updates keep working after that.
 - **iPhone / iPad**: there is no App Store or signed iOS app. Use the web
-  version instead: open https://napo.github.io/openvolleyscout in Safari and
+  version instead: open https://scout.volleyserve.it in Safari and
   choose **Share → Add to Home Screen**. It then starts like an app and works
   offline.
 
@@ -1625,7 +1625,7 @@
   terminal: `xattr -dr com.apple.quarantine /Applications/OpenVolleyScout.app`.
   Automatic updates keep working after that.
 - **iPhone / iPad**: there is no App Store or signed iOS app. Use the web
-  version instead: open https://napo.github.io/openvolleyscout in Safari and
+  version instead: open https://scout.volleyserve.it in Safari and
   choose **Share → Add to Home Screen**. It then starts like an app and works
   offline.
 
@@ -1656,7 +1656,7 @@ courtendvb - thanks for the contribution.
   terminal: `xattr -dr com.apple.quarantine /Applications/OpenVolleyScout.app`.
   Automatic updates keep working after that.
 - **iPhone / iPad**: there is no App Store or signed iOS app. Use the web
-  version instead: open https://napo.github.io/openvolleyscout in Safari and
+  version instead: open https://scout.volleyserve.it in Safari and
   choose **Share → Add to Home Screen**. It then starts like an app and works
   offline.
 

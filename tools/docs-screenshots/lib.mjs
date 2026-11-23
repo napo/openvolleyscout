@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { chromium } from 'playwright';
 /** The public address shown in the screenshots; requests to it are served from the local preview. */
-export const BASE = process.env.OVS_DOCS_BASE ?? 'https://napo.github.io/openvolleyscout/';
+export const BASE = process.env.OVS_DOCS_BASE ?? 'https://scout.volleyserve.it/';
 const ORIGIN = new URL(BASE).origin;
 /** Browser profiles (one per language) live outside the repository and outside your own archive. */
 const PROFILES = process.env.OVS_DOCS_PROFILES ?? (await import('node:os')).tmpdir() + '/ovs-docs-screenshots';

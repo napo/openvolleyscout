@@ -67,11 +67,11 @@ describe('shared playlist links', () => {
   });
 
   it('builds a fragment link on any base and reads it back from any domain', () => {
-    const url = buildSharedPlaylistUrl('https://napo.github.io/openvolleyscout/', playlist);
-    expect(url.startsWith('https://napo.github.io/openvolleyscout/#/player/1.')).toBe(true);
+    const url = buildSharedPlaylistUrl('https://scout.volleyserve.it/', playlist);
+    expect(url.startsWith('https://scout.volleyserve.it/#/player/1.')).toBe(true);
     expect(buildSharedPlaylistUrl('https://example.org/ovs/#/analysis', playlist).startsWith('https://example.org/ovs/#/player/1.')).toBe(true);
 
-    const payload = extractSharedPlaylistPayload(url.replace('napo.github.io/openvolleyscout', 'ovs.example.com'));
+    const payload = extractSharedPlaylistPayload(url.replace('scout.volleyserve.it', 'ovs.example.com'));
     expect(payload).toBe(url.split('#/player/')[1]);
     expect(extractSharedPlaylistPayload(` ${payload} `)).toBe(payload);
     expect(decodeSharedPlaylist(payload ?? '')?.clips).toHaveLength(2);
