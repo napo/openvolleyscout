@@ -77,8 +77,7 @@ OneDrive or Dropbox.
 - Optional synchronisation with your own **Google Drive**, **OneDrive** or
   **Dropbox**. Only one device at a time scouts a match; the others follow it
   and can take over when it stops or is handed over.
-- English, Italian, German, Spanish, Romanian, Slovenian, Turkish, Chinese,
-  Arabic and Japanese.
+- Available in 10 languages (see [Languages](#languages)).
 
 Step-by-step tutorials are inside the app, under **About → Tutorials**, and on
 the home page.
@@ -169,6 +168,26 @@ If you trust the file from the official release page, open it in one of these wa
 
 Automatic updates keep working afterwards.
 </details>
+
+## Languages
+
+OpenVolleyScout is available in **10 languages**: English, Italian (Italiano),
+German (Deutsch), Spanish (Español), Romanian (Română), Slovenian (Slovenščina),
+Turkish (Türkçe), Chinese (中文), Arabic (العربية) and Japanese (日本語). The
+language is chosen in Settings.
+
+Some translations may contain mistakes or words that a coach would never use.
+**Help us improve them!** If you speak one of these languages, or would like
+to add a new one:
+
+- open an [issue](https://github.com/napo/openvolleyscout/issues) with the
+  screen, the current text and your suggestion; or
+- edit the language file in [`src/i18n/locales/`](src/i18n/locales/) (for
+  example `de.ts` for German) and open a pull request. Each text has the same
+  name in every language, with English (`en.ts`) as the reference.
+
+Volleyball words matter most: skills, evaluations, roles and the names used by
+coaches in your country.
 
 ## Privacy
 
