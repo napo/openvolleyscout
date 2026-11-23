@@ -67,5 +67,8 @@ for (const [from, to] of [
   ['tr-03-editor', '09-tactical-report'],
   ['tr-04-serve-targets', '14-tactical-serve-targets'],
   ['tr-07-how-they-serve', '15-tactical-how-they-serve'],
+  // Stuttgart - Schwerin with its public YouTube video (see capture.mjs).
+  ['vs-07-filters', '17-video-analysis'],
+  ['vs-09-player', '18-video-playlist'],
 ]) copyFileSync(`public/tutorials/en/${from}.png`, `${OUT}/${to}.png`);
 console.log(`Screenshots written to ${OUT}/`);

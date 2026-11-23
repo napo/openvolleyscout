@@ -83,6 +83,22 @@ OneDrive or Dropbox.
 Step-by-step tutorials are inside the app, under **About → Tutorials**, and on
 the home page.
 
+## Video
+
+Link the match video (a local file or YouTube), synchronise it with the actions
+and watch only what you need: every attack of a player, the receptions in P1,
+the points lost on serve. Selected actions become a playlist you can share as a
+link: whoever receives it watches them in sequence in the browser, without
+installing anything.
+
+| | |
+|---|---|
+| ![Video analysis](docs/images/17-video-analysis.png)<br/>**Video analysis**: video and filtered actions side by side | ![Shared playlist](docs/images/18-video-playlist.png)<br/>**Shared playlist**, opened from a link |
+
+The pictures use the public match Allianz MTV Stuttgart - SSC Palmberg Schwerin
+and its video on YouTube, the same used by the "Video and sharing" tutorial in
+the app.
+
 ## Tactical report and booklet
 
 Pick the opponent's matches and OpenVolleyScout drafts a scouting report you
