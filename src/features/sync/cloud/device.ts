@@ -70,9 +70,9 @@ export function detectOs(): Promise<string> {
     }
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
     const fromUa = osFromUserAgent(ua);
-    const data = (navigator as Navigator & {
+    const data = (typeof navigator === 'undefined' ? undefined : navigator as Navigator & {
       userAgentData?: { platform?: string; getHighEntropyValues?: (hints: string[]) => Promise<{ platformVersion?: string }> };
-    }).userAgentData;
+    })?.userAgentData;
     if (data?.getHighEntropyValues && data.platform && !/Android/.test(fromUa)) {
       try {
         const { platformVersion } = await data.getHighEntropyValues(['platformVersion']);
