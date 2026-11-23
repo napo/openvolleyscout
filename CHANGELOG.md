@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.42.1 - 2026-11-23
+
+### Added
+- Match videos in your Google Drive now play straight from the cloud in the web version, also in Firefox, and you can jump anywhere in the video. In the desktop app a Google Drive video can still only be downloaded with Download to this device.
+
+### Fixed
+- Downloading a match video from Google Drive did not work: it now works from Chrome, Edge and the desktop app.
+- Stop in the video upload list now updates the list at once, and a video added just after stopping no longer stays waiting forever.
+- An upload that failed several times (mostly with Dropbox) starts again from the beginning instead of failing every time, and an upload whose last part reached the cloud is no longer shown as failed.
+- If you link a different video to a match, the old copy in the cloud is removed, so it is never played with the sync points of the new one. The same video moved or renamed keeps its cloud copy.
+- Remove from the cloud in Settings now also clears the "in the cloud" mark of the match.
+- When the upload question asks you to choose the file, the file you choose is the one uploaded, also in the desktop app.
+- Desktop app: downloading from Dropbox and uploading to a personal OneDrive were blocked; they now work.
+- While scouting with a video played from the cloud, the video no longer stops after about an hour: the link is renewed and the video goes on from the same point.
+
 ## 0.42.0 - 2026-11-23
 
 ### Added
