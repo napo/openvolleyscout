@@ -116,11 +116,22 @@ export interface OvsEventRow {
 export type TouchRecordedEvent = Extract<MatchEvent, { type: 'touch_recorded' }>;
 export type NonTouchEvent = Exclude<MatchEvent, { type: 'touch_recorded' }>;
 
+/**
+ * The reception and defense systems the exporting device used for this match
+ * (each team's own system, else the active one). Read only to understand a
+ * reported match: importing a match never changes the systems of the device.
+ */
+export interface OvsSystemsSnapshot {
+  home: { reception: unknown; defense: unknown };
+  away: { reception: unknown; defense: unknown };
+}
+
 export interface ParsedOvsBundle {
   manifest: OvsManifest;
   meta: OvsMetaJson;
   touchRows: OvsTouchRow[];
   eventRows: OvsEventRow[];
+  systems?: OvsSystemsSnapshot;
 }
 
 /**

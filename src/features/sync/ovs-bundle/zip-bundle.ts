@@ -5,18 +5,19 @@ import { decodeEventsTable, decodeTouchesTable, encodeEventsTable, encodeTouches
 import { flattenNonTouchEvents, unflattenEventRows } from './serializer/events-flatten';
 import { buildMetaJson } from './serializer/meta-json';
 import { flattenTouchEvents, unflattenTouchRows } from './serializer/touches-flatten';
-import { OVS_FORMAT_VERSION, type OvsManifest, type ParsedOvsBundle } from './types';
+import { OVS_FORMAT_VERSION, type OvsManifest, type OvsSystemsSnapshot, type ParsedOvsBundle } from './types';
 
 export const MANIFEST_ENTRY = 'manifest.json';
 const META_ENTRY = 'meta.json';
 const TOUCHES_ENTRY = 'touches.arrow';
 const EVENTS_ENTRY = 'events.arrow';
+const SYSTEMS_ENTRY = 'systems.json';
 
 /**
  * The only module that imports `fflate` - the zip container is assembled
  * here from the outputs of the (also independently isolated) Arrow codec.
  */
-export function buildOvsBundle(project: MatchProject, deviceId: string): Uint8Array {
+export function buildOvsBundle(project: MatchProject, deviceId: string, systems?: OvsSystemsSnapshot): Uint8Array {
   const manifest: OvsManifest = {
     ovsFormatVersion: OVS_FORMAT_VERSION,
     kind: 'match',
@@ -35,6 +36,7 @@ export function buildOvsBundle(project: MatchProject, deviceId: string): Uint8Ar
     [META_ENTRY]: strToU8(JSON.stringify(meta)),
     [TOUCHES_ENTRY]: encodeTouchesTable(touchRows),
     [EVENTS_ENTRY]: encodeEventsTable(eventRows),
+    ...(systems ? { [SYSTEMS_ENTRY]: strToU8(JSON.stringify(systems)) } : {}),
   });
 }
 
@@ -67,6 +69,7 @@ export function readOvsBundle(bytes: Uint8Array): ParsedOvsBundle {
     meta: JSON.parse(strFromU8(metaEntry)),
     touchRows: decodeTouchesTable(touchesEntry),
     eventRows: decodeEventsTable(eventsEntry),
+    ...(entries[SYSTEMS_ENTRY] ? { systems: JSON.parse(strFromU8(entries[SYSTEMS_ENTRY])) as OvsSystemsSnapshot } : {}),
   };
 }
 

@@ -13,10 +13,10 @@ import { sanitizeDataVolleyFileNamePart } from '../../export/datavolley/utils/da
 import { getOrCreateDeviceId } from './device-id';
 import { applyMetaJson } from './serializer/meta-json';
 import { buildOvsBundle,  readOvsBundle, reconstructEvents } from './zip-bundle';
-import type { OvsManifest } from './types';
+import type { OvsManifest, OvsSystemsSnapshot } from './types';
 
 export { OVS_FORMAT_VERSION } from './types';
-export type { OvsManifest, OvsMetaJson, ParsedOvsBundle, BackupOvsTouchRow, BackupOvsEventRow } from './types';
+export type { OvsManifest, OvsMetaJson, OvsSystemsSnapshot, ParsedOvsBundle, BackupOvsTouchRow, BackupOvsEventRow } from './types';
 export { peekOvsManifest } from './zip-bundle';
 export type { OvsAnyManifest } from './zip-bundle';
 export { getOrCreateDeviceId } from './device-id';
@@ -34,9 +34,9 @@ export function getOvsExportFileName(project: MatchProject): string {
   return `${teams}.ovs`;
 }
 
-export function exportMatchToOvsBundle(project: MatchProject): OvsBundleExport {
+export function exportMatchToOvsBundle(project: MatchProject, systems?: OvsSystemsSnapshot): OvsBundleExport {
   const deviceId = getOrCreateDeviceId();
-  const bytes = buildOvsBundle(project, deviceId);
+  const bytes = buildOvsBundle(project, deviceId, systems);
 
   return { fileName: getOvsExportFileName(project), bytes };
 }

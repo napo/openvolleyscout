@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, PointerEvent } from 'react';
 import {
   DEFAULT_PLAYING_SYSTEM,
+  DEFAULT_RECEPTION_SYSTEM_BLOCK,
   RECEPTION_ROTATIONS,
+  getRotationsDifferentFromBase,
 } from '@src/config/systems';
+import { confirmAction } from '@src/components/confirm-dialog';
 import {
   getNearestDataVolleyZone,
   getRoleLabel,
@@ -202,6 +205,27 @@ export function ReceptionSystemEditor({
       : DEFAULT_PLAYING_SYSTEM.roleSequence,
   });
 
+  // The built-in base system, saved on this device, may be an older or edited copy.
+  const baseDifferences = draftBlock.id === DEFAULT_RECEPTION_SYSTEM_BLOCK.id
+    ? getRotationsDifferentFromBase(draftBlock.rotations)
+    : [];
+
+  const handleRestoreBase = async () => {
+    if (!(await confirmAction(t('baseReceptionRestoreConfirm')))) return;
+    const nextBlock: ReceptionSystemBlock = {
+      ...getPersistableDraftBlock(),
+      roleSequence: [...DEFAULT_RECEPTION_SYSTEM_BLOCK.roleSequence],
+      rotations: DEFAULT_RECEPTION_SYSTEM_BLOCK.rotations.map((rotation) => ({
+        rotation: rotation.rotation,
+        positions: rotation.positions.map((position) => ({ ...position })),
+      })),
+    };
+    onSaveBlock(nextBlock);
+    setDraftBlock(nextBlock);
+    setIsModified(false);
+    setIsSaved(true);
+  };
+
   const handleSave = () => {
     const nextBlock = getPersistableDraftBlock();
 
@@ -291,6 +315,20 @@ export function ReceptionSystemEditor({
           </span>
         </div>
       </div>
+
+      {baseDifferences.length > 0 ? (
+        <div className="reception-system-editor__faults" role="status">
+          <strong>{t('baseReceptionDiffersTitle')}</strong>
+          <p>
+            {t('baseReceptionDiffersText', {
+              rotations: baseDifferences.map((rotation) => getSetterRotationLabel(rotation, locale)).join(', '),
+            })}
+          </p>
+          <button type="button" className="btn-secondary btn-small" onClick={() => void handleRestoreBase()}>
+            {t('baseReceptionRestore')}
+          </button>
+        </div>
+      ) : null}
 
       <div className="reception-system-editor__playing-system">
         <span className="systems-editor__summary-label">{t('roleOrder')}</span>

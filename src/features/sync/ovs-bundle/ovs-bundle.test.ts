@@ -7,6 +7,7 @@ import { exportMatchToOvsBundle, parseOvsBundleFile } from './index';
 import { flattenTouchEvents, unflattenTouchRows } from './serializer/touches-flatten';
 import { flattenNonTouchEvents, unflattenEventRows } from './serializer/events-flatten';
 import { decodeEventsTable, decodeTouchesTable, encodeEventsTable, encodeTouchesTable } from './serializer/arrow-codec';
+import { readOvsBundle } from './zip-bundle';
 
 const sparseTouchEvent: MatchEvent = {
   id: 'evt-1',
@@ -151,6 +152,10 @@ test('full bundle round-trip: export then parse reconstructs the match project s
 
   const { bytes, fileName } = exportMatchToOvsBundle(project);
   assert.ok(fileName.endsWith('.ovs'));
+  // Without systems the bundle has no systems entry; with them they come back as written.
+  assert.strictEqual(readOvsBundle(bytes).systems, undefined);
+  const systems = { home: { reception: { id: 'r1' }, defense: null }, away: { reception: null, defense: { id: 'd1' } } };
+  assert.deepStrictEqual(readOvsBundle(exportMatchToOvsBundle(project, systems).bytes).systems, systems);
 
   const parsed = parseOvsBundleFile(bytes);
   assert.strictEqual(parsed.matchId, 'match-1');

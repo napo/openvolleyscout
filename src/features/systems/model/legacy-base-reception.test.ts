@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { CourtPosition } from '@src/domain/common/enums';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { Team } from '@src/domain/roster/types';
-import { DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems';
+import { DEFAULT_RECEPTION_SYSTEM_BLOCK, getRotationsDifferentFromBase } from '@src/config/systems';
 import { PlayerRole } from '@src/domain/systems';
 import { resolveTacticalCourtPlayers } from '@src/features/scouting/live/tactical/positioning/tactical-position-resolver';
 import { normalizeReceptionSystemBlock } from './reception-system-store';
@@ -41,6 +41,13 @@ describe('saved copy of an old base reception system', () => {
   it('is upgraded to the current base rotations', () => {
     const block = normalizeReceptionSystemBlock(savedOldBaseSystem())!;
     expect(block.rotations).toEqual(DEFAULT_RECEPTION_SYSTEM_BLOCK.rotations);
+  });
+
+  it('tells which rotations still differ from the base system', () => {
+    const saved = savedOldBaseSystem();
+    saved.rotations[2].positions[0].x = 40;
+    expect(getRotationsDifferentFromBase(normalizeReceptionSystemBlock(saved)!.rotations)).toEqual([3]);
+    expect(getRotationsDifferentFromBase(DEFAULT_RECEPTION_SYSTEM_BLOCK.rotations)).toEqual([]);
   });
 
   it('keeps a rotation the user has redrawn', () => {
@@ -86,5 +93,31 @@ describe('saved copy of an old base reception system', () => {
     expect(depth(26)).toBeLessThan(depth(8));
     expect(depth(26)).toBeLessThan(depth(2));
     expect(markers.find((marker) => marker.jerseyNumber === 2)!.isLibero).toBe(true);
+  });
+});
+
+/**
+ * Guard: the base reception system is saved on every device and only rotations
+ * listed in reception-defaults-history.ts are upgraded. If you change the base
+ * system, first add each changed rotation as it was before to
+ * LEGACY_BASE_RECEPTION_ROTATIONS, then update BASE_FINGERPRINT below.
+ */
+const BASE_FINGERPRINT = '6434d53e';
+
+function fingerprint(): string {
+  return DEFAULT_RECEPTION_SYSTEM_BLOCK.rotations
+    .map((rotation) => `${rotation.rotation}:${rotation.positions
+      .map((position) => `${position.role}@${position.x.toFixed(4)},${position.y.toFixed(4)}`)
+      .sort()
+      .join(';')}`)
+    .join('|')
+    .split('')
+    .reduce((hash, char) => (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0, 7)
+    .toString(16);
+}
+
+describe('base reception system guard', () => {
+  it('has not changed without recording the previous rotations', () => {
+    expect(fingerprint(), 'Base reception changed: record the old rotations in reception-defaults-history.ts, then update BASE_FINGERPRINT').toBe(BASE_FINGERPRINT);
   });
 });

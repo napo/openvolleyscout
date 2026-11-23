@@ -75,3 +75,16 @@ export function upgradeLegacyBaseReceptionRotations(
       : rotation;
   });
 }
+
+/** Rotations of `rotations` that differ from the current base system (role and position). */
+export function getRotationsDifferentFromBase(rotations: readonly ReceptionRotationSystem[]): ReceptionRotation[] {
+  return DEFAULT_RECEPTION_SYSTEM_BLOCK.rotations
+    .filter((base) => {
+      const saved = rotations.find((rotation) => rotation.rotation === base.rotation);
+      if (!saved || saved.positions.length !== base.positions.length) return true;
+      return base.positions.some((position) => !saved.positions.some((other) => (
+        other.role === position.role && samePoint(other.x, position.x) && samePoint(other.y, position.y)
+      )));
+    })
+    .map((base) => base.rotation);
+}
