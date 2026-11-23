@@ -11,7 +11,8 @@ import { writeTiebreakDatabase, type SqlJsWritableStatic } from './tiebreak-writ
 
 const ROOT = resolve(__dirname, '../../../..');
 const TEMPLATE = readFileSync(resolve(__dirname, 'tiebreak-template.sql'), 'utf8');
-const REAL_DB = resolve(ROOT, "docs/2026-05-09 - - Rit - G 26 - Serie B2 Vs CARTIERA DELL'ADDA LC - 0-3.db");
+// A real Tiebreak Tech database with every name replaced by the demo match's fictional ones.
+const REAL_DB = resolve(__dirname, '__fixtures__/tiebreak-sample.db');
 
 async function sql() {
   return await initSqlJs() as unknown as SqlJsWritableStatic;
@@ -72,9 +73,9 @@ describe('Tiebreak Tech export', () => {
 
   it('reads the family name from "name" and the given name from "surname"', async () => {
     const original = await readTiebreak(new Uint8Array(readFileSync(REAL_DB)));
-    // Same player as the DataVolley export of this match: Perghem Aurora, #3.
+    // Home #3 is stored as name "Toffoli", surname "Elisa".
     const player = original.players.find((entry) => entry.side === 'home' && entry.jerseyNumber === 3);
-    expect([player?.lastName, player?.firstName]).toEqual(['Perghem', 'Aurora']);
+    expect([player?.lastName, player?.firstName]).toEqual(['Toffoli', 'Elisa']);
   });
 
   it('an OVS match exports to Tiebreak Tech with the same actions and score', async () => {
