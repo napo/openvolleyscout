@@ -5,7 +5,8 @@ import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { Team } from '@src/domain/roster/types';
 import { DEFAULT_RECEPTION_SYSTEM_BLOCK, getRotationsDifferentFromBase } from '@src/config/systems';
 import { PlayerRole } from '@src/domain/systems';
-import { resolveTacticalCourtPlayers } from '@src/features/scouting/live/tactical/positioning/tactical-position-resolver';
+import { getReceptionLayoutIssue, resolveTacticalCourtPlayers } from '@src/features/scouting/live/tactical/positioning/tactical-position-resolver';
+import { RECEPTION_SYSTEM_PRESET_OPTIONS, createReceptionRotationsForPreset, getRoleSequenceForOrder } from '@src/config/systems';
 import { normalizeReceptionSystemBlock } from './reception-system-store';
 
 // The base system as saved by releases before 0.7.0: rotation 3 had MB1
@@ -119,5 +120,35 @@ function fingerprint(): string {
 describe('base reception system guard', () => {
   it('has not changed without recording the previous rotations', () => {
     expect(fingerprint(), 'Base reception changed: record the old rotations in reception-defaults-history.ts, then update BASE_FINGERPRINT').toBe(BASE_FINGERPRINT);
+  });
+});
+
+describe('warning on court about the reception system', () => {
+  const setterAt = (courtPosition: number) => ({
+    teamSide: 'home', setterPlayerId: 's', liberoPlayerIds: [],
+    slots: [{ courtPosition, playerId: 's', tacticalRole: PlayerRole.SETTER }],
+    personnelState: { onCourtPlayerIds: ['s'], benchPlayerIds: [], substitutionPairs: [], substitutionHistory: [], liberoAutoMiddleReplacement: true },
+  }) as unknown as ActiveLineup;
+
+  it('stays silent with the shipped systems in every rotation', () => {
+    const blocks = [
+      DEFAULT_RECEPTION_SYSTEM_BLOCK,
+      ...RECEPTION_SYSTEM_PRESET_OPTIONS.map((preset) => ({
+        ...DEFAULT_RECEPTION_SYSTEM_BLOCK,
+        roleSequence: getRoleSequenceForOrder(preset.order),
+        rotations: createReceptionRotationsForPreset(preset),
+      })),
+    ];
+    for (const block of blocks) {
+      for (let rotation = 1; rotation <= 6; rotation += 1) {
+        expect(getReceptionLayoutIssue({ lineup: setterAt(rotation), phase: 'reception', receptionSystemBlock: block })).toBeNull();
+      }
+    }
+  });
+
+  it('warns with the old base rotation 3, only while receiving', () => {
+    const old = { ...savedOldBaseSystem(), rotations: savedOldBaseSystem().rotations };
+    expect(getReceptionLayoutIssue({ lineup: setterAt(3), phase: 'reception', receptionSystemBlock: old })).toEqual({ rotation: 3 });
+    expect(getReceptionLayoutIssue({ lineup: setterAt(3), phase: 'serving_prepare', receptionSystemBlock: old })).toBeNull();
   });
 });

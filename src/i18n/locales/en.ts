@@ -580,6 +580,8 @@ export const en = {
   baseReceptionDiffersText: "In rotations {{rotations}} the positions differ from the app's base system: it may be an old copy saved on this device or a change of yours. If you did not change them on purpose, restore the base system.",
   baseReceptionRestore: "Restore the base system",
   baseReceptionRestoreConfirm: "Restore the base system? The positions of every rotation go back to the app's ones; the name and the assigned team stay.",
+  receptionLayoutIssue: "The reception system of {{team}} in {{rotation}} has irregular positions: the court corrects them. Check it in Systems.",
+  receptionLayoutIssueDismiss: "Close the notice",
   overlapFaultDepth: 'Position {{front}} must be in front of position {{back}}',
   overlapFaultLateral: 'Position {{left}} must be to the left of position {{right}}',
   newFromPreset: 'New from preset',

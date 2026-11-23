@@ -15,7 +15,7 @@ import {
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import { getBallTrajectoriesForTouches } from '@src/domain/trajectory';
-import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
+import { getSetterRotationLabel, type DefenseSystemBlock, type ReceptionSystemBlock } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
 import { getRallyEndReasonKey } from '../model/rally-end-reason';
 import type { DataVolleyBallTypeCode } from '../model/datavolley-ball-types';
@@ -39,6 +39,7 @@ const ONE_TEAM_SKILLS = ['serve', 'receive', 'attack', 'block'] as const;
 const SERVE_RATINGS_FOR_UNSCOUTED_RECEIVER: SkillEvaluation[] = ['-', '!', '+', '/', '#'];
 import {
   EXPECTED_COURT_MARKER_COUNT,
+  getReceptionLayoutIssue,
   resolveTacticalCourtPlayers,
   type TacticalCourtPlayer,
 } from '../live/tactical/positioning/tactical-position-resolver';
@@ -185,7 +186,7 @@ export function LiveRallyStage({
   onOpenEvents,
   statusMessage,
 }: LiveRallyStageProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const toolbarScale = useAppStore((state) => state.toolbarScale);
   const markerScale = useAppStore((state) => state.markerScale);
   const simpleInput = useAppStore((state) => state.simpleInput);
@@ -306,6 +307,28 @@ export function LiveRallyStage({
     teamTacticalPhases,
     attackLayoutSide,
   ]);
+  // The receiving team's system breaks the overlap rule or puts the libero at the
+  // net in this rotation: the court shows a corrected layout, so say it, once per
+  // team, rotation and system, without stopping the scout.
+  const [dismissedLayoutIssues, setDismissedLayoutIssues] = useState<ReadonlySet<string>>(() => new Set());
+  const layoutIssue = useMemo(() => {
+    for (const side of ['home', 'away'] as const) {
+      const block = (side === 'home' ? teamSystemBlocks?.home?.reception : teamSystemBlocks?.away?.reception) ?? receptionSystemBlock;
+      const issue = getReceptionLayoutIssue({
+        lineup: side === 'home' ? homeLineup : awayLineup,
+        phase: layoutPhase(side),
+        receptionSystemBlock: block,
+      });
+      if (issue) {
+        const key = `${side}:${issue.rotation}:${block?.id ?? 'base'}`;
+        if (!dismissedLayoutIssues.has(key)) {
+          return { key, team: (side === 'home' ? homeTeam : awayTeam).name, rotation: issue.rotation };
+        }
+      }
+    }
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeLineup, awayLineup, receptionSystemBlock, teamSystemBlocks, teamTacticalPhases, servingTeam, attackLayoutSide, dismissedLayoutIssues, homeTeam, awayTeam]);
   // A team entered by name only shows one team marker in the middle of its
   // half instead of six empty positions (see model/unscouted-team.ts).
   const buildTeamMarker = (teamSide: TeamSide, team: Team, displaySide: 'left' | 'right'): TacticalCourtPlayer => {
@@ -891,6 +914,21 @@ export function LiveRallyStage({
           >
             ⟳
           </button>
+          {layoutIssue ? (
+            <div className="live-rally-stage__layout-issue" role="status">
+              <span>
+                {t('receptionLayoutIssue', { team: layoutIssue.team, rotation: getSetterRotationLabel(layoutIssue.rotation, locale) })}
+              </span>
+              <button
+                type="button"
+                aria-label={t('receptionLayoutIssueDismiss')}
+                title={t('receptionLayoutIssueDismiss')}
+                onClick={() => setDismissedLayoutIssues((previous) => new Set(previous).add(layoutIssue.key))}
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
           <ScoutingCourt
             zones={courtZones}
             orientation={courtOrientation}

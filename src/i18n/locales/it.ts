@@ -580,6 +580,8 @@ export const it = {
   baseReceptionDiffersText: "Nelle rotazioni {{rotations}} le posizioni sono diverse dallo schema Base dell'app: potrebbe essere una copia vecchia salvata su questo dispositivo o una tua modifica. Se non le hai cambiate tu apposta, ripristina lo schema Base.",
   baseReceptionRestore: "Ripristina lo schema Base",
   baseReceptionRestoreConfirm: "Ripristinare lo schema Base? Le posizioni di tutte le rotazioni tornano quelle dell'app; nome e squadra assegnata restano.",
+  receptionLayoutIssue: "Lo schema di ricezione di {{team}} in {{rotation}} ha posizioni irregolari: il campo le corregge. Controllalo in Sistemi.",
+  receptionLayoutIssueDismiss: "Chiudi l'avviso",
   overlapFaultDepth: 'La posizione {{front}} deve stare davanti alla posizione {{back}}',
   overlapFaultLateral: 'La posizione {{left}} deve stare a sinistra della posizione {{right}}',
   newFromPreset: 'Nuovo da preset',

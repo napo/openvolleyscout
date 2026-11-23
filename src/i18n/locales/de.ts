@@ -542,6 +542,8 @@ export const de = {
   baseReceptionDiffersText: "In den Rotationen {{rotations}} weichen die Positionen vom Basissystem der App ab: Es kann eine alte, auf diesem Gerät gespeicherte Kopie oder eine eigene Änderung sein. Wenn du sie nicht absichtlich geändert hast, stelle das Basissystem wieder her.",
   baseReceptionRestore: "Basissystem wiederherstellen",
   baseReceptionRestoreConfirm: "Basissystem wiederherstellen? Die Positionen aller Rotationen werden auf die der App zurückgesetzt; Name und zugewiesene Mannschaft bleiben.",
+  receptionLayoutIssue: "Das Annahmesystem von {{team}} in {{rotation}} hat unzulässige Positionen: Das Feld korrigiert sie. Prüfe es unter Systeme.",
+  receptionLayoutIssueDismiss: "Hinweis schließen",
   overlapFaultDepth: 'Position {{front}} muss vor Position {{back}} stehen',
   overlapFaultLateral: 'Position {{left}} muss links von Position {{right}} stehen',
   newFromPreset: 'Neu aus Vorlage',

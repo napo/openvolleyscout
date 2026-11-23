@@ -542,6 +542,8 @@ export const tr = {
   baseReceptionDiffersText: "{{rotations}} rotasyonlarında pozisyonlar uygulamanın temel sisteminden farklı: bu cihazda kayıtlı eski bir kopya ya da sizin yaptığınız bir değişiklik olabilir. Bilerek değiştirmediyseniz temel sistemi geri yükleyin.",
   baseReceptionRestore: "Temel sistemi geri yükle",
   baseReceptionRestoreConfirm: "Temel sistem geri yüklensin mi? Tüm rotasyonların pozisyonları uygulamadakilere döner; ad ve atanan takım korunur.",
+  receptionLayoutIssue: "{{team}} takımının {{rotation}} karşılama sisteminde kurala aykırı pozisyonlar var: saha bunları düzeltiyor. Sistemler bölümünden kontrol edin.",
+  receptionLayoutIssueDismiss: "Uyarıyı kapat",
   overlapFaultDepth: '{{front}} numaralı pozisyon {{back}} numaralı pozisyonun önünde olmalı',
   overlapFaultLateral: '{{left}} numaralı pozisyon {{right}} numaralı pozisyonun solunda olmalı',
   newFromPreset: 'Hazır şablondan yeni',

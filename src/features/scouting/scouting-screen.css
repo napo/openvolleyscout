@@ -8373,3 +8373,33 @@
 .live-rally-stage--vertical .scouting-court__surface--vertical {
     overflow: visible;
 }
+
+/* Discreet note: the receiving team's reception system has positions the court had to correct. */
+.live-rally-stage__layout-issue {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: min(26rem, calc(100% - 1rem));
+  padding: 0.3rem 0.4rem 0.3rem 0.6rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 244, 214, 0.95);
+  color: #6b4a00;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+}
+
+.live-rally-stage__layout-issue button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  cursor: pointer;
+}

@@ -5,6 +5,8 @@ import type { Player, Team } from '@src/domain/roster/types';
 import type { ScoutingPoint, ScoutingZone } from '@src/domain/spatial';
 import {
   PlayerRole,
+  getReceptionOverlapFaults,
+  hasAdvancedLiberoPosition,
   type DefensePosition,
   type DefenseRotation,
   type DefenseSystemBlock,
@@ -550,6 +552,32 @@ export function getSystemRotationPositions({
     defenseSystemBlock,
     rotation: rotation as DefenseRotation,
   });
+}
+
+/**
+ * The reception system drawing the current rotation breaks the overlap rule or
+ * puts the libero at the net: the court then shows a corrected layout, so the
+ * scout is told to check the system (as the Systems editor does). Null when fine
+ * or when the team is not receiving.
+ */
+export function getReceptionLayoutIssue({
+  lineup,
+  phase,
+  receptionSystemBlock,
+}: {
+  lineup: ActiveLineup | null;
+  phase: TeamTacticalPhase;
+  receptionSystemBlock?: ReceptionSystemBlock | null;
+}): { rotation: ReceptionRotation } | null {
+  if (!lineup?.slots.length || !usesReceptionLayout(phase)) return null;
+  const block = receptionSystemBlock ?? DEFAULT_RECEPTION_SYSTEM_BLOCK;
+  const roleSequence = getRoleSequence(block);
+  const rotation = getCurrentSetterRotation(lineup, roleSequence) as ReceptionRotation;
+  const positions = getReceptionLayoutPositions({ receptionSystemBlock: block, rotation });
+  if (positions.length === 0) return null;
+  const faulty = getReceptionOverlapFaults(roleSequence, rotation, positions).length > 0
+    || hasAdvancedLiberoPosition(roleSequence, rotation, positions);
+  return faulty ? { rotation } : null;
 }
 
 export function resolveTacticalCourtPlayers({

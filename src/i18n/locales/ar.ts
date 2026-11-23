@@ -542,6 +542,8 @@ export const ar = {
   baseReceptionDiffersText: "في الدورانات {{rotations}} تختلف المواقع عن النظام الأساسي للتطبيق: قد تكون نسخة قديمة محفوظة على هذا الجهاز أو تعديلاً منك. إذا لم تغيّرها عمداً، فاستعد النظام الأساسي.",
   baseReceptionRestore: "استعادة النظام الأساسي",
   baseReceptionRestoreConfirm: "هل تريد استعادة النظام الأساسي؟ تعود مواقع جميع الدورانات إلى مواقع التطبيق؛ ويبقى الاسم والفريق المعيّن.",
+  receptionLayoutIssue: "نظام الاستقبال لفريق {{team}} في {{rotation}} فيه مواقع غير نظامية: يصححها الملعب. تحقق منه في الأنظمة.",
+  receptionLayoutIssueDismiss: "إغلاق التنبيه",
   overlapFaultDepth: 'يجب أن يكون المركز {{front}} أمام المركز {{back}}',
   overlapFaultLateral: 'يجب أن يكون المركز {{left}} على يسار المركز {{right}}',
   newFromPreset: 'جديد من قالب',

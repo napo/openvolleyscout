@@ -543,6 +543,8 @@ export const ja = {
   baseReceptionDiffersText: "ローテーション {{rotations}} の位置がアプリの基本システムと異なります。このデバイスに保存された古いコピーか、あなたの変更の可能性があります。意図して変更したのでなければ、基本システムを復元してください。",
   baseReceptionRestore: "基本システムを復元",
   baseReceptionRestoreConfirm: "基本システムを復元しますか？すべてのローテーションの位置がアプリのものに戻ります。名前と割り当てたチームはそのままです。",
+  receptionLayoutIssue: "{{team}} の {{rotation}} のレセプションシステムに不正な位置があります。コート上では修正して表示しています。システムで確認してください。",
+  receptionLayoutIssueDismiss: "お知らせを閉じる",
   overlapFaultDepth: '{{front}}番ポジションは{{back}}番ポジションより前にいる必要があります',
   overlapFaultLateral: '{{left}}番ポジションは{{right}}番ポジションより左にいる必要があります',
   newFromPreset: 'プリセットから新規作成',

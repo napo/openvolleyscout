@@ -542,6 +542,8 @@ export const zh = {
   baseReceptionDiffersText: "在轮次 {{rotations}} 中，站位与应用的基础体系不同：可能是此设备上保存的旧副本，也可能是你的修改。如果不是你有意更改的，请恢复基础体系。",
   baseReceptionRestore: "恢复基础体系",
   baseReceptionRestoreConfirm: "要恢复基础体系吗？所有轮次的站位将恢复为应用的默认值；名称和指定球队保持不变。",
+  receptionLayoutIssue: "{{team}} 在 {{rotation}} 的接发球体系站位不规范：场地图已自动修正。请在“系统”中检查。",
+  receptionLayoutIssueDismiss: "关闭提示",
   overlapFaultDepth: '{{front}}号位必须在{{back}}号位前面',
   overlapFaultLateral: '{{left}}号位必须在{{right}}号位左侧',
   newFromPreset: '从预设新建',

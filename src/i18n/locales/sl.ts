@@ -542,6 +542,8 @@ export const sl = {
   baseReceptionDiffersText: "V rotacijah {{rotations}} se položaji razlikujejo od osnovnega sistema aplikacije: lahko je stara kopija, shranjena na tej napravi, ali tvoja sprememba. Če jih nisi spremenil namenoma, obnovi osnovni sistem.",
   baseReceptionRestore: "Obnovi osnovni sistem",
   baseReceptionRestoreConfirm: "Obnovim osnovni sistem? Položaji vseh rotacij se vrnejo na tiste iz aplikacije; ime in dodeljena ekipa ostaneta.",
+  receptionLayoutIssue: "Sistem sprejema ekipe {{team}} v {{rotation}} ima nepravilne položaje: igrišče jih popravi. Preveri ga v razdelku Sistemi.",
+  receptionLayoutIssueDismiss: "Zapri obvestilo",
   overlapFaultDepth: 'Položaj {{front}} mora biti pred položajem {{back}}',
   overlapFaultLateral: 'Položaj {{left}} mora biti levo od položaja {{right}}',
   newFromPreset: 'Nov iz predloge',

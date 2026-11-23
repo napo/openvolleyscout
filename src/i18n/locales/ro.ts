@@ -542,6 +542,8 @@ export const ro = {
   baseReceptionDiffersText: "În rotațiile {{rotations}} pozițiile diferă de sistemul de bază al aplicației: poate fi o copie veche salvată pe acest dispozitiv sau o modificare a ta. Dacă nu le-ai schimbat intenționat, restaurează sistemul de bază.",
   baseReceptionRestore: "Restaurează sistemul de bază",
   baseReceptionRestoreConfirm: "Restaurezi sistemul de bază? Pozițiile tuturor rotațiilor revin la cele ale aplicației; numele și echipa atribuită rămân.",
+  receptionLayoutIssue: "Sistemul de preluare al {{team}} în {{rotation}} are poziții nereglementare: terenul le corectează. Verifică-l în Sisteme.",
+  receptionLayoutIssueDismiss: "Închide avertismentul",
   overlapFaultDepth: 'Poziția {{front}} trebuie să fie în fața poziției {{back}}',
   overlapFaultLateral: 'Poziția {{left}} trebuie să fie în stânga poziției {{right}}',
   newFromPreset: 'Nou din presetare',
