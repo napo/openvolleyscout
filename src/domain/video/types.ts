@@ -119,8 +119,20 @@ export interface PointNote {
   createdAt: number;
 }
 
+/** The local video of the match was sent to the user's cloud (Google Drive, OneDrive or Dropbox). */
+export interface MatchVideoCloudCopy {
+  /** Cloud service id, e.g. 'google-drive'. */
+  provider: string;
+  /** File name in the cloud folder of the app. */
+  name: string;
+  size: number;
+  uploadedAt: string;
+}
+
 export interface MatchVideoAnalysis {
   source?: MatchVideoSource;
+  /** Set when the video file was uploaded to the cloud: other devices stream it from there. */
+  cloudCopy?: MatchVideoCloudCopy;
   syncPoints: VideoSyncPoint[];
   /** Missing on older projects, which behave as 'step'. */
   syncInterpolation?: VideoSyncInterpolation;

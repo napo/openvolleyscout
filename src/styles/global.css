@@ -5291,3 +5291,18 @@ input[type="radio"] {
   font-size: 0.8rem;
   color: var(--color-text-muted, #64748b);
 }
+
+.setup-video-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.setup-video-field__or,
+.setup-video-field__file {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}

@@ -28,7 +28,7 @@ export function buildMatchSummary(project: MatchProject): MatchSummaryRecord {
   };
 }
 
-function videoSummary(project: MatchProject): Pick<MatchSummaryRecord, 'videoKind' | 'videoName'> {
+function videoSummary(project: MatchProject): Pick<MatchSummaryRecord, 'videoKind' | 'videoName' | 'videoInCloud'> {
   const source = project.videoAnalysis?.source;
   if (!source) return {};
   const videoName = source.kind === 'file'
@@ -36,7 +36,7 @@ function videoSummary(project: MatchProject): Pick<MatchSummaryRecord, 'videoKin
     : source.kind === 'youtube' || source.kind === 'url' || source.kind === 'rtsp'
       ? source.url
       : source.deviceLabel || undefined;
-  return { videoKind: source.kind, videoName };
+  return { videoKind: source.kind, videoName, ...(project.videoAnalysis?.cloudCopy ? { videoInCloud: true } : {}) };
 }
 
 const repairsInFlight = new Set<string>();

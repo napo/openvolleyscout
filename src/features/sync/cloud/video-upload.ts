@@ -9,6 +9,9 @@
 
 import { useEffect, useState } from 'react';
 import { loadVideoFileHandle } from '@src/features/analysis/video/file-handle-store';
+import { useAppStore } from '@src/app/store/app-store';
+import { createDefaultMatchVideoAnalysis } from '@src/domain/video/types';
+import { matchRepository } from '@src/infrastructure/repositories';
 import { cloudSyncController } from './archive-adapter';
 import { isTauriRuntime, syncPlatform } from './platform';
 import { type CloudVideoFile, VIDEO_CHUNK_BYTES, type VideoStorage } from './storage';
@@ -140,6 +143,25 @@ export async function uploadOneVideo(
   return null;
 }
 
+/** Notes in the match that its video is now in the cloud, so every device shows it. */
+export async function recordCloudCopy(matchId: string, provider: string, file: CloudVideoFile): Promise<void> {
+  const store = useAppStore.getState();
+  const open = store.activeProject?.metadata.id === matchId ? store.activeProject : null;
+  const project = open ?? await matchRepository.getById(matchId);
+  if (!project) return;
+  const videoAnalysis = project.videoAnalysis ?? createDefaultMatchVideoAnalysis();
+  const saved = await matchRepository.update({
+    ...project,
+    videoAnalysis: {
+      ...videoAnalysis,
+      cloudCopy: { provider, name: file.name, size: file.size, uploadedAt: new Date().toISOString() },
+      updatedAt: Date.now(),
+    },
+    updatedAt: Date.now(),
+  });
+  if (useAppStore.getState().activeProject?.metadata.id === matchId) useAppStore.getState().setActiveProject(saved);
+}
+
 class VideoUploadQueue {
   private states = new Map<string, VideoUploadState>();
   private readonly listeners = new Set<Listener>();
@@ -207,7 +229,10 @@ class VideoUploadQueue {
             (sent) => this.set(job.video.matchId, { status: 'uploading', sent, size: job.size }),
             () => this.stopRequested,
           );
-          if (file) this.set(job.video.matchId, { status: 'done', sent: job.size, size: job.size });
+          if (file) {
+            await recordCloudCopy(job.video.matchId, provider, file).catch((error) => console.warn('Could not mark the video as uploaded', error));
+            this.set(job.video.matchId, { status: 'done', sent: job.size, size: job.size });
+          }
           else this.states.delete(job.video.matchId);
         } catch (error) {
           console.warn('Could not upload the video', error);

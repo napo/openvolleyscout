@@ -189,7 +189,7 @@ export function LoadDataPage() {
 
   const videoKindLabel = (project: MatchSummaryRecord): string => {
     switch (project.videoKind) {
-      case 'file': return t('tableVideoFile');
+      case 'file': return project.videoInCloud ? t('tableVideoFileInCloud') : t('tableVideoFile');
       case 'youtube': return 'YouTube';
       case 'url': return t('tableVideoLink');
       case 'webcam':

@@ -20,5 +20,7 @@ export interface MatchSummaryRecord {
   videoKind?: MatchVideoSource['kind'];
   /** File name or link of that video, shown as a hint. */
   videoName?: string;
+  /** The video file is also in the user's cloud. */
+  videoInCloud?: boolean;
   updatedAt: number;
 }

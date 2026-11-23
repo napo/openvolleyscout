@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { createDefaultMatchVideoAnalysis } from '@src/domain/video/types';
+import { createDefaultMatchVideoAnalysis, type MatchVideoSource } from '@src/domain/video/types';
+import { saveVideoFileHandle } from '@src/features/analysis/video/file-handle-store';
+import { SetupVideoField, type SetupVideoFile } from '../components/SetupVideoField';
 import { remoteVideoUrlErrorKey, resolveRemoteVideoSource } from '@src/features/analysis/video/remote-video-url';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
@@ -64,26 +66,27 @@ interface MatchSetupData {
 const MATCH_WIZARD_STEPS: MatchWizardStep[] = ['match_info', 'home_team', 'away_team'];
 
 /**
- * The video link typed while preparing the match. A local file linked later in
- * Video analysis is kept; emptying the field removes only a link source. A new
- * link for the same match keeps the sync points already set.
+ * The match video chosen while preparing the match: a file on this computer or
+ * a remote link. A new source of the same match keeps the sync points already
+ * set; emptying both removes the source.
  */
-export function applySetupVideoLink(project: MatchProject, rawUrl: string): void {
+export function applySetupVideo(project: MatchProject, rawUrl: string, file: SetupVideoFile | null): void {
   const current = project.videoAnalysis?.source;
-  const isLink = current?.kind === 'youtube' || current?.kind === 'url';
-  if (!rawUrl.trim()) {
-    if (isLink && project.videoAnalysis) {
-      project.videoAnalysis = { ...project.videoAnalysis, source: undefined, updatedAt: Date.now() };
-    }
+  let next: MatchVideoSource | undefined;
+  if (file) {
+    if (current?.kind === 'file' && current.path === file.path) return;
+    next = { kind: 'file', path: file.path, fileName: file.fileName };
+  } else if (rawUrl.trim()) {
+    const resolved = resolveRemoteVideoSource(rawUrl);
+    if (!resolved.ok) return;
+    if ((current?.kind === 'youtube' || current?.kind === 'url') && current.url === resolved.source.url) return;
+    next = resolved.source;
+  } else if (!current || current.kind === 'webcam' || current.kind === 'rtsp') {
     return;
   }
-  const resolved = resolveRemoteVideoSource(rawUrl);
-  if (!resolved.ok) return;
-  if (isLink && current.url === resolved.source.url) return;
-  if (current && !isLink) return;
   project.videoAnalysis = {
     ...(project.videoAnalysis ?? createDefaultMatchVideoAnalysis()),
-    source: resolved.source,
+    source: next,
     updatedAt: Date.now(),
   };
 }
@@ -215,6 +218,7 @@ export function MatchSetupPage() {
 
   const [formData, setFormData] = useState<MatchSetupData>(() => createEmptyMatchSetupData());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [videoFile, setVideoFile] = useState<SetupVideoFile | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState<MatchWizardStep>('match_info');
   // A new match opens on the one-page quick start; editing a match keeps the full wizard.
@@ -230,6 +234,8 @@ export function MatchSetupPage() {
     }
 
     setFormData(createFormDataFromProject(activeProject));
+    const linked = activeProject.videoAnalysis?.source;
+    setVideoFile(linked?.kind === 'file' ? { path: linked.path, fileName: linked.fileName || linked.path.split(/[\\/]/).pop() || linked.path } : null);
     setErrors({});
   }, [activeProject]);
 
@@ -302,7 +308,7 @@ export function MatchSetupPage() {
       stepErrors.startTime = t('startTimeRequired');
     }
 
-    if (formData.videoUrl.trim()) {
+    if (!videoFile && formData.videoUrl.trim()) {
       const video = resolveRemoteVideoSource(formData.videoUrl);
       if (!video.ok) stepErrors.videoUrl = t(remoteVideoUrlErrorKey(video.reason));
     }
@@ -677,7 +683,8 @@ export function MatchSetupPage() {
       project.metadata.matchNumber = formData.matchNumber.trim() || undefined;
       project.metadata.venue = formData.venue.trim() || undefined;
       project.metadata.playedAt = playedAt;
-      applySetupVideoLink(project, formData.videoUrl);
+      applySetupVideo(project, formData.videoUrl, videoFile);
+      if (videoFile?.handle) void saveVideoFileHandle(project.metadata.id, videoFile.handle).catch(() => undefined);
       project.updatedAt = Date.now();
 
       // An opponent left unnamed is "Opponent", never saved in the team archive.
@@ -845,7 +852,8 @@ export function MatchSetupPage() {
     };
     return (
       <QuickMatchStart
-        details={{ competitionName: formData.competitionName, matchDate: formData.matchDate, startTime: formData.startTime, venue: formData.venue, videoUrl: formData.videoUrl, videoUrlError: errors.videoUrl }}
+        details={{ competitionName: formData.competitionName, matchDate: formData.matchDate, startTime: formData.startTime, venue: formData.venue, videoUrl: formData.videoUrl, videoUrlError: errors.videoUrl, videoFile }}
+        onVideoFileChange={(file) => { setVideoFile(file); if (file) handleInputChange('videoUrl', ''); }}
         // Date and time cannot be emptied here: the match needs them (today and now by default).
         onDetailChange={(field, value) => {
           if ((field === 'matchDate' || field === 'startTime') && !value) return;
@@ -1029,21 +1037,18 @@ export function MatchSetupPage() {
               </div>
 
               <div className="form-group match-setup-form-grid__full">
-                <label htmlFor="videoUrl" className="form-label">
+                <label className="form-label">
                   {t('matchVideoLink')} <span className="form-label__optional">{t('optional')}</span>
                 </label>
-                <input
-                  id="videoUrl"
-                  type="url"
-                  value={formData.videoUrl}
-                  onChange={(event) => handleInputChange('videoUrl', event.target.value)}
-                  onKeyDown={handleSequentialEnter}
-                  placeholder={t('videoYoutubeUrlPlaceholder')}
-                  className={`form-input ${errors.videoUrl ? 'form-input-error' : ''}`}
+                <SetupVideoField
+                  url={formData.videoUrl}
+                  file={videoFile}
+                  error={errors.videoUrl}
+                  inputClassName={`form-input ${errors.videoUrl ? 'form-input-error' : ''}`}
+                  onUrlChange={(value) => handleInputChange('videoUrl', value)}
+                  onFileChange={(file) => { setVideoFile(file); if (file) handleInputChange('videoUrl', ''); }}
                 />
-                {errors.videoUrl
-                  ? <span className="form-error">{errors.videoUrl}</span>
-                  : <span className="form-hint">{t('matchVideoLinkHint')}</span>}
+                {!errors.videoUrl ? <span className="form-hint">{t('matchVideoLinkHint')}</span> : null}
               </div>
             </div>
           )}

@@ -7,6 +7,7 @@ import type { MatchRosterSelectionPlayer } from '@src/domain/match/types';
 import type { QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
 import { parseLineupJersey, type QuickStartLevel, type QuickStartRequest } from '@src/features/scouting/model/quick-start';
 import { MatchTeamSelection, type MatchTeamSelectionProps } from './MatchTeamSelection';
+import { SetupVideoField, type SetupVideoFile } from './SetupVideoField';
 import './quick-match-start.css';
 
 /** Court layout seen from behind the team's own baseline: net at the top. */
@@ -38,7 +39,8 @@ interface QuickMatchStartProps {
   onStart: (request: QuickStartRequest) => void;
   onFullSetup: () => void;
   /** Match details, all optional (defaults: friendly, today, now). */
-  details?: { competitionName: string; matchDate: string; startTime: string; venue: string; videoUrl: string; videoUrlError?: string };
+  details?: { competitionName: string; matchDate: string; startTime: string; venue: string; videoUrl: string; videoUrlError?: string; videoFile: SetupVideoFile | null };
+  onVideoFileChange?: (file: SetupVideoFile | null) => void;
   onDetailChange?: (field: 'competitionName' | 'matchDate' | 'startTime' | 'venue' | 'videoUrl', value: string) => void;
   /** Tutorial: show only this step (1-5, or 6 for the start buttons), filled with `initial`, not interactive. */
   previewStep?: number;
@@ -75,6 +77,7 @@ export function QuickMatchStart({
   initial,
   details,
   onDetailChange,
+  onVideoFileChange,
 }: QuickMatchStartProps) {
   const { t } = useTranslation();
   const defaultLiberoAuto = useAppStore((state) => state.liberoAutoMiddleReplacement);
@@ -258,11 +261,16 @@ export function QuickMatchStart({
                   <span>{t('venue')}</span>
                   <input type="text" value={details.venue} placeholder={t('venuePlaceholder')} onChange={(event) => onDetailChange('venue', event.target.value)} />
                 </label>
-                <label className="quick-start__field">
+                <div className="quick-start__field quick-start__field--wide">
                   <span>{t('matchVideoLink')}</span>
-                  <input type="url" value={details.videoUrl} placeholder={t('videoYoutubeUrlPlaceholder')} onChange={(event) => onDetailChange('videoUrl', event.target.value)} />
-                  {details.videoUrlError ? <span className="form-error">{details.videoUrlError}</span> : null}
-                </label>
+                  <SetupVideoField
+                    url={details.videoUrl}
+                    file={details.videoFile}
+                    error={details.videoUrlError}
+                    onUrlChange={(value) => onDetailChange('videoUrl', value)}
+                    onFileChange={(file) => onVideoFileChange?.(file)}
+                  />
+                </div>
               </div>
             </details>
           ) : null}

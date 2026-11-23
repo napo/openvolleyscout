@@ -7,6 +7,7 @@ import { seedDemoMatchOnce } from './features/demo/demo-match';
 import { ConfirmDialogHost } from './components/confirm-dialog';
 import { cloudSyncController } from './features/sync/cloud';
 import { ScoutingClaimKeeper } from './features/sync/cloud/ScoutingClaimKeeper';
+import { CloudVideoUploadPrompt } from './features/sync/cloud/CloudVideoUploadPrompt';
 import { hydrateDefenseSystemsFromDatabase, hydrateReceptionSystemsFromDatabase } from './features/systems/model';
 
 /**
@@ -58,6 +59,7 @@ export default function App() {
       {isRestored ? <AppRouter /> : null}
       <ConfirmDialogHost />
       <ScoutingClaimKeeper />
+      <CloudVideoUploadPrompt />
     </AppProviders>
   );
 }

@@ -364,3 +364,12 @@
     padding-top: 0;
   }
 }
+
+/* The match video (link or file) takes a whole row of the details grid. */
+.quick-start__field--wide {
+  grid-column: 1 / -1;
+}
+
+.quick-start__field--wide .setup-video-field__or .btn-small {
+  width: auto;
+}
