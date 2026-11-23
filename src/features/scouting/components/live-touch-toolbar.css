@@ -262,6 +262,31 @@
     width: 100%;
 }
 
+/* Vertical court, Attack selected: hard / placed / tip (and the blocker count)
+   get a row of their own under the evaluations, as on the horizontal court;
+   without a place in this grid they were cut off. */
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical:has(.live-scouting-toolbar__group--attack-subtype) {
+    --touch-toolbar-height: calc(var(--touch-toolbar-row-height) * 4 + var(--touch-eval-row-height) + 1.35rem);
+}
+
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar.live-scouting-toolbar--touch:has(.live-scouting-toolbar__group--attack-subtype) {
+    grid-template-rows: var(--touch-toolbar-row-height) calc(var(--touch-toolbar-row-height) * 2 + 0.25rem) var(--touch-eval-row-height) var(--touch-toolbar-row-height);
+    grid-template-areas:
+        "player balltype actions"
+        "skills skills skills"
+        "evals evals evals"
+        "subtype numblockers numblockers";
+}
+
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar.live-scouting-toolbar--touch:has(.live-scouting-toolbar__group--num-blockers):not(:has(.live-scouting-toolbar__group--attack-subtype)) {
+    grid-template-rows: var(--touch-toolbar-row-height) calc(var(--touch-toolbar-row-height) * 2 + 0.25rem) var(--touch-eval-row-height) var(--touch-toolbar-row-height);
+    grid-template-areas:
+        "player balltype actions"
+        "skills skills skills"
+        "evals evals evals"
+        "numblockers numblockers numblockers";
+}
+
 .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -304,6 +329,11 @@
 
     .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical.live-rally-stage--with-sidebar .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills {
         grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+
+    .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical.live-rally-stage--with-sidebar .live-scouting-toolbar.live-scouting-toolbar--touch:has(.live-scouting-toolbar__group--attack-subtype),
+    .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical.live-rally-stage--with-sidebar .live-scouting-toolbar.live-scouting-toolbar--touch:has(.live-scouting-toolbar__group--num-blockers) {
+        grid-template-rows: var(--touch-toolbar-row-height) var(--touch-toolbar-row-height) var(--touch-eval-row-height) var(--touch-toolbar-row-height);
     }
 
     .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical.live-rally-stage--with-sidebar .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills .live-scouting-toolbar__button {
