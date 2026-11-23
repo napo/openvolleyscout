@@ -4,7 +4,7 @@
 
 import type { CloudAuth } from './auth';
 import type { SyncPlatform } from './platform';
-import type { Fetch, RemoteStorage } from './storage';
+import type { Fetch, RemoteStorage, VideoStorage } from './storage';
 
 export type ProviderId = 'google-drive' | 'dropbox' | 'onedrive';
 
@@ -16,6 +16,8 @@ export interface SyncProvider {
   available(platform: SyncPlatform): boolean;
   createAuth(platform: SyncPlatform): Promise<CloudAuth>;
   storage(accessToken: string, fetchFn: Fetch): RemoteStorage;
+  /** Match videos in the same cloud space. */
+  videos(accessToken: string, fetchFn: Fetch): VideoStorage;
   /** Optional preparation before the user's sign-in tap (e.g. loading Google's web script). */
   prepare?(platform: SyncPlatform): Promise<void>;
 }

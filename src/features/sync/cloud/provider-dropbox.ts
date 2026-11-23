@@ -53,6 +53,7 @@ export const dropbox: SyncProvider = {
   available: (platform) => (platform === 'web' || platform === 'desktop') && DROPBOX_OAUTH.appKey !== '',
   createAuth,
   storage: (accessToken, fetchFn) => new DropboxClient(accessToken, fetchFn),
+  videos: (accessToken, fetchFn) => new DropboxClient(accessToken, fetchFn),
   async prepare(platform) {
     if (platform === 'web') await Promise.all([import('./auth-pkce'), import('./auth-popup')]);
   },

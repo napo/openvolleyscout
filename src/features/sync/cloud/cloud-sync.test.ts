@@ -112,6 +112,7 @@ describe('cloud synchronisation engine and controller', () => {
       available: () => true,
       createAuth: async () => ({ token: async () => 'tok', invalidate: vi.fn(), signOut: vi.fn(async () => {}) }),
       storage: () => remote,
+      videos: () => { throw new Error('not used'); },
     };
     const controller = new CloudSyncController(archive);
     expect(await controller.connect(provider)).toBe(true);

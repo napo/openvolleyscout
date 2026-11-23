@@ -28,6 +28,31 @@ fn webcam_supported() -> bool {
 
 /// Size in bytes of a local video file, or None when it is missing or not a
 /// file. Read-only: used to tell how much cloud space the videos would need.
+const VIDEO_EXTENSIONS: [&str; 8] = ["mp4", "m4v", "mov", "mkv", "webm", "avi", "ogv", "mts"];
+
+fn is_video_path(path: &str) -> bool {
+  std::path::Path::new(path)
+    .extension()
+    .and_then(|ext| ext.to_str())
+    .map(|ext| VIDEO_EXTENSIONS.contains(&ext.to_ascii_lowercase().as_str()))
+    .unwrap_or(false)
+}
+
+/// Reads part of a local video file, for the resumable upload to the user's
+/// cloud. Only video files can be read; the bytes go back as raw binary.
+#[tauri::command]
+fn read_video_chunk(path: String, offset: u64, length: u64) -> Result<tauri::ipc::Response, String> {
+  use std::io::{Read, Seek, SeekFrom};
+  if !is_video_path(&path) {
+    return Err("not a video file".into());
+  }
+  let mut file = std::fs::File::open(&path).map_err(|error| error.to_string())?;
+  file.seek(SeekFrom::Start(offset)).map_err(|error| error.to_string())?;
+  let mut buffer = Vec::with_capacity(length.min(64 * 1024 * 1024) as usize);
+  file.take(length.min(64 * 1024 * 1024)).read_to_end(&mut buffer).map_err(|error| error.to_string())?;
+  Ok(tauri::ipc::Response::new(buffer))
+}
+
 #[tauri::command]
 fn video_file_size(path: String) -> Option<u64> {
   std::fs::metadata(&path).ok().filter(|meta| meta.is_file()).map(|meta| meta.len())
@@ -88,6 +113,7 @@ pub fn run() {
       multi_window_available,
       webcam_supported,
       video_file_size,
+      read_video_chunk,
       rtsp_relay::rtsp_relay_available,
       rtsp_relay::start_rtsp_relay,
       rtsp_relay::stop_rtsp_relay,

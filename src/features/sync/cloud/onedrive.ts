@@ -7,10 +7,23 @@
  */
 
 import { SYNC_FILE_NAME } from './config';
-import { type Fetch, type RemoteFile, type RemoteStorage, type SpaceUsage, StorageError } from './storage';
+import {
+  type CloudVideoFile,
+  type Fetch,
+  type RemoteFile,
+  type RemoteStorage,
+  type SpaceUsage,
+  StorageError,
+  type VideoChunkResult,
+  type VideoStorage,
+  cloudVideoName,
+  matchIdFromCloudVideoName,
+} from './storage';
 
 const ITEM = `https://graph.microsoft.com/v1.0/me/drive/special/approot:/${SYNC_FILE_NAME}`;
 const CONTENT = `${ITEM}:/content`;
+const GRAPH = 'https://graph.microsoft.com/v1.0/me/drive';
+const VIDEO_FOLDER = `${GRAPH}/special/approot:/videos`;
 
 export const ONEDRIVE_SCOPE = 'Files.ReadWrite.AppFolder offline_access';
 
@@ -19,7 +32,7 @@ interface Item {
   readonly '@microsoft.graph.downloadUrl': string;
 }
 
-export class OneDriveClient implements RemoteStorage {
+export class OneDriveClient implements RemoteStorage, VideoStorage {
   constructor(
     private readonly accessToken: string,
     private readonly fetchFn: Fetch = (input, init) => fetch(input, init),
@@ -100,5 +113,73 @@ export class OneDriveClient implements RemoteStorage {
     } catch {
       return null;
     }
+  }
+
+  async listVideos(): Promise<CloudVideoFile[]> {
+    const videos: CloudVideoFile[] = [];
+    type Page = { value: Array<{ id: string; name: string; size?: number; file?: unknown }>; '@odata.nextLink'?: string };
+    let url: string | undefined = `${VIDEO_FOLDER}:/children?$select=id,name,size,file&$top=200`;
+    while (url) {
+      let page: Page;
+      try {
+        page = (await (await this.request(url)).json()) as Page;
+      } catch (e) {
+        if (e instanceof StorageError && e.status === 404) return videos;
+        throw e;
+      }
+      for (const item of page.value) {
+        const matchId = item.file ? matchIdFromCloudVideoName(item.name) : null;
+        if (matchId) videos.push({ id: item.id, matchId, name: item.name, size: item.size ?? 0 });
+      }
+      url = page['@odata.nextLink'];
+    }
+    return videos;
+  }
+
+  async startVideoUpload(matchId: string, fileName: string): Promise<string> {
+    const name = encodeURIComponent(cloudVideoName(matchId, fileName));
+    const response = await this.request(`${VIDEO_FOLDER}/${name}:/createUploadSession`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item: { '@microsoft.graph.conflictBehavior': 'rename' } }),
+    });
+    return ((await response.json()) as { uploadUrl: string }).uploadUrl;
+  }
+
+  private static nextOffset(body: { nextExpectedRanges?: string[] }): number | null {
+    const first = body.nextExpectedRanges?.[0];
+    return first ? Number(first.split('-')[0]) : null;
+  }
+
+  /** The upload URL is pre-authorised: no Authorization header (Microsoft rejects it there). */
+  async videoUploadOffset(session: string, _size: number, knownOffset: number): Promise<number | null> {
+    const response = await this.fetchFn(session);
+    if (response.status === 404) return null;
+    if (!response.ok) throw new StorageError(response.status);
+    return OneDriveClient.nextOffset((await response.json()) as { nextExpectedRanges?: string[] }) ?? knownOffset;
+  }
+
+  async uploadVideoChunk(session: string, offset: number, bytes: Uint8Array, size: number): Promise<VideoChunkResult> {
+    const end = offset + bytes.length;
+    const response = await this.fetchFn(session, {
+      method: 'PUT',
+      headers: { 'Content-Range': `bytes ${offset}-${end - 1}/${size}` },
+      body: new Blob([bytes as BlobPart]),
+    });
+    if (!response.ok) throw new StorageError(response.status);
+    const body = (await response.json()) as { id?: string; name?: string; size?: number; nextExpectedRanges?: string[] };
+    if (response.status === 202 || !body.id) return { done: false, offset: OneDriveClient.nextOffset(body) ?? end };
+    const name = body.name ?? '';
+    return { done: true, file: { id: body.id, matchId: matchIdFromCloudVideoName(name) ?? '', name, size: body.size ?? size } };
+  }
+
+  /** A pre-authorised link valid for about an hour. */
+  async videoStreamUrl(file: CloudVideoFile): Promise<string> {
+    const item = (await (await this.request(`${GRAPH}/items/${file.id}`)).json()) as Item;
+    return item['@microsoft.graph.downloadUrl'];
+  }
+
+  async trashVideo(file: CloudVideoFile): Promise<void> {
+    await this.request(`${GRAPH}/items/${file.id}`, { method: 'DELETE' });
   }
 }

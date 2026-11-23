@@ -49,6 +49,7 @@ export const onedrive: SyncProvider = {
   available: (platform) => (platform === 'web' || platform === 'desktop') && ONEDRIVE_OAUTH.clientId !== '',
   createAuth,
   storage: (accessToken, fetchFn) => new OneDriveClient(accessToken, fetchFn),
+  videos: (accessToken, fetchFn) => new OneDriveClient(accessToken, fetchFn),
   async prepare(platform) {
     if (platform === 'web') await Promise.all([import('./auth-pkce'), import('./auth-popup')]);
   },

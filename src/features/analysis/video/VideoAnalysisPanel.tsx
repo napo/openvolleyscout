@@ -73,6 +73,8 @@ import {
   supportsFileSystemAccess,
 } from './file-handle-store';
 import { resolveRemoteVideoSource, remoteVideoUrlErrorKey, type RemoteVideoUrlError } from './remote-video-url';
+import { findCloudVideo } from '@src/features/sync/cloud/video-upload';
+import { cloudSyncController } from '@src/features/sync/cloud/archive-adapter';
 import { buildYouTubePlaylistClips } from './youtube-playlist';
 import { buildLocalPlaylistClips } from './playlist-file';
 import { PlaylistFileActions } from './PlaylistFileActions';
@@ -139,6 +141,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const [videoError, setVideoError] = useState(false);
   useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
   const [storedHandle, setStoredHandle] = useState<FileSystemFileHandle | null>(null);
+  const [cloudCopy, setCloudCopy] = useState<'none' | 'available' | 'opening' | 'failed'>('none');
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibrationTarget, setCalibrationTarget] = useState<VideoEventEntry | null>(null);
   const [filters, setFilters] = useState<VideoEventFilters>(createDefaultVideoEventFilters);
@@ -374,6 +377,36 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     void saveVideoFileHandle(project.metadata.id, handle).catch(() => {});
     setStoredHandle(null);
     handleFileSelected(file);
+  };
+
+  // A local file missing here may be in the user's cloud, sent from another device.
+  useEffect(() => {
+    setCloudCopy('none');
+    if (source?.kind !== 'file' || cloudSyncController.status.state === 'off') return undefined;
+    let cancelled = false;
+    void findCloudVideo(project.metadata.id)
+      .then((found) => { if (!cancelled && found) setCloudCopy('available'); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceKey, project.metadata.id]);
+
+  const openCloudCopy = async () => {
+    setCloudCopy('opening');
+    try {
+      const found = await findCloudVideo(project.metadata.id);
+      if (!found) throw new Error('no cloud video');
+      const url = await found.storage.videoStreamUrl(found.file);
+      setFileObjectUrl((previousUrl) => {
+        if (previousUrl) URL.revokeObjectURL(previousUrl);
+        return url;
+      });
+      setIsPlayable(true);
+      setVideoError(false);
+      setCloudCopy('available');
+    } catch {
+      setCloudCopy('failed');
+    }
   };
 
   const reopenStoredVideo = async () => {
@@ -921,6 +954,11 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
       <h3>{t('videoMissingTitle')}</h3>
       <p>{t('videoMissingDescription', { path: source?.kind === 'file' ? source.path : source?.kind === 'webcam' ? (source.recordingPath ?? '') : source?.kind === 'rtsp' ? source.url : '' })}</p>
       <div className="video-analysis__missing-actions">
+        {cloudCopy === 'available' || cloudCopy === 'opening' || cloudCopy === 'failed' ? (
+          <button type="button" className="btn-primary" disabled={cloudCopy === 'opening'} onClick={() => void openCloudCopy()}>
+            {t('videoOpenFromCloud')}
+          </button>
+        ) : null}
         {storedHandle ? (
           <button type="button" className="btn-primary" onClick={() => void reopenStoredVideo()}>
             {t('videoReopenStored')}
@@ -934,6 +972,8 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
         </button>
       </div>
       {storedHandle ? <p className="video-analysis__hint">{t('videoReopenStoredHint')}</p> : null}
+      {cloudCopy === 'available' ? <p className="video-analysis__hint">{t('videoOpenFromCloudHint')}</p> : null}
+      {cloudCopy === 'failed' ? <p className="video-analysis__error">{t('videoOpenFromCloudError')}</p> : null}
       <p className="video-analysis__notice">{t('videoSourceNotice')}</p>
     </div>
   );

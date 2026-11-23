@@ -8,7 +8,18 @@
  */
 
 import { SYNC_FILE_NAME, SYNC_FOLDER_NAME } from './config';
-import { type Fetch, type RemoteFile, type RemoteStorage, type SpaceUsage, StorageError } from './storage';
+import {
+  type CloudVideoFile,
+  type Fetch,
+  type RemoteFile,
+  type RemoteStorage,
+  type SpaceUsage,
+  StorageError,
+  type VideoChunkResult,
+  type VideoStorage,
+  cloudVideoName,
+  matchIdFromCloudVideoName,
+} from './storage';
 
 const API = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
@@ -17,7 +28,7 @@ const PROPERTY = 'openvolleyscout';
 
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
-export class DriveClient implements RemoteStorage {
+export class DriveClient implements RemoteStorage, VideoStorage {
   constructor(
     private readonly accessToken: string,
     private readonly fetchFn: Fetch = (input, init) => fetch(input, init),
@@ -126,5 +137,81 @@ export class DriveClient implements RemoteStorage {
     } catch {
       return null;
     }
+  }
+
+  async listVideos(): Promise<CloudVideoFile[]> {
+    const q = `appProperties has { key='${PROPERTY}' and value='video' } and trashed=false`;
+    const videos: CloudVideoFile[] = [];
+    let pageToken = '';
+    do {
+      const params = new URLSearchParams({ q, spaces: 'drive', fields: 'nextPageToken,files(id,name,size)', pageSize: '200' });
+      if (pageToken) params.set('pageToken', pageToken);
+      const response = await this.request(`${API}?${params}`);
+      const page = (await response.json()) as { nextPageToken?: string; files?: Array<{ id: string; name: string; size?: string }> };
+      for (const file of page.files ?? []) {
+        const matchId = matchIdFromCloudVideoName(file.name);
+        if (matchId) videos.push({ id: file.id, matchId, name: file.name, size: Number(file.size ?? 0) });
+      }
+      pageToken = page.nextPageToken ?? '';
+    } while (pageToken);
+    return videos;
+  }
+
+  async startVideoUpload(matchId: string, fileName: string, size: number): Promise<string> {
+    const response = await this.request(`${UPLOAD}?uploadType=resumable&fields=id,name,size`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Length': String(size) },
+      body: JSON.stringify({
+        name: cloudVideoName(matchId, fileName),
+        parents: [await this.folder()],
+        appProperties: { [PROPERTY]: 'video' },
+      }),
+    });
+    const location = response.headers.get('Location') ?? response.headers.get('location');
+    if (!location) throw new StorageError(0, 'no upload session');
+    return location;
+  }
+
+  private async putChunk(session: string, range: string, body?: Uint8Array): Promise<Response> {
+    return this.fetchFn(session, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${this.accessToken}`, 'Content-Range': range },
+      body: body ? new Blob([body as BlobPart]) : undefined,
+    });
+  }
+
+  private static rangeEnd(response: Response): number | null {
+    const range = response.headers.get('Range') ?? response.headers.get('range');
+    const end = range ? /bytes=0-(\d+)/.exec(range)?.[1] : undefined;
+    return end === undefined ? null : Number(end) + 1;
+  }
+
+  async videoUploadOffset(session: string, size: number, knownOffset: number): Promise<number | null> {
+    const response = await this.putChunk(session, `bytes */${size}`);
+    if (response.status === 404 || response.status === 410) return null;
+    if (response.status === 308) return DriveClient.rangeEnd(response) ?? (response.headers.has('Range') ? knownOffset : 0);
+    if (response.ok) return size;
+    throw new StorageError(response.status);
+  }
+
+  async uploadVideoChunk(session: string, offset: number, bytes: Uint8Array, size: number): Promise<VideoChunkResult> {
+    const end = offset + bytes.length;
+    const response = await this.putChunk(session, `bytes ${offset}-${end - 1}/${size}`, bytes);
+    if (response.status === 308) return { done: false, offset: DriveClient.rangeEnd(response) ?? end };
+    if (!response.ok) throw new StorageError(response.status);
+    const file = (await response.json()) as { id: string; name: string; size?: string };
+    return {
+      done: true,
+      file: { id: file.id, matchId: matchIdFromCloudVideoName(file.name) ?? '', name: file.name, size: Number(file.size ?? size) },
+    };
+  }
+
+  /** Drive needs the token on the request; the player cannot send headers, so it goes in the link (valid about an hour). */
+  async videoStreamUrl(file: CloudVideoFile): Promise<string> {
+    return `${API}/${file.id}?${new URLSearchParams({ alt: 'media', access_token: this.accessToken })}`;
+  }
+
+  trashVideo(file: CloudVideoFile): Promise<void> {
+    return this.trash(file.id);
   }
 }

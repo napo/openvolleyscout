@@ -63,6 +63,7 @@ export const googleDrive: SyncProvider = {
   },
   createAuth,
   storage: (accessToken, fetchFn) => new DriveClient(accessToken, fetchFn),
+  videos: (accessToken, fetchFn) => new DriveClient(accessToken, fetchFn),
   async prepare(platform) {
     if (platform !== 'web') return;
     const { loadGoogle } = await import('./auth-web');

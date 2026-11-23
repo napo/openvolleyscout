@@ -17,7 +17,7 @@ import { currentDevice, readTakeoverMinutes } from './device';
 import type { DeviceEntry, PresenceResult, ScoutingClaim, ScoutingIntent } from './presence';
 import type { ProviderId, SyncProvider } from './provider';
 import { DEFAULT_PROVIDER, createAuth, providerById } from './providers';
-import { type SpaceUsage, StorageError } from './storage';
+import { type SpaceUsage, StorageError, type VideoStorage } from './storage';
 
 export type SyncState = 'off' | 'syncing' | 'ok' | 'paused' | 'error';
 
@@ -143,6 +143,14 @@ export class CloudSyncController {
     const token = await this.auth.token(false).catch(() => null);
     if (!token) return null;
     return this.provider.storage(token, await syncFetch()).spaceUsage();
+  }
+
+  /** Match videos of the connected cloud service; null when not connected or signed out. */
+  async videoStorage(): Promise<VideoStorage | null> {
+    if (!this.auth || this.current.state === 'off') return null;
+    const token = await this.auth.token(false).catch(() => null);
+    if (!token) return null;
+    return this.provider.videos(token, await syncFetch());
   }
 
   async disconnect(deleteRemote = false): Promise<void> {

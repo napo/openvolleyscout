@@ -3,15 +3,18 @@
 /**
  * Settings > Cloud synchronisation > This device > Videos: whether this
  * device includes the match videos, which ones, and how much cloud space
- * they would need compared with the free space of the connected service.
+ * they would need compared with the free space of the connected service;
+ * sends them (computers only), shows the progress and removes them.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
+import { confirmAction } from '@src/components/confirm-dialog';
 import { cloudSyncController } from './archive-adapter';
 import { SERVICE_NAME_KEY } from './CloudSyncCard';
 import { useCloudSyncStatus } from './controller';
-import type { SpaceUsage } from './storage';
+import type { CloudVideoFile, SpaceUsage } from './storage';
+import { canUploadVideos, createChunkReader, useVideoUploads, videoUploadQueue, type VideoUploadJob } from './video-upload';
 import {
   estimateVideoSpace,
   formatBytes,
@@ -36,7 +39,13 @@ export function CloudSyncVideoSettings() {
   const [selected, setSelected] = useState<string[] | null>(() => readSelectedVideoMatchIds());
   const [sizes, setSizes] = useState<Record<string, Size>>({});
   const [cloud, setCloud] = useState<SpaceUsage | null | undefined>(undefined);
+  const [cloudVideos, setCloudVideos] = useState<Record<string, CloudVideoFile>>({});
+  const [refresh, setRefresh] = useState(0);
+  const chosenFiles = useRef(new Map<string, File>());
+  const uploads = useVideoUploads();
   const connected = status.state !== 'off';
+  const uploadAllowed = canUploadVideos();
+  const doneCount = [...uploads.values()].filter((state) => state.status === 'done').length;
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -61,14 +70,31 @@ export function CloudSyncVideoSettings() {
     let alive = true;
     setCloud(undefined);
     void cloudSyncController.spaceUsage().catch(() => null).then((usage) => { if (alive) setCloud(usage); });
+    void cloudSyncController.videoStorage()
+      .then((storage) => storage?.listVideos() ?? [])
+      .catch(() => [])
+      .then((files) => {
+        if (!alive) return;
+        const byMatch: Record<string, CloudVideoFile> = {};
+        for (const file of files) {
+          if (!byMatch[file.matchId] || file.size > byMatch[file.matchId].size) byMatch[file.matchId] = file;
+        }
+        setCloudVideos(byMatch);
+      });
     return () => { alive = false; };
-  }, [enabled, connected, status.provider]);
+  }, [enabled, connected, status.provider, refresh, doneCount]);
 
   const isSelected = (matchId: string) => selected === null || selected.includes(matchId);
+  const inCloud = (video: LocalVideoMatch) => {
+    const file = cloudVideos[video.matchId];
+    const size = sizes[video.matchId];
+    return Boolean(file) && (typeof size !== 'number' || file.size === size);
+  };
+  const toSend = (videos ?? []).filter((video) => isSelected(video.matchId) && !inCloud(video));
   const estimate = useMemo(
-    () => estimateVideoSpace((videos ?? []).filter((video) => isSelected(video.matchId)).map((video) => sizes[video.matchId]), cloud ?? null),
+    () => estimateVideoSpace(toSend.map((video) => sizes[video.matchId]), cloud ?? null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [videos, sizes, cloud, selected],
+    [videos, sizes, cloud, selected, cloudVideos],
   );
 
   const toggle = (matchId: string) => {
@@ -84,7 +110,40 @@ export function CloudSyncVideoSettings() {
   };
 
   const pickSize = (video: LocalVideoMatch, file: File | undefined) => {
-    if (file) setSizes((previous) => ({ ...previous, [video.matchId]: file.size }));
+    if (!file) return;
+    chosenFiles.current.set(video.matchId, file);
+    setSizes((previous) => ({ ...previous, [video.matchId]: file.size }));
+  };
+
+  const startUploads = async () => {
+    const jobs: VideoUploadJob[] = [];
+    for (const video of toSend) {
+      const chosen = chosenFiles.current.get(video.matchId);
+      const size = chosen?.size ?? await measureVideoFile(video, true).catch(() => null);
+      if (typeof size !== 'number' || size === 0) continue;
+      const read = await createChunkReader(video, chosen).catch(() => null);
+      if (read) jobs.push({ video, size, read });
+    }
+    videoUploadQueue.enqueue(jobs);
+  };
+
+  const removeFromCloud = async (video: LocalVideoMatch) => {
+    const file = cloudVideos[video.matchId];
+    if (!file || !(await confirmAction(t('cloudSyncVideosRemoveConfirm', { name: video.fileName })))) return;
+    const storage = await cloudSyncController.videoStorage();
+    await storage?.trashVideo(file).catch(() => undefined);
+    setRefresh((value) => value + 1);
+  };
+
+  const rowState = (video: LocalVideoMatch): string | null => {
+    const upload = uploads.get(video.matchId);
+    if (upload?.status === 'uploading') {
+      return t('cloudSyncVideosUploading', { percent: upload.size ? Math.floor((upload.sent / upload.size) * 100) : 0 });
+    }
+    if (upload?.status === 'queued') return t('cloudSyncVideosQueued');
+    if (upload?.status === 'error') return t('cloudSyncVideosUploadError');
+    if (inCloud(video)) return t('cloudSyncVideosInCloud');
+    return null;
   };
 
   const service = t(SERVICE_NAME_KEY[status.provider]);
@@ -129,7 +188,16 @@ export function CloudSyncVideoSettings() {
                       : value === 'missing'
                         ? t('cloudSyncVideosMissing')
                         : t('cloudSyncVideosUnknownSize')}
-                    {value === null ? (
+                    {rowState(video) ? <>{' - '}<em>{rowState(video)}</em></> : null}
+                    {inCloud(video) && !uploads.has(video.matchId) ? (
+                      <>
+                        {' '}
+                        <button type="button" className="btn-secondary btn-small" onClick={() => void removeFromCloud(video)}>
+                          {t('cloudSyncVideosRemove')}
+                        </button>
+                      </>
+                    ) : null}
+                    {value === null && !inCloud(video) ? (
                       <>
                         {' '}
                         <button type="button" className="btn-secondary btn-small" onClick={() => void readSize(video)}>
@@ -172,6 +240,27 @@ export function CloudSyncVideoSettings() {
                 </p>
               </>
             )}
+            {!uploadAllowed ? (
+              <p className="cloud-sync-card__note">{t('cloudSyncVideosPhoneNoUpload')}</p>
+            ) : connected ? (
+              <div className="cloud-sync-card__actions">
+                {videoUploadQueue.isRunning ? (
+                  <button type="button" className="btn-secondary btn-small" onClick={() => videoUploadQueue.stop()}>
+                    {t('cloudSyncVideosStop')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-primary btn-small"
+                    disabled={estimate.known === 0 || Boolean(estimate.missing)}
+                    onClick={() => void startUploads()}
+                  >
+                    {t('cloudSyncVideosUpload', { count: estimate.known })}
+                  </button>
+                )}
+              </div>
+            ) : null}
+            {uploadAllowed && connected ? <p className="cloud-sync-card__note">{t('cloudSyncVideosUploadHelp')}</p> : null}
           </>
         )
       ) : null}
