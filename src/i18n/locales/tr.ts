@@ -2886,6 +2886,7 @@ export const tr = {
   cloudSyncTitle: "Bulut eşitleme",
   cloudSyncDescription: "Arşivinizi (maçlar, takımlar, kadrolar, sistemler ve taktik raporlar) kendi bulut hesabınızla tüm cihazlarınızda aynı tutun.",
   cloudSyncExclusiveNote: "Her cihaz aynı anda yalnızca bir bulut hizmetine bağlanır. Farklı hizmetlere bağlı cihazlar birbiriyle eşitlenmez.",
+  cloudSyncVideoNote: "Video dosyaları buluta kopyalanmaz: yalnızca YouTube bağlantısı veya dosya adı ve senkronizasyon noktaları eşitlenir. Başka bir cihazda video dosyasını Video analizi bölümünde yeniden bağlayın.",
   cloudSyncProviderGoogle: "Google Drive",
   cloudSyncProviderDropbox: "Dropbox",
   cloudSyncProviderOneDrive: "OneDrive",

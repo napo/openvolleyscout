@@ -198,6 +198,7 @@ export function CloudSyncCard({
               })}
             </div>
             <p className="cloud-sync-card__note">{t('cloudSyncExclusiveNote')}</p>
+            <p className="cloud-sync-card__note">{t('cloudSyncVideoNote')}</p>
           </>
         )}
       </section>
@@ -248,6 +249,7 @@ export function CloudSyncCard({
           <h3 className="cloud-sync-card__subtitle">{t('cloudSyncDisconnectTitle', { service: serviceLabel })}</h3>
           <p className="cloud-sync-card__text">{t('cloudSyncDisconnectText', { service: serviceLabel })}</p>
           <p className="cloud-sync-card__note">{t('cloudSyncExclusiveNote')}</p>
+          <p className="cloud-sync-card__note">{t('cloudSyncVideoNote')}</p>
           <label className="cloud-sync-card__check">
             <input
               type="checkbox"

@@ -2892,6 +2892,7 @@ export const es = {
   cloudSyncTitle: "Sincronización en la nube",
   cloudSyncDescription: "Mantén tu archivo (partidos, equipos, plantillas, sistemas e informes tácticos) igual en todos tus dispositivos con tu propia cuenta en la nube.",
   cloudSyncExclusiveNote: "Cada dispositivo se conecta a un solo servicio en la nube a la vez. Los dispositivos conectados a servicios distintos no se sincronizan entre sí.",
+  cloudSyncVideoNote: "Los archivos de vídeo no se copian en la nube: solo se sincronizan el enlace de YouTube o el nombre del archivo y los puntos de sincronización. En otro dispositivo, vuelve a vincular el archivo de vídeo en Análisis de vídeo.",
   cloudSyncProviderGoogle: "Google Drive",
   cloudSyncProviderDropbox: "Dropbox",
   cloudSyncProviderOneDrive: "OneDrive",

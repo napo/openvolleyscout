@@ -2892,6 +2892,7 @@ export const ar = {
   cloudSyncTitle: "المزامنة السحابية",
   cloudSyncDescription: "حافظ على أرشيفك (المباريات والفرق والقوائم والأنظمة والتقارير التكتيكية) متطابقاً على جميع أجهزتك باستخدام حسابك السحابي الخاص.",
   cloudSyncExclusiveNote: "يتصل كل جهاز بخدمة سحابية واحدة فقط في كل مرة. الأجهزة المتصلة بخدمات مختلفة لا تتزامن مع بعضها.",
+  cloudSyncVideoNote: "لا تُنسخ ملفات الفيديو إلى السحابة: تتم مزامنة رابط YouTube أو اسم الملف ونقاط المزامنة فقط. على جهاز آخر، اربط ملف الفيديو مرة أخرى في تحليل الفيديو.",
   cloudSyncProviderGoogle: "Google Drive",
   cloudSyncProviderDropbox: "Dropbox",
   cloudSyncProviderOneDrive: "OneDrive",

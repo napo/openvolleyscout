@@ -2895,6 +2895,7 @@ export const it = {
   cloudSyncTitle: "Sincronizzazione cloud",
   cloudSyncDescription: "Mantieni allineato il tuo archivio (gare, squadre, rose, sistemi e report tattici) tra i tuoi dispositivi usando il tuo spazio cloud personale.",
   cloudSyncExclusiveNote: "Ogni dispositivo si collega a un solo servizio cloud alla volta. Dispositivi collegati a servizi diversi non si sincronizzano tra loro.",
+  cloudSyncVideoNote: "I file video non vengono copiati nel cloud: si sincronizzano solo il link YouTube o il nome del file e i punti di sincronizzazione. Su un altro dispositivo ricollega il file video in Analisi video.",
   cloudSyncProviderGoogle: "Google Drive",
   cloudSyncProviderDropbox: "Dropbox",
   cloudSyncProviderOneDrive: "OneDrive",

@@ -2890,6 +2890,7 @@ export const sl = {
   cloudSyncTitle: "Sinhronizacija v oblak",
   cloudSyncDescription: "Ohrani svoj arhiv (tekme, ekipe, sezname igralcev, sisteme in taktična poročila) enak na vseh napravah z lastnim računom v oblaku.",
   cloudSyncExclusiveNote: "Vsaka naprava je naenkrat povezana le z eno storitvijo v oblaku. Naprave, povezane z različnimi storitvami, se med seboj ne sinhronizirajo.",
+  cloudSyncVideoNote: "Video datoteke se ne kopirajo v oblak: sinhronizirajo se le povezava YouTube ali ime datoteke in sinhronizacijske točke. Na drugi napravi video datoteko znova povežite v Analizi videa.",
   cloudSyncProviderGoogle: "Google Drive",
   cloudSyncProviderDropbox: "Dropbox",
   cloudSyncProviderOneDrive: "OneDrive",

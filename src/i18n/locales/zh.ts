@@ -2890,6 +2890,7 @@ export const zh = {
   cloudSyncTitle: "云同步",
   cloudSyncDescription: "使用你自己的云账号，让存档（比赛、球队、名单、体系和战术报告）在所有设备上保持一致。",
   cloudSyncExclusiveNote: "每台设备同一时间只能连接一个云服务。连接到不同服务的设备之间不会同步。",
+  cloudSyncVideoNote: "视频文件不会复制到云端：只同步 YouTube 链接或文件名以及同步点。在其他设备上，请在视频分析中重新关联视频文件。",
   cloudSyncProviderGoogle: "Google Drive",
   cloudSyncProviderDropbox: "Dropbox",
   cloudSyncProviderOneDrive: "OneDrive",

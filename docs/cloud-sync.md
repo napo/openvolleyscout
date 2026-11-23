@@ -2,6 +2,8 @@
 
 OpenVolleyScout can synchronise a user's local archive (matches, teams, rosters, competitions, opponent reports, and reception/defense systems) across devices using their own Google Drive, Dropbox, or OneDrive account. No intermediary server is used: tokens stay on the device and data travels directly between the device and the chosen cloud service.
 
+Video files are never copied to the cloud (OpenVolleyScout does not store them at all): a match carries only the video reference (YouTube link, URL or local file name/path), the sync points, starred actions and notes. On another device a local video must be linked again in Video analysis.
+
 ## Architecture
 
 The implementation lives in `src/features/sync/cloud/` (modelled on `volleyreportxls`):

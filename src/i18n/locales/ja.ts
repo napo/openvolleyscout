@@ -2871,6 +2871,7 @@ export const ja = {
   cloudSyncTitle: "クラウド同期",
   cloudSyncDescription: "自分のクラウドアカウントを使って、アーカイブ（試合、チーム、ロスター、システム、戦術レポート）をすべてのデバイスでそろえます。",
   cloudSyncExclusiveNote: "各デバイスが同時に接続できるクラウドサービスは1つだけです。別のサービスに接続したデバイス同士は同期されません。",
+  cloudSyncVideoNote: "動画ファイルはクラウドにコピーされません。同期されるのは YouTube のリンクまたはファイル名と同期ポイントだけです。別のデバイスでは、動画分析で動画ファイルを再度リンクしてください。",
   cloudSyncProviderGoogle: "Google Drive",
   cloudSyncProviderDropbox: "Dropbox",
   cloudSyncProviderOneDrive: "OneDrive",

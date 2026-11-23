@@ -2892,6 +2892,7 @@ export const ro = {
   cloudSyncTitle: "Sincronizare în cloud",
   cloudSyncDescription: "Păstrează arhiva (meciuri, echipe, loturi, sisteme și rapoarte tactice) la fel pe toate dispozitivele, cu propriul cont cloud.",
   cloudSyncExclusiveNote: "Fiecare dispozitiv se conectează la un singur serviciu cloud o dată. Dispozitivele conectate la servicii diferite nu se sincronizează între ele.",
+  cloudSyncVideoNote: "Fișierele video nu sunt copiate în cloud: se sincronizează doar linkul YouTube sau numele fișierului și punctele de sincronizare. Pe alt dispozitiv, asociază din nou fișierul video în Analiza video.",
   cloudSyncProviderGoogle: "Google Drive",
   cloudSyncProviderDropbox: "Dropbox",
   cloudSyncProviderOneDrive: "OneDrive",

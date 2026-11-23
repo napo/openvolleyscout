@@ -2890,6 +2890,7 @@ export const de = {
   cloudSyncTitle: "Cloud-Synchronisierung",
   cloudSyncDescription: "Halte dein Archiv (Spiele, Teams, Kader, Systeme und taktische Berichte) mit deinem eigenen Cloud-Konto auf allen Geräten gleich.",
   cloudSyncExclusiveNote: "Jedes Gerät ist immer nur mit einem Cloud-Dienst verbunden. Geräte mit unterschiedlichen Diensten synchronisieren sich nicht miteinander.",
+  cloudSyncVideoNote: "Videodateien werden nicht in die Cloud kopiert: Synchronisiert werden nur der YouTube-Link oder der Dateiname und die Synchronisationspunkte. Verknüpfe die Videodatei auf einem anderen Gerät erneut in der Videoanalyse.",
   cloudSyncProviderGoogle: "Google Drive",
   cloudSyncProviderDropbox: "Dropbox",
   cloudSyncProviderOneDrive: "OneDrive",
