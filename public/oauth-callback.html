@@ -1,0 +1,25 @@
+<!doctype html>
+<!--
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <meta name="referrer" content="no-referrer" />
+    <title>OpenVolleyScout</title>
+  </head>
+  <body style="font-family: sans-serif; text-align: center; padding: 3em">
+    <h1>OpenVolleyScout</h1>
+    <p>Accesso completato: puoi chiudere questa pagina e tornare all'app.</p>
+    <p>Signed in: you can close this page and go back to the app.</p>
+    <script>
+      // Hands the callback URL (with code and state) back to the window that started sign-in (auth-popup.ts).
+      const channel = new BroadcastChannel('openvolleyscout-oauth');
+      channel.postMessage(location.href);
+      channel.close();
+      history.replaceState(null, '', location.pathname);
+      window.close();
+    </script>
+  </body>
+</html>

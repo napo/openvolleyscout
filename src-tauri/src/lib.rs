@@ -1,3 +1,4 @@
+mod oauth;
 mod playlist_server;
 mod rtsp_relay;
 mod sidecar;
@@ -64,11 +65,15 @@ pub fn run() {
     .manage(video_export::ClipExportState::default())
     .manage(rtsp_relay::RtspRelayState::default())
     .manage(playlist_server::PlaylistServerState::default())
+    .manage(oauth::Pending::default())
     .plugin(tauri_plugin_updater::Builder::new().build())
     .plugin(tauri_plugin_process::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_http::init())
+    .plugin(tauri_plugin_os::init())
+    .plugin(tauri_plugin_google_auth::init())
     .invoke_handler(tauri::generate_handler![
       video_export::clip_export_available,
       video_export::export_video_clips,
@@ -79,6 +84,9 @@ pub fn run() {
       rtsp_relay::start_rtsp_relay,
       rtsp_relay::stop_rtsp_relay,
       playlist_server::open_playlist_page,
+      oauth::oauth_listen,
+      oauth::oauth_wait,
+      oauth::oauth_cancel,
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

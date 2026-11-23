@@ -83,6 +83,8 @@ jobs:
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+          # Only tells the app that an "Android" OAuth client exists: Google recognises the app by package and signing certificate.
+          VITE_GOOGLE_ANDROID_CLIENT_ID: ${{ vars.VITE_GOOGLE_ANDROID_CLIENT_ID }}
         run: npx tauri android build
 
       - name: Sign APK

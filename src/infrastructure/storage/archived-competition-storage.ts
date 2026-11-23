@@ -1,4 +1,5 @@
 import { matchProjectDb } from '../db/match-project-db';
+import { rememberDeletion } from './sync-deletions';
 import type { CompetitionArchiveEntry } from '@src/domain/archive/types';
 
 export async function saveCompetitionName(competition: CompetitionArchiveEntry) {
@@ -31,7 +32,10 @@ export async function findCompetitionNamesByText(searchText: string): Promise<Co
 }
 
 export async function deleteCompetitionName(id: string) {
-  await matchProjectDb.archivedCompetitions.delete(id);
+  await matchProjectDb.transaction('rw', matchProjectDb.archivedCompetitions, matchProjectDb.syncDeletions, async () => {
+    await matchProjectDb.archivedCompetitions.delete(id);
+    await rememberDeletion('competitions', id);
+  });
 }
 
 export const competitionRepository = {

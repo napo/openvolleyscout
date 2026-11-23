@@ -15,11 +15,13 @@ function getPlayerPageUrl(): string {
 
 interface YouTubeFramePlayerProps {
   videoId: string;
-  onPlayable?: (playable: boolean) => void;
+  /** `errorCode`: the YouTube player error (100 private or removed, 101/150 embedding not allowed). */
+  onPlayable?: (playable: boolean, errorCode?: number) => void;
 }
 
 type FrameMessage =
-  | { ovsYoutube: true; type: 'ready' | 'error' }
+  | { ovsYoutube: true; type: 'ready' }
+  | { ovsYoutube: true; type: 'error'; code?: number }
   | { ovsYoutube: true; type: 'state'; time: number; paused: boolean; rate?: number };
 
 /**
@@ -60,7 +62,7 @@ export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlay
           stateRef.current.ready = true;
           onPlayableRef.current?.(true);
         } else if (data.type === 'error') {
-          onPlayableRef.current?.(false);
+          onPlayableRef.current?.(false, typeof data.code === 'number' ? data.code : undefined);
         } else if (data.type === 'state') {
           stateRef.current.time = data.time;
           stateRef.current.paused = data.paused;

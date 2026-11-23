@@ -1,4 +1,5 @@
 import { VideoPaddingControl } from './VideoPaddingControl';
+import { RemoteVideoErrorHelp } from './RemoteVideoErrorHelp';
 import { createPlayerRoleLookup } from '@src/features/scouting/model/player-roles';
 import { SkillOffsetsControl } from './SkillOffsetsControl';
 import { VideoFilterPresets } from './VideoFilterPresets';
@@ -198,9 +199,11 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     setVideoError(false);
   }
 
-  const handlePlayable = useCallback((playable: boolean) => {
+  const [youtubeErrorCode, setYoutubeErrorCode] = useState<number | null>(null);
+  const handlePlayable = useCallback((playable: boolean, errorCode?: number) => {
     setIsPlayable(playable);
     setVideoError(!playable);
+    setYoutubeErrorCode(playable ? null : errorCode ?? null);
   }, []);
 
   useEffect(() => {
@@ -1508,8 +1511,8 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
                 />
               )}
             </div>
-            {source.kind === 'url' && videoError ? (
-              <p className="video-analysis__error" role="alert">{t('videoRemoteLoadError')}</p>
+            {videoError && (source.kind === 'url' || source.kind === 'youtube') ? (
+              <RemoteVideoErrorHelp source={source} youtubeErrorCode={youtubeErrorCode} />
             ) : null}
             <section className="video-analysis__padding">
               <VideoPaddingControl label={t('videoPaddingBefore')} value={videoAnalysis.paddingBeforeSeconds}

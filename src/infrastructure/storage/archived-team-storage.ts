@@ -1,4 +1,5 @@
 import { matchProjectDb } from '../db/match-project-db';
+import { rememberDeletion } from './sync-deletions';
 import type { ArchivedPlayer, ArchivedTeam, ArchivedRoster } from '@src/domain/team/types';
 import type { TeamStaff } from '@src/domain/roster/types';
 import { createEmptyArchivedRoster, createEmptyArchivedTeam } from '@src/domain/team/factories';
@@ -185,14 +186,16 @@ export async function findArchivedTeamsByName(
 }
 
 export async function deleteTeam(teamId: string) {
-  await matchProjectDb.transaction('rw', matchProjectDb.archivedTeams, matchProjectDb.archivedRosters, async () => {
+  await matchProjectDb.transaction('rw', matchProjectDb.archivedTeams, matchProjectDb.archivedRosters, matchProjectDb.syncDeletions, async () => {
     const rosters = await matchProjectDb.archivedRosters.where('teamId').equals(teamId).toArray();
 
     for (const roster of rosters) {
       await matchProjectDb.archivedRosters.delete(roster.id);
+      await rememberDeletion('rosters', roster.id);
     }
 
     await matchProjectDb.archivedTeams.delete(teamId);
+    await rememberDeletion('teams', teamId);
   });
 }
 
@@ -226,7 +229,10 @@ export async function getAllArchivedRosters(): Promise<ArchivedRoster[]> {
 }
 
 export async function deleteArchivedRoster(id: string) {
-  await matchProjectDb.archivedRosters.delete(id);
+  await matchProjectDb.transaction('rw', matchProjectDb.archivedRosters, matchProjectDb.syncDeletions, async () => {
+    await matchProjectDb.archivedRosters.delete(id);
+    await rememberDeletion('rosters', id);
+  });
 }
 
 export async function getTeamRecord(teamId: string): Promise<ArchivedTeamRecord | null> {

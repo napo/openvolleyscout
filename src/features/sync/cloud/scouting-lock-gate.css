@@ -1,0 +1,61 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.scouting-lock-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.scouting-lock-gate__card {
+  width: min(32rem, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #0f172a);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+}
+
+.scouting-lock-gate__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.scouting-lock-gate__details {
+  margin: 0.15rem 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.scouting-lock-gate__text {
+  margin: 0.6rem 0 0;
+  font-size: 0.9rem;
+}
+
+.scouting-lock-gate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.scouting-lock-gate__notice {
+  position: fixed;
+  left: 50%;
+  bottom: 0.75rem;
+  z-index: 900;
+  transform: translateX(-50%);
+  max-width: min(36rem, calc(100% - 1.5rem));
+  margin: 0;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  background: #fef3c7;
+  color: #78350f;
+  font-size: 0.8rem;
+  pointer-events: none;
+}

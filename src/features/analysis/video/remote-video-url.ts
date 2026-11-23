@@ -6,7 +6,7 @@ export type RemoteVideoResolution =
   | { ok: true; source: Extract<MatchVideoSource, { kind: 'youtube' | 'url' }> }
   | { ok: false; reason: 'invalid' | 'dropbox_folder' };
 
-function isDropboxHost(hostname: string): boolean {
+export function isDropboxHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
   return host === 'dropbox.com' || host.endsWith('.dropbox.com') || host.endsWith('.dropboxusercontent.com');
 }

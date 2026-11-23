@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "dropbox",
+  "description": "Synchronisation with the user's Dropbox, only after the user connects it: Dropbox sign-in and API",
+  "windows": ["main"],
+  "permissions": [
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api.dropboxapi.com/*" },
+        { "url": "https://content.dropboxapi.com/*" }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { notifyLocalDataChanged } from '@src/features/sync/cloud/local-change-bus';
+import { loadSystemBlocks, persistSystemBlocks } from '@src/infrastructure/storage/system-block-storage';
 import { isSameSystem, mergeImportedSystemBlocks, type SystemMergeResult } from './system-library-file';
 import {
   DEFAULT_DEFENSE_FALLBACK_ZONE,
@@ -228,12 +230,17 @@ function readStoredDefenseSystemBlocks(): DefenseSystemBlock[] | null {
   }
 }
 
-function writeStoredDefenseSystemBlocks(blocks: readonly DefenseSystemBlock[]) {
+function writeStoredDefenseSystemBlocks(blocks: readonly DefenseSystemBlock[], toDatabase = true) {
   if (typeof window === 'undefined') {
     return;
   }
 
   window.localStorage.setItem(DEFENSE_SYSTEM_BLOCK_STORAGE_KEY, JSON.stringify(blocks));
+  // The database copy is the one cloud sync reads; localStorage only lets the app start synchronously.
+  if (toDatabase) {
+    void persistSystemBlocks('defenseSystems', blocks as unknown as Parameters<typeof persistSystemBlocks>[1])
+      .catch((error) => console.warn('Could not save the defense systems', error));
+  }
 }
 
 function getInitialDefenseSystemBlocks(): DefenseSystemBlock[] {
@@ -264,6 +271,24 @@ interface DefenseSystemStoreState {
     rawBlocks: readonly unknown[],
     renameConflict: (name: string) => string,
   ) => { added: number; unchanged: number };
+  /** Replaces all defense systems with the ones already saved in the database (cloud sync, start-up). */
+  replaceDefenseSystemBlocks: (blocks: readonly DefenseSystemBlock[]) => void;
+}
+
+/**
+ * Loads the systems saved in the database at start-up. The first time (nothing
+ * saved there yet) the systems of this device are written to it.
+ */
+export async function hydrateDefenseSystemsFromDatabase(): Promise<void> {
+  const stored = await loadSystemBlocks('defenseSystems');
+  if (stored === null) {
+    await persistSystemBlocks('defenseSystems', useDefenseSystemStore.getState().defenseSystemBlocks as unknown as Parameters<typeof persistSystemBlocks>[1]);
+    return;
+  }
+  const blocks = stored
+    .map(normalizeDefenseSystemBlock)
+    .filter((block): block is DefenseSystemBlock => Boolean(block));
+  useDefenseSystemStore.getState().replaceDefenseSystemBlocks(blocks);
 }
 
 // A team uses one defense system: assigning it to a block releases it from
@@ -361,6 +386,7 @@ export const useDefenseSystemStore = create<DefenseSystemStoreState>((set) => ({
       };
     });
 
+    notifyLocalDataChanged();
     return nextBlock;
   },
   saveDefenseSystemBlock: (block) => {
@@ -382,6 +408,8 @@ export const useDefenseSystemStore = create<DefenseSystemStoreState>((set) => ({
         activeDefenseSystemBlockId: nextBlock.id,
       };
     });
+
+    notifyLocalDataChanged();
   },
   deleteDefenseSystemBlock: (blockId) => {
     set((state) => {
@@ -395,6 +423,8 @@ export const useDefenseSystemStore = create<DefenseSystemStoreState>((set) => ({
         activeDefenseSystemBlockId: activeDefenseSystemBlock?.id ?? null,
       };
     });
+
+    notifyLocalDataChanged();
   },
   importDefenseSystemBlocks: (rawBlocks, renameConflict) => {
     let counts = { added: 0, unchanged: 0 };
@@ -416,6 +446,20 @@ export const useDefenseSystemStore = create<DefenseSystemStoreState>((set) => ({
       };
     });
 
+    if (counts.added > 0) notifyLocalDataChanged();
     return counts;
+  },
+  replaceDefenseSystemBlocks: (blocks) => {
+    const cloned = blocks.map(cloneDefenseSystemBlock);
+    // Called with what is already in the database (cloud sync, start-up): only refresh the local copy.
+    writeStoredDefenseSystemBlocks(cloned, false);
+    set((state) => {
+      const activeDefenseSystemBlock = getActiveBlock(cloned, state.activeDefenseSystemBlockId);
+      return {
+        defenseSystemBlocks: cloned,
+        activeDefenseSystemBlock,
+        activeDefenseSystemBlockId: activeDefenseSystemBlock?.id ?? null,
+      };
+    });
   },
 }));

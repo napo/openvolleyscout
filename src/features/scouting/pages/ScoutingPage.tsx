@@ -1,4 +1,5 @@
 import { formatPlayerLabel, getPlayerDisplayName } from '@src/domain/roster/helpers';
+import { ScoutingLockGate } from '@src/features/sync/cloud/ScoutingLockGate';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
@@ -3282,6 +3283,7 @@ export function ScoutingPage() {
 
   return (
     <>
+      <ScoutingLockGate project={activeProject} />
       <main className={scoutingScreenClassName}>
         <div className={scoutingContainerClassName}>
         {isPreMatchStage ? (

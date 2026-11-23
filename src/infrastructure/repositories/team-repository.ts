@@ -4,6 +4,7 @@ import {
   addPlayerToTeam,
   createTeam as createStoredTeam,
   deletePlayer as deleteStoredPlayer,
+  deleteArchivedRoster,
   deleteTeam as deleteStoredTeam,
   findArchivedTeamsByName,
   getAllArchivedRosters,
@@ -19,6 +20,7 @@ import {
 } from '../storage/archived-team-storage';
 import { createEmptyArchivedRoster } from '@src/domain/team/factories';
 import { cloneEntity, withRepositoryError } from './shared';
+import { notifyLocalDataChanged } from '@src/features/sync/cloud/local-change-bus';
 
 type TeamRecordInput = {
   id?: string;
@@ -57,6 +59,7 @@ export const teamRepository = {
   async create(input: TeamRecordInput): Promise<ArchivedTeamAggregate> {
     return withRepositoryError(REPOSITORY_NAME, 'create team', async () => {
       const created = await createStoredTeam(cloneEntity(input));
+      notifyLocalDataChanged();
       return getRequiredTeamRecord(created.team.id);
     });
   },
@@ -129,19 +132,23 @@ export const teamRepository = {
   ): Promise<ArchivedTeamAggregate> {
     return withRepositoryError(REPOSITORY_NAME, 'update team', async () => {
       const updated = await updateStoredTeam(teamId, cloneEntity(updates));
+      notifyLocalDataChanged();
       return getRequiredTeamRecord(updated.team.id);
     });
   },
 
   async delete(teamId: string): Promise<void> {
     return withRepositoryError(REPOSITORY_NAME, 'delete team', async () => {
+      // Deletions of the team and of its rosters are remembered for cloud sync by the storage layer.
       await deleteStoredTeam(teamId);
+      notifyLocalDataChanged();
     });
   },
 
   async addPlayer(teamId: string, player: ArchivedPlayer): Promise<ArchivedTeamAggregate> {
     return withRepositoryError(REPOSITORY_NAME, 'add player', async () => {
       const updated = await addPlayerToTeam(teamId, cloneEntity(player));
+      notifyLocalDataChanged();
       return getRequiredTeamRecord(updated.team.id);
     });
   },
@@ -153,6 +160,7 @@ export const teamRepository = {
   ): Promise<ArchivedTeamAggregate> {
     return withRepositoryError(REPOSITORY_NAME, 'update player', async () => {
       const updated = await updateStoredPlayer(teamId, playerId, cloneEntity(updates));
+      notifyLocalDataChanged();
       return getRequiredTeamRecord(updated.team.id);
     });
   },
@@ -160,6 +168,7 @@ export const teamRepository = {
   async deletePlayer(teamId: string, playerId: string): Promise<ArchivedTeamAggregate> {
     return withRepositoryError(REPOSITORY_NAME, 'delete player', async () => {
       const updated = await deleteStoredPlayer(teamId, playerId);
+      notifyLocalDataChanged();
       return getRequiredTeamRecord(updated.team.id);
     });
   },
@@ -190,6 +199,14 @@ export const teamRepository = {
   async restoreTeam(team: ArchivedTeam): Promise<void> {
     return withRepositoryError(REPOSITORY_NAME, 'restore team', async () => {
       await saveArchivedTeam(cloneEntity(team));
+    });
+  },
+
+  /** Deletes a single roster (used by cloud sync when another device removed it). */
+  async deleteRoster(rosterId: string): Promise<void> {
+    return withRepositoryError(REPOSITORY_NAME, 'delete roster', async () => {
+      await deleteArchivedRoster(rosterId);
+      notifyLocalDataChanged();
     });
   },
 

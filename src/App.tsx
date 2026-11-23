@@ -5,6 +5,9 @@ import { readStoredActiveProjectId, useAppStore } from './app/store/app-store';
 import { matchRepository } from './infrastructure/repositories';
 import { seedDemoMatchOnce } from './features/demo/demo-match';
 import { ConfirmDialogHost } from './components/confirm-dialog';
+import { cloudSyncController } from './features/sync/cloud';
+import { ScoutingClaimKeeper } from './features/sync/cloud/ScoutingClaimKeeper';
+import { hydrateDefenseSystemsFromDatabase, hydrateReceptionSystemsFromDatabase } from './features/systems/model';
 
 /**
  * Reopens the match that was open before the page was reloaded. The router
@@ -44,12 +47,17 @@ export default function App() {
   const isRestored = useRestoreActiveProject();
   useEffect(() => {
     void seedDemoMatchOnce();
+    // Systems live in the database (cloud sync reads them there): load them before sync starts.
+    void Promise.all([hydrateReceptionSystemsFromDatabase(), hydrateDefenseSystemsFromDatabase()])
+      .catch((error) => console.warn('Could not load the systems from the database', error))
+      .finally(() => void cloudSyncController.init());
   }, []);
 
   return (
     <AppProviders>
       {isRestored ? <AppRouter /> : null}
       <ConfirmDialogHost />
+      <ScoutingClaimKeeper />
     </AppProviders>
   );
 }

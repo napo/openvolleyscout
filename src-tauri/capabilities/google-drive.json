@@ -1,0 +1,25 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "google-drive",
+  "description": "Synchronisation with the user's Google Drive, only after the user connects it: Google sign-in (Play services on Android) and the Drive API",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "google-auth:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://oauth2.googleapis.com/*"
+        },
+        {
+          "url": "https://www.googleapis.com/drive/v3/*"
+        },
+        {
+          "url": "https://www.googleapis.com/upload/drive/v3/*"
+        }
+      ]
+    }
+  ]
+}

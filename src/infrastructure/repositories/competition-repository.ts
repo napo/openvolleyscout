@@ -8,6 +8,7 @@ import {
   saveCompetitionName,
 } from '../storage/archived-competition-storage';
 import { cloneEntity, withRepositoryError } from './shared';
+import { notifyLocalDataChanged } from '@src/features/sync/cloud/local-change-bus';
 
 const REPOSITORY_NAME = 'competitionRepository';
 
@@ -52,6 +53,7 @@ export const competitionRepository = {
       });
 
       await saveCompetitionName(nextRecord);
+      notifyLocalDataChanged();
       const persistedCompetition = await getCompetitionNameById(nextRecord.id);
       if (!persistedCompetition) {
         throw new Error(`Competition ${nextRecord.id} not found after persistence`);
@@ -92,6 +94,7 @@ export const competitionRepository = {
   async delete(id: string): Promise<void> {
     return withRepositoryError(REPOSITORY_NAME, 'delete competition', async () => {
       await deleteCompetitionName(id);
+      notifyLocalDataChanged();
     });
   },
 

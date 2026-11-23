@@ -309,15 +309,18 @@ export function AboutPage() {
               <p className="about-page__text">{t('aboutAcknowledgementsIntro')}</p>
               <ul className="about-page__acknowledgements-list">
                 {[
-                  'Lorenzo Cosentino',
-                  'Luigi Mazzotta',
-                  'Valentina Perghem',
-                  "Fabio d'Amico",
-                  'Alessandro Fellin',
-                  'Cataldo Di Michele',
-                ].map((name) => (
+                  { name: 'Lorenzo Cosentino', roles: ['aboutContributionFeedback'] as const },
+                  { name: 'Luigi Mazzotta', roles: ['aboutContributionFeedback'] as const },
+                  { name: 'Valentina Perghem', roles: ['aboutContributionFeedback'] as const },
+                  { name: "Fabio d'Amico", roles: ['aboutContributionLogo', 'aboutContributionFeedback'] as const },
+                  { name: 'Alessandro Fellin', roles: ['aboutContributionFeedback'] as const },
+                  { name: 'Cataldo Di Michele', roles: ['aboutContributionFeedback'] as const },
+                ].map(({ name, roles }) => (
                   <li key={name} className="about-page__acknowledgement-item">
-                    <strong>{name}</strong> <span className="about-page__role-badge">{t('aboutContributionFeedback')}</span>
+                    <strong>{name}</strong>{' '}
+                    {roles.map((role) => (
+                      <span key={role} className="about-page__role-badge">{t(role)}</span>
+                    ))}
                   </li>
                 ))}
               </ul>

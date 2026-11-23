@@ -13,6 +13,7 @@ import {
 
 export type { MatchSummaryRecord };
 import { cloneEntity, withRepositoryError } from './shared';
+import { notifyLocalDataChanged } from '@src/features/sync/cloud/local-change-bus';
 
 const REPOSITORY_NAME = 'matchRepository';
 
@@ -28,7 +29,9 @@ function normalizeForPersistence(project: MatchProject): MatchProject {
 export const matchRepository = {
   async create(project: MatchProject): Promise<MatchProject> {
     return withRepositoryError(REPOSITORY_NAME, 'create match project', async () => {
-      return saveMatchProject(normalizeForPersistence(project));
+      const saved = await saveMatchProject(normalizeForPersistence(project));
+      notifyLocalDataChanged();
+      return saved;
     });
   },
 
@@ -64,13 +67,16 @@ export const matchRepository = {
 
   async update(project: MatchProject): Promise<MatchProject> {
     return withRepositoryError(REPOSITORY_NAME, 'update match project', async () => {
-      return saveMatchProject(normalizeForPersistence(project));
+      const saved = await saveMatchProject(normalizeForPersistence(project));
+      notifyLocalDataChanged();
+      return saved;
     });
   },
 
   async delete(projectId: string): Promise<void> {
     return withRepositoryError(REPOSITORY_NAME, 'delete match project', async () => {
       await deleteMatchProject(projectId);
+      notifyLocalDataChanged();
     });
   },
 };

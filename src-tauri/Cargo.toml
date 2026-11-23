@@ -28,6 +28,10 @@ tauri-plugin-process = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "~2.5.5"
+tauri-plugin-http = { version = "=2.5.9", features = ["unsafe-headers"] }
+tauri-plugin-os = "~2.3"
+# Google sign-in on Android (plugins/google-auth); it does nothing elsewhere.
+tauri-plugin-google-auth = { path = "plugins/google-auth" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"

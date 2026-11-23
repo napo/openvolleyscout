@@ -54,6 +54,7 @@ import { confirmOvsImport, OvsImportBlockedError, OvsImportStaleStateError, type
 import { confirmOvsBackupImport } from '@src/features/sync/import/confirm-ovs-backup-import';
 import { OvsImportPreview } from '@src/features/sync/import/preview/OvsImportPreview';
 import { OvsBackupImportPreview } from '@src/features/sync/import/preview/OvsBackupImportPreview';
+import { CloudSyncCard } from '@src/features/sync/cloud/CloudSyncCard';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { translateImportMessage } from '@src/features/import/diagnostics/translate';
 import { confirmAction } from '@src/components/confirm-dialog';
@@ -989,6 +990,9 @@ export function LoadDataPage() {
               <div className="app-page-card__header-copy">
                 <h1 className="app-page-card__title">{t('loadData')}</h1>
                 <p className="app-page-card__description">{t('loadDataDescription')}</p>
+                {!isImportMode && projects.length > 0 ? (
+                  <BackupReminder compact syncAnchorId="cloud-sync" onBackup={() => void handleExportBackup({ everything: true })} busy={isExportingBackup} />
+                ) : null}
               </div>
               <div className="app-page-card__header-actions">
                 <button
@@ -1011,6 +1015,8 @@ export function LoadDataPage() {
             </>
           )}
         >
+
+        {!isImportMode ? <CloudSyncCard id="cloud-sync" /> : null}
 
         {!bulkPassResult && errorMessage ? (
           <div className="app-page-message app-page-message--error">
@@ -1095,10 +1101,6 @@ export function LoadDataPage() {
 
         {!isImportMode ? (
           <>
-            {projects.length > 0 ? (
-              <BackupReminder onBackup={() => void handleExportBackup({ everything: true })} busy={isExportingBackup} />
-            ) : null}
-
             <section className="datavolley-import-panel">
               <div className="datavolley-import-panel__copy">
                 <h2><ActionIcon name="archive" />{t('exportBackupAll')}</h2>
@@ -1136,7 +1138,6 @@ export function LoadDataPage() {
                 </button>
               </div>
             </section>
-
           </>
         ) : null}
 

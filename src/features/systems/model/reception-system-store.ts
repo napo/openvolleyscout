@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { notifyLocalDataChanged } from '@src/features/sync/cloud/local-change-bus';
+import { loadSystemBlocks, persistSystemBlocks } from '@src/infrastructure/storage/system-block-storage';
 import { isSameSystem, mergeImportedSystemBlocks, type SystemMergeResult } from './system-library-file';
 import {
   DEFAULT_RECEPTION_FALLBACK_ZONE,
@@ -204,12 +206,17 @@ function readStoredReceptionSystemBlocks(): ReceptionSystemBlock[] | null {
   }
 }
 
-function writeStoredReceptionSystemBlocks(blocks: readonly ReceptionSystemBlock[]) {
+function writeStoredReceptionSystemBlocks(blocks: readonly ReceptionSystemBlock[], toDatabase = true) {
   if (typeof window === 'undefined') {
     return;
   }
 
   window.localStorage.setItem(RECEPTION_SYSTEM_BLOCK_STORAGE_KEY, JSON.stringify(blocks));
+  // The database copy is the one cloud sync reads; localStorage only lets the app start synchronously.
+  if (toDatabase) {
+    void persistSystemBlocks('receptionSystems', blocks as unknown as Parameters<typeof persistSystemBlocks>[1])
+      .catch((error) => console.warn('Could not save the reception systems', error));
+  }
 }
 
 function getInitialReceptionSystemBlocks(): ReceptionSystemBlock[] {
@@ -240,6 +247,24 @@ interface ReceptionSystemStoreState {
     rawBlocks: readonly unknown[],
     renameConflict: (name: string) => string,
   ) => { added: number; unchanged: number };
+  /** Replaces all reception systems with the ones already saved in the database (cloud sync, start-up). */
+  replaceReceptionSystemBlocks: (blocks: readonly ReceptionSystemBlock[]) => void;
+}
+
+/**
+ * Loads the systems saved in the database at start-up. The first time (nothing
+ * saved there yet) the systems of this device are written to it.
+ */
+export async function hydrateReceptionSystemsFromDatabase(): Promise<void> {
+  const stored = await loadSystemBlocks('receptionSystems');
+  if (stored === null) {
+    await persistSystemBlocks('receptionSystems', useReceptionSystemStore.getState().receptionSystemBlocks as unknown as Parameters<typeof persistSystemBlocks>[1]);
+    return;
+  }
+  const blocks = stored
+    .map(normalizeReceptionSystemBlock)
+    .filter((block): block is ReceptionSystemBlock => Boolean(block));
+  useReceptionSystemStore.getState().replaceReceptionSystemBlocks(blocks);
 }
 
 // A team uses one reception system: assigning it to a block releases it from
@@ -337,6 +362,7 @@ export const useReceptionSystemStore = create<ReceptionSystemStoreState>((set) =
       };
     });
 
+    notifyLocalDataChanged();
     return nextBlock;
   },
   saveReceptionSystemBlock: (block) => {
@@ -358,6 +384,8 @@ export const useReceptionSystemStore = create<ReceptionSystemStoreState>((set) =
         activeReceptionSystemBlockId: nextBlock.id,
       };
     });
+
+    notifyLocalDataChanged();
   },
   deleteReceptionSystemBlock: (blockId) => {
     set((state) => {
@@ -371,6 +399,8 @@ export const useReceptionSystemStore = create<ReceptionSystemStoreState>((set) =
         activeReceptionSystemBlockId: activeReceptionSystemBlock?.id ?? null,
       };
     });
+
+    notifyLocalDataChanged();
   },
   importReceptionSystemBlocks: (rawBlocks, renameConflict) => {
     let counts = { added: 0, unchanged: 0 };
@@ -392,6 +422,20 @@ export const useReceptionSystemStore = create<ReceptionSystemStoreState>((set) =
       };
     });
 
+    if (counts.added > 0) notifyLocalDataChanged();
     return counts;
+  },
+  replaceReceptionSystemBlocks: (blocks) => {
+    const cloned = blocks.map(cloneReceptionSystemBlock);
+    // Called with what is already in the database (cloud sync, start-up): only refresh the local copy.
+    writeStoredReceptionSystemBlocks(cloned, false);
+    set((state) => {
+      const activeReceptionSystemBlock = getActiveBlock(cloned, state.activeReceptionSystemBlockId);
+      return {
+        receptionSystemBlocks: cloned,
+        activeReceptionSystemBlock,
+        activeReceptionSystemBlockId: activeReceptionSystemBlock?.id ?? null,
+      };
+    });
   },
 }));

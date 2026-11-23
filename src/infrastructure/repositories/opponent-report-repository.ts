@@ -1,6 +1,8 @@
 import type { OpponentReport } from '@src/domain/opponent-report/types';
 import { matchProjectDb } from '../db/match-project-db';
+import { rememberDeletion } from '../storage/sync-deletions';
 import { cloneEntity, withRepositoryError } from './shared';
+import { notifyLocalDataChanged } from '@src/features/sync/cloud/local-change-bus';
 
 const REPOSITORY_NAME = 'opponentReportRepository';
 const REPORT_LOAD_BATCH_SIZE = 10;
@@ -66,13 +68,18 @@ export const opponentReportRepository = {
     return withRepositoryError(REPOSITORY_NAME, 'save opponent report', async () => {
       const record = { ...cloneEntity(report), updatedAt: now };
       await matchProjectDb.opponentReports.put(record);
+      notifyLocalDataChanged();
       return cloneEntity(record);
     });
   },
 
   async delete(id: string): Promise<void> {
     return withRepositoryError(REPOSITORY_NAME, 'delete opponent report', async () => {
-      await matchProjectDb.opponentReports.delete(id);
+      await matchProjectDb.transaction('rw', matchProjectDb.opponentReports, matchProjectDb.syncDeletions, async () => {
+        await matchProjectDb.opponentReports.delete(id);
+        await rememberDeletion('opponentReports', id);
+      });
+      notifyLocalDataChanged();
     });
   },
 

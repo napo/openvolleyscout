@@ -1,4 +1,5 @@
 import { matchProjectDb, type MatchSummaryRecord } from '../db/match-project-db';
+import { forgetDeletion, rememberDeletion } from './sync-deletions';
 import type { MatchProject } from '@src/domain/match/types';
 import { getMatchTeamSnapshot, normalizeMatchProject } from '@src/domain/match';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
@@ -50,7 +51,7 @@ async function persistRepairedProject(stored: MatchProject, repaired: MatchProje
 }
 
 /** Normalizes a stored project and runs any pending versioned data migrations. */
-function loadStoredProject(raw: MatchProject): MatchProject {
+export function loadStoredProject(raw: MatchProject): MatchProject {
   const normalized = normalizeMatchProject(raw);
   const { project: migrated, changed } = runMatchMigrations(normalized);
   if (changed) void persistRepairedProject(raw, migrated);
@@ -70,12 +71,19 @@ export async function saveMatchProject(project: MatchProject): Promise<MatchProj
       },
     }
     : normalized;
-  const summary = buildMatchSummary(stamped);
-  await matchProjectDb.transaction('rw', matchProjectDb.matchProjects, matchProjectDb.matchSummaries, async () => {
-    await matchProjectDb.matchProjects.put(stamped);
-    await matchProjectDb.matchSummaries.put(summary);
+  let saved = stamped;
+  await matchProjectDb.transaction('rw', matchProjectDb.matchProjects, matchProjectDb.matchSummaries, matchProjectDb.syncDeletions, async () => {
+    // A change is always later than the version it replaces, even when this
+    // device's clock is behind the one that wrote it (cloud sync compares times).
+    const old = await matchProjectDb.matchProjects.get(stamped.metadata.id);
+    if (old && typeof old.updatedAt === 'number' && stamped.updatedAt < old.updatedAt) {
+      saved = { ...stamped, updatedAt: old.updatedAt + 1 };
+    }
+    await matchProjectDb.matchProjects.put(saved);
+    await matchProjectDb.matchSummaries.put(buildMatchSummary(saved));
+    await forgetDeletion('matches', saved.metadata.id);
   });
-  return stamped;
+  return saved;
 }
 
 export async function getLatestMatchProject(): Promise<MatchProject | null> {
@@ -89,9 +97,10 @@ export async function getMatchProjectById(id: string): Promise<MatchProject | nu
 }
 
 export async function deleteMatchProject(id: string) {
-  await matchProjectDb.transaction('rw', matchProjectDb.matchProjects, matchProjectDb.matchSummaries, async () => {
+  await matchProjectDb.transaction('rw', matchProjectDb.matchProjects, matchProjectDb.matchSummaries, matchProjectDb.syncDeletions, async () => {
     await matchProjectDb.matchProjects.delete(id);
     await matchProjectDb.matchSummaries.delete(id);
+    await rememberDeletion('matches', id);
   });
 }
 

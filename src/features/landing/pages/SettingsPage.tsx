@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
 import { EfficiencySettings } from './EfficiencySettings';
+import { CloudSyncDeviceSettings } from '@src/features/sync/cloud/CloudSyncDeviceSettings';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n/translations';
@@ -199,6 +200,7 @@ const SETTINGS_TABS = [
   ['scoutingSettingsTitle', 'scouting'],
   ['settingsTabShortcuts', 'shortcuts'],
   ['analysis', 'analysis'],
+  ['cloudSyncTitle', 'sync'],
   ['settingsTabExperimental', 'experimental'],
   ['settingsMaintenanceTitle', 'maintenance'],
 ] as const;
@@ -505,6 +507,16 @@ export function SettingsPage() {
                 </label>
               ))}
             </section>
+          </div>
+          <div
+            id="settings-panel-sync"
+            className="tabbed-page__panel settings-page__panel"
+            role="tabpanel"
+            aria-labelledby="settings-tab-sync"
+            tabIndex={0}
+            hidden={activeTab !== 'sync'}
+          >
+            <CloudSyncDeviceSettings />
           </div>
           <div
             id="settings-panel-maintenance"

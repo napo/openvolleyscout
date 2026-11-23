@@ -1038,3 +1038,12 @@ label.video-analysis__multiselect-option {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+div.video-analysis__error p {
+  margin: 0;
+}
+
+div.video-analysis__error ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+}

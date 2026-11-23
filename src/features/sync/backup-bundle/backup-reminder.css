@@ -17,3 +17,55 @@
 .backup-reminder .btn-secondary {
     min-height: 2.5rem;
 }
+
+/* Data page header: one short line. */
+.backup-reminder--compact {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 0.45rem;
+    margin-top: 0.45rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    line-height: 1.2;
+}
+
+.backup-reminder__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex: 0 0 auto;
+}
+
+.backup-reminder__action {
+    padding: 0.2rem 0.65rem;
+    border: 0;
+    border-radius: 999px;
+    background: #7a4b00;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.backup-reminder__action:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.backup-reminder--compact {
+    flex-wrap: wrap;
+}
+
+.backup-reminder__action--secondary {
+    background: #fff;
+    color: #7a4b00;
+    box-shadow: inset 0 0 0 1px #d99a2b;
+}
+
+.backup-reminder--compact {
+    border-radius: 0.9rem;
+    padding: 0.3rem 0.4rem 0.3rem 0.6rem;
+}

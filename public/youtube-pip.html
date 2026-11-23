@@ -71,7 +71,7 @@
                   ready = true;
                   send({ type: 'ready' });
                 },
-                onError: function () { send({ type: 'error' }); },
+                onError: function (event) { send({ type: 'error', code: event && event.data }); },
               },
             });
           };

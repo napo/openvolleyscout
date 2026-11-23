@@ -63,7 +63,8 @@ interface VideoPlayerViewProps {
   mediaStream?: MediaStream | null;
   /** Show the native <video> transport controls. Defaults to true; set false when a caller renders its own transport bar. */
   controls?: boolean;
-  onPlayable?: (playable: boolean) => void;
+  /** `errorCode`: YouTube player error when the video cannot be played (100 private or removed, 101/150 embedding not allowed). */
+  onPlayable?: (playable: boolean, errorCode?: number) => void;
 }
 
 /** Resolve a playable URL for a local-file source, or null when unavailable. */
@@ -246,9 +247,9 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
               setYoutubeReady(true);
               onPlayableRef.current?.(true);
             },
-            onError: () => {
+            onError: (event) => {
               if (cancelled) return;
-              onPlayableRef.current?.(false);
+              onPlayableRef.current?.(false, event.data);
             },
           },
         });

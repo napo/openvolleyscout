@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Google sign-in on Android for the Drive synchronisation: the Authorization API
+# of Google Play services, called from Kotlin. Nothing to do on the other platforms.
+[package]
+name = "tauri-plugin-google-auth"
+version = "0.1.0"
+authors = ["napo"]
+license = "AGPL-3.0-or-later"
+edition = "2021"
+publish = false
+links = "tauri-plugin-google-auth"
+
+[dependencies]
+tauri = "2.11.2"
+
+[build-dependencies]
+tauri-plugin = { version = "2.6.2", features = ["build"] }

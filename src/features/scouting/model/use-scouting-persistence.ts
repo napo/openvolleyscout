@@ -4,6 +4,7 @@ import type { MatchProject } from '@src/domain/match/types';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { useScoutingStore } from './scouting-store';
 import { isProjectSyncedWithLiveMatch, syncProjectWithLiveMatch } from './session';
+import { isScoutingHeldElsewhere } from '@src/features/sync/cloud/ScoutingLockGate';
 
 type PendingPersistence = {
   project: MatchProject;
@@ -54,6 +55,11 @@ export function useScoutingPersistence(activeProject: MatchProject | null) {
     }
 
     if (activeProject.metadata.id !== liveMatch.activeProjectId) {
+      return;
+    }
+
+    // Another device scouts this match: this one only follows it and must not save over it.
+    if (isScoutingHeldElsewhere(activeProject.metadata.id)) {
       return;
     }
 

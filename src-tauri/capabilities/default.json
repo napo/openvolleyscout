@@ -18,6 +18,9 @@
     "dialog:allow-save",
     "dialog:allow-open",
     "opener:default",
+    "os:allow-platform",
+    "os:allow-version",
+    "os:allow-os-type",
     "fs:allow-write-file",
     "fs:read-files",
     {
