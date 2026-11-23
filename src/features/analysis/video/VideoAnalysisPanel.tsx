@@ -70,6 +70,8 @@ import {
   deleteVideoFileHandle,
   loadVideoFileHandle,
   saveVideoFileHandle,
+  getSessionVideoFile,
+  rememberSessionVideoFile,
   supportsFileSystemAccess,
 } from './file-handle-store';
 import { resolveRemoteVideoSource, remoteVideoUrlErrorKey, type RemoteVideoUrlError } from './remote-video-url';
@@ -310,6 +312,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
 
   const handleFileSelected = (file: File | null) => {
     if (!file) return;
+    rememberSessionVideoFile(project.metadata.id, file);
     if (fileObjectUrl) {
       URL.revokeObjectURL(fileObjectUrl);
     }
@@ -487,6 +490,17 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   useEffect(() => {
     if (source?.kind !== 'file' || resolveLocalVideoUrl(source.path, null)) {
       setStoredHandle(null);
+      return undefined;
+    }
+
+    const sessionFile = getSessionVideoFile(project.metadata.id, source.fileName);
+    if (sessionFile) {
+      setFileObjectUrl((previousUrl) => {
+        if (previousUrl?.startsWith('blob:')) URL.revokeObjectURL(previousUrl);
+        return URL.createObjectURL(sessionFile);
+      });
+      setIsPlayable(true);
+      setVideoError(false);
       return undefined;
     }
 

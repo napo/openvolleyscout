@@ -80,3 +80,19 @@ export async function loadVideoFileHandle(projectId: string): Promise<FileSystem
 export async function deleteVideoFileHandle(projectId: string): Promise<void> {
   await withHandleStore('readwrite', (store) => store.delete(projectId));
 }
+
+/**
+ * Video files chosen in this browser session, by match. Browsers without
+ * remembered files (Firefox, Safari) can still play the video chosen in the
+ * match setup when scouting starts, until the page is closed.
+ */
+const sessionVideoFiles = new Map<string, File>();
+
+export function rememberSessionVideoFile(projectId: string, file: File): void {
+  sessionVideoFiles.set(projectId, file);
+}
+
+export function getSessionVideoFile(projectId: string, fileName?: string): File | null {
+  const file = sessionVideoFiles.get(projectId);
+  return file && (!fileName || file.name === fileName) ? file : null;
+}

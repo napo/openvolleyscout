@@ -23,6 +23,8 @@ export interface SetupVideoFile {
   readonly size?: number;
   /** Browser only (Chrome, Edge): lets Video analysis reopen the file later. */
   readonly handle?: FileSystemFileHandle;
+  /** Browser only: the chosen file itself, playable until the page is closed. */
+  readonly file?: File;
 }
 
 interface SetupVideoFieldProps {
@@ -79,7 +81,7 @@ export function SetupVideoField({ url, file, error, onUrlChange, onFileChange, i
           types: [{ description: 'Video', accept: { 'video/*': VIDEO_EXTENSIONS } }],
         });
         const picked = await handle.getFile();
-        onFileChange({ path: picked.name, fileName: picked.name, size: picked.size, handle });
+        onFileChange({ path: picked.name, fileName: picked.name, size: picked.size, handle, file: picked });
       } catch {
         // Picker dismissed.
       }
@@ -103,6 +105,7 @@ export function SetupVideoField({ url, file, error, onUrlChange, onFileChange, i
       path: getFilePath(dropped),
       fileName: dropped.name,
       size: dropped.size,
+      file: dropped,
       ...(handle?.kind === 'file' ? { handle: handle as FileSystemFileHandle } : {}),
     });
   };
@@ -177,7 +180,7 @@ export function SetupVideoField({ url, file, error, onUrlChange, onFileChange, i
         hidden
         onChange={(event) => {
           const picked = event.target.files?.[0];
-          if (picked) onFileChange({ path: getFilePath(picked), fileName: picked.name, size: picked.size });
+          if (picked) onFileChange({ path: getFilePath(picked), fileName: picked.name, size: picked.size, file: picked });
           event.target.value = '';
         }}
       />

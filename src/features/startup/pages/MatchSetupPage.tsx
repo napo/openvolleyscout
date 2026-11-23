@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createDefaultMatchVideoAnalysis, type MatchVideoSource } from '@src/domain/video/types';
-import { saveVideoFileHandle } from '@src/features/analysis/video/file-handle-store';
+import { rememberSessionVideoFile, saveVideoFileHandle } from '@src/features/analysis/video/file-handle-store';
 import { SetupVideoField, type SetupVideoFile } from '../components/SetupVideoField';
 import { remoteVideoUrlErrorKey, resolveRemoteVideoSource } from '@src/features/analysis/video/remote-video-url';
 import { useNavigate } from 'react-router-dom';
@@ -685,6 +685,7 @@ export function MatchSetupPage() {
       project.metadata.playedAt = playedAt;
       applySetupVideo(project, formData.videoUrl, videoFile);
       if (videoFile?.handle) void saveVideoFileHandle(project.metadata.id, videoFile.handle).catch(() => undefined);
+      if (videoFile?.file) rememberSessionVideoFile(project.metadata.id, videoFile.file);
       project.updatedAt = Date.now();
 
       // An opponent left unnamed is "Opponent", never saved in the team archive.

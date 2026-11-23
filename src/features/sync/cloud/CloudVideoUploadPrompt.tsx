@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
+import { rememberSessionVideoFile } from '@src/features/analysis/video/file-handle-store';
 import '@src/components/confirm-dialog.css';
 import { cloudSyncController } from './archive-adapter';
 import { SERVICE_NAME_KEY } from './CloudSyncCard';
@@ -55,6 +56,7 @@ export function CloudVideoUploadPrompt() {
   const status = useCloudSyncStatus(cloudSyncController);
   const [question, setQuestion] = useState<Question | null>(null);
   const checking = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (status.state !== 'ok' || !status.lastSyncedAt || question || checking.current) return;
@@ -112,17 +114,44 @@ export function CloudVideoUploadPrompt() {
           {t('cloudVideoPrompt', {
             match: video.label,
             file: video.fileName,
-            size: typeof size === 'number' ? formatBytes(size, locale) : t('cloudSyncVideosUnknownSize'),
             service,
           })}
         </p>
         <p className="confirm-dialog__message">
-          {free === null
-            ? t('cloudSyncVideosFreeUnknown', { service })
-            : notEnough
-              ? t('cloudSyncVideosNotEnough', { missing: formatBytes((size as number) - free, locale) })
-              : t('cloudVideoPromptFree', { free: formatBytes(free, locale), service })}
+          <strong>
+            {typeof size === 'number'
+              ? free === null
+                ? t('cloudVideoPromptSizeOnly', { size: formatBytes(size, locale) })
+                : t('cloudVideoPromptSpace', { size: formatBytes(size, locale), free: formatBytes(free, locale), service })
+              : t('cloudVideoPromptSizeUnknown')}
+          </strong>
         </p>
+        {free === null ? <p className="confirm-dialog__message">{t('cloudSyncVideosFreeUnknown', { service })}</p> : null}
+        {notEnough ? (
+          <p className="confirm-dialog__message" role="alert">
+            {t('cloudSyncVideosNotEnough', { missing: formatBytes((size as number) - free, locale) })}
+          </p>
+        ) : null}
+        {size === null ? (
+          <p className="confirm-dialog__message">
+            <button type="button" className="btn-secondary btn-small" onClick={() => fileInputRef.current?.click()}>
+              {t('setupVideoPickFile')}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/*"
+              hidden
+              onChange={(event) => {
+                const picked = event.target.files?.[0];
+                event.target.value = '';
+                if (!picked) return;
+                rememberSessionVideoFile(video.matchId, picked);
+                setQuestion({ video: { ...video, fileName: picked.name }, size: picked.size, free });
+              }}
+            />
+          </p>
+        ) : null}
         <div className="confirm-dialog__actions">
           <button
             type="button"
@@ -137,7 +166,7 @@ export function CloudVideoUploadPrompt() {
           <button type="button" className="btn-secondary" onClick={() => setQuestion(null)}>
             {t('cloudVideoPromptLater')}
           </button>
-          <button type="button" className="btn-primary" disabled={notEnough} onClick={() => void upload()}>
+          <button type="button" className="btn-primary" disabled={notEnough || size === null} onClick={() => void upload()}>
             {t('cloudVideoPromptUpload')}
           </button>
         </div>

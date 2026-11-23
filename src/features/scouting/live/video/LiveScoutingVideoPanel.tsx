@@ -17,7 +17,7 @@ import type { MatchProject } from '@src/domain/match/types';
 import type { MatchVideoAnalysis, MatchVideoSource } from '@src/domain/video/types';
 import { createDefaultMatchVideoAnalysis, getFilePath, getVideoSourceKey } from '@src/domain/video/types';
 import { VideoPlayerView, resolveLocalVideoUrl, type VideoPlayerHandle } from '@src/features/analysis/video/VideoPlayerView';
-import { loadVideoFileHandle, saveVideoFileHandle, supportsFileSystemAccess } from '@src/features/analysis/video/file-handle-store';
+import { getSessionVideoFile, loadVideoFileHandle, rememberSessionVideoFile, saveVideoFileHandle, supportsFileSystemAccess } from '@src/features/analysis/video/file-handle-store';
 import { cloudSyncController } from '@src/features/sync/cloud/archive-adapter';
 import { findCloudVideo } from '@src/features/sync/cloud/video-upload';
 import { YouTubeFramePlayer } from '@src/features/analysis/video/YouTubeFramePlayer';
@@ -452,6 +452,11 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     useEffect(() => {
       setStoredHandle(null);
       if (source?.kind !== 'file' || resolveLocalVideoUrl(source.path, fileObjectUrl)) return undefined;
+      const sessionFile = getSessionVideoFile(project.metadata.id, source.fileName);
+      if (sessionFile) {
+        setFileObjectUrl(URL.createObjectURL(sessionFile));
+        return undefined;
+      }
       let cancelled = false;
       void (async () => {
         const handle = await loadVideoFileHandle(project.metadata.id).catch(() => null);
@@ -494,6 +499,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       if (fileObjectUrl?.startsWith('blob:')) URL.revokeObjectURL(fileObjectUrl);
       setFileObjectUrl(URL.createObjectURL(file));
       setStoredHandle(null);
+      rememberSessionVideoFile(project.metadata.id, file);
       if (handle) void saveVideoFileHandle(project.metadata.id, handle).catch(() => undefined);
       if (source?.kind === 'file' && source.fileName === file.name) return;
       persistVideoAnalysis({ source: { kind: 'file', path: getFilePath(file), fileName: file.name } });

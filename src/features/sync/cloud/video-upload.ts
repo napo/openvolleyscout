@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { loadVideoFileHandle } from '@src/features/analysis/video/file-handle-store';
+import { getSessionVideoFile, loadVideoFileHandle } from '@src/features/analysis/video/file-handle-store';
 import { useAppStore } from '@src/app/store/app-store';
 import { createDefaultMatchVideoAnalysis } from '@src/domain/video/types';
 import { matchRepository } from '@src/infrastructure/repositories';
@@ -77,6 +77,10 @@ export async function createChunkReader(video: LocalVideoMatch, chosen?: File): 
     return async (offset, length) => new Uint8Array(
       await invoke<ArrayBuffer>('read_video_chunk', { path: video.path, offset, length }),
     );
+  }
+  const sessionFile = getSessionVideoFile(video.matchId, video.fileName);
+  if (sessionFile) {
+    return async (offset, length) => new Uint8Array(await sessionFile.slice(offset, offset + length).arrayBuffer());
   }
   const handle = await loadVideoFileHandle(video.matchId).catch(() => null);
   if (!handle || (await handle.queryPermission?.({ mode: 'read' })) !== 'granted') return null;

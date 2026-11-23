@@ -9,7 +9,7 @@
 
 import type { MatchVideoSource } from '@src/domain/video/types';
 import { matchProjectDb } from '@src/infrastructure/db/match-project-db';
-import { loadVideoFileHandle } from '@src/features/analysis/video/file-handle-store';
+import { getSessionVideoFile, loadVideoFileHandle } from '@src/features/analysis/video/file-handle-store';
 import { isTauriRuntime, syncPlatform, type SyncPlatform } from './platform';
 
 const ENABLED_KEY = 'openvolleyscout.sync.videos';
@@ -102,6 +102,8 @@ export async function measureVideoFile(video: LocalVideoMatch, ask = false): Pro
     const size = await invoke<number | null>('video_file_size', { path: video.path }).catch(() => null);
     return typeof size === 'number' ? size : 'missing';
   }
+  const sessionFile = getSessionVideoFile(video.matchId, video.fileName);
+  if (sessionFile) return sessionFile.size;
   const handle = await loadVideoFileHandle(video.matchId).catch(() => null);
   if (!handle) return null;
   let permission = await handle.queryPermission?.({ mode: 'read' }) ?? 'prompt';
