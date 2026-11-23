@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { createDefaultMatchVideoAnalysis } from '@src/domain/video/types';
+import { remoteVideoUrlErrorKey, resolveRemoteVideoSource } from '@src/features/analysis/video/remote-video-url';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '../../../app/store/app-store';
@@ -53,11 +55,38 @@ interface MatchSetupData {
   matchDate: string;
   startTime: string;
   venue: string;
+  /** YouTube, Dropbox, OneDrive, Google Drive or direct link of the match video; optional. */
+  videoUrl: string;
   homeTeam: TeamSelectionState;
   awayTeam: TeamSelectionState;
 }
 
 const MATCH_WIZARD_STEPS: MatchWizardStep[] = ['match_info', 'home_team', 'away_team'];
+
+/**
+ * The video link typed while preparing the match. A local file linked later in
+ * Video analysis is kept; emptying the field removes only a link source. A new
+ * link for the same match keeps the sync points already set.
+ */
+export function applySetupVideoLink(project: MatchProject, rawUrl: string): void {
+  const current = project.videoAnalysis?.source;
+  const isLink = current?.kind === 'youtube' || current?.kind === 'url';
+  if (!rawUrl.trim()) {
+    if (isLink && project.videoAnalysis) {
+      project.videoAnalysis = { ...project.videoAnalysis, source: undefined, updatedAt: Date.now() };
+    }
+    return;
+  }
+  const resolved = resolveRemoteVideoSource(rawUrl);
+  if (!resolved.ok) return;
+  if (isLink && current.url === resolved.source.url) return;
+  if (current && !isLink) return;
+  project.videoAnalysis = {
+    ...(project.videoAnalysis ?? createDefaultMatchVideoAnalysis()),
+    source: resolved.source,
+    updatedAt: Date.now(),
+  };
+}
 
 function toPersistedRosterPlayers(players: MatchRosterSelectionPlayer[]): MatchRosterPlayer[] {
   return players
@@ -116,6 +145,7 @@ function createEmptyMatchSetupData(): MatchSetupData {
     matchDate: toLocalDateString(now),
     startTime: now.toTimeString().slice(0, 5),
     venue: '',
+    videoUrl: '',
     homeTeam: createEmptyTeamSelectionState(),
     awayTeam: createEmptyTeamSelectionState(),
   };
@@ -168,6 +198,9 @@ function createFormDataFromProject(project: MatchProject): MatchSetupData {
     matchDate: formatLocalDate(project.metadata.playedAt),
     startTime: project.metadata.playedAt ? new Date(project.metadata.playedAt).toTimeString().slice(0, 5) : '',
     venue: project.metadata.venue ?? '',
+    videoUrl: project.videoAnalysis?.source?.kind === 'youtube' || project.videoAnalysis?.source?.kind === 'url'
+      ? project.videoAnalysis.source.url
+      : '',
     homeTeam: createTeamSelectionStateFromProject(project, 'home'),
     awayTeam: createTeamSelectionStateFromProject(project, 'away'),
   };
@@ -269,7 +302,12 @@ export function MatchSetupPage() {
       stepErrors.startTime = t('startTimeRequired');
     }
 
-    return mergeValidationErrors(stepErrors, ['competitionName', 'matchDate', 'startTime', 'venue']);
+    if (formData.videoUrl.trim()) {
+      const video = resolveRemoteVideoSource(formData.videoUrl);
+      if (!video.ok) stepErrors.videoUrl = t(remoteVideoUrlErrorKey(video.reason));
+    }
+
+    return mergeValidationErrors(stepErrors, ['competitionName', 'matchDate', 'startTime', 'venue', 'videoUrl']);
   };
 
   const validateTeamStep = (teamType: 'home' | 'away') => {
@@ -639,6 +677,7 @@ export function MatchSetupPage() {
       project.metadata.matchNumber = formData.matchNumber.trim() || undefined;
       project.metadata.venue = formData.venue.trim() || undefined;
       project.metadata.playedAt = playedAt;
+      applySetupVideoLink(project, formData.videoUrl);
       project.updatedAt = Date.now();
 
       // An opponent left unnamed is "Opponent", never saved in the team archive.
@@ -806,7 +845,7 @@ export function MatchSetupPage() {
     };
     return (
       <QuickMatchStart
-        details={{ competitionName: formData.competitionName, matchDate: formData.matchDate, startTime: formData.startTime, venue: formData.venue }}
+        details={{ competitionName: formData.competitionName, matchDate: formData.matchDate, startTime: formData.startTime, venue: formData.venue, videoUrl: formData.videoUrl, videoUrlError: errors.videoUrl }}
         // Date and time cannot be emptied here: the match needs them (today and now by default).
         onDetailChange={(field, value) => {
           if ((field === 'matchDate' || field === 'startTime') && !value) return;
@@ -987,6 +1026,24 @@ export function MatchSetupPage() {
                   className={`form-input ${errors.venue ? 'form-input-error' : ''}`}
                 />
                 {errors.venue && <span className="form-error">{errors.venue}</span>}
+              </div>
+
+              <div className="form-group match-setup-form-grid__full">
+                <label htmlFor="videoUrl" className="form-label">
+                  {t('matchVideoLink')} <span className="form-label__optional">{t('optional')}</span>
+                </label>
+                <input
+                  id="videoUrl"
+                  type="url"
+                  value={formData.videoUrl}
+                  onChange={(event) => handleInputChange('videoUrl', event.target.value)}
+                  onKeyDown={handleSequentialEnter}
+                  placeholder={t('videoYoutubeUrlPlaceholder')}
+                  className={`form-input ${errors.videoUrl ? 'form-input-error' : ''}`}
+                />
+                {errors.videoUrl
+                  ? <span className="form-error">{errors.videoUrl}</span>
+                  : <span className="form-hint">{t('matchVideoLinkHint')}</span>}
               </div>
             </div>
           )}

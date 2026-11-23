@@ -38,8 +38,8 @@ interface QuickMatchStartProps {
   onStart: (request: QuickStartRequest) => void;
   onFullSetup: () => void;
   /** Match details, all optional (defaults: friendly, today, now). */
-  details?: { competitionName: string; matchDate: string; startTime: string; venue: string };
-  onDetailChange?: (field: 'competitionName' | 'matchDate' | 'startTime' | 'venue', value: string) => void;
+  details?: { competitionName: string; matchDate: string; startTime: string; venue: string; videoUrl: string; videoUrlError?: string };
+  onDetailChange?: (field: 'competitionName' | 'matchDate' | 'startTime' | 'venue' | 'videoUrl', value: string) => void;
   /** Tutorial: show only this step (1-5, or 6 for the start buttons), filled with `initial`, not interactive. */
   previewStep?: number;
   initial?: {
@@ -239,7 +239,7 @@ export function QuickMatchStart({
           <h2><span className="quick-start__index">1</span>{t('quickStartTeamQuestion')}</h2>
           <MatchTeamSelection {...homeTeamProps} />
           {details && onDetailChange ? (
-            <details className="quick-start__details">
+            <details className="quick-start__details" open={details.videoUrlError ? true : undefined}>
               <summary>{t('quickStartMatchDetails')}</summary>
               <div className="quick-start__details-grid">
                 <label className="quick-start__field">
@@ -257,6 +257,11 @@ export function QuickMatchStart({
                 <label className="quick-start__field">
                   <span>{t('venue')}</span>
                   <input type="text" value={details.venue} placeholder={t('venuePlaceholder')} onChange={(event) => onDetailChange('venue', event.target.value)} />
+                </label>
+                <label className="quick-start__field">
+                  <span>{t('matchVideoLink')}</span>
+                  <input type="url" value={details.videoUrl} placeholder={t('videoYoutubeUrlPlaceholder')} onChange={(event) => onDetailChange('videoUrl', event.target.value)} />
+                  {details.videoUrlError ? <span className="form-error">{details.videoUrlError}</span> : null}
                 </label>
               </div>
             </details>
