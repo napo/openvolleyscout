@@ -17,7 +17,7 @@ import { currentDevice, readTakeoverMinutes } from './device';
 import type { DeviceEntry, PresenceResult, ScoutingClaim, ScoutingIntent } from './presence';
 import type { ProviderId, SyncProvider } from './provider';
 import { DEFAULT_PROVIDER, createAuth, providerById } from './providers';
-import { StorageError } from './storage';
+import { type SpaceUsage, StorageError } from './storage';
 
 export type SyncState = 'off' | 'syncing' | 'ok' | 'paused' | 'error';
 
@@ -137,6 +137,14 @@ export class CloudSyncController {
   }
 
   /** Stops synchronisation on this device; with `deleteRemote` moves the remote archive to the bin. */
+  /** Used and total space of the connected cloud account; null when not connected or not available. */
+  async spaceUsage(): Promise<SpaceUsage | null> {
+    if (!this.auth || this.current.state === 'off') return null;
+    const token = await this.auth.token(false).catch(() => null);
+    if (!token) return null;
+    return this.provider.storage(token, await syncFetch()).spaceUsage();
+  }
+
   async disconnect(deleteRemote = false): Promise<void> {
     if (deleteRemote && this.auth) {
       const token = await this.auth.token(true).catch(() => null);

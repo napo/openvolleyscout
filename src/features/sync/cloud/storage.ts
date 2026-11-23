@@ -21,6 +21,12 @@ export class StorageError extends Error {
   }
 }
 
+/** Space of the cloud account in bytes; `total` is null when the account has no fixed limit. */
+export interface SpaceUsage {
+  readonly used: number;
+  readonly total: number | null;
+}
+
 export interface RemoteStorage {
   /** The archive file of the app, or null when there is none (never synchronised, or deleted by the user). */
   findArchive(): Promise<RemoteFile | null>;
@@ -31,4 +37,6 @@ export interface RemoteStorage {
   update(id: string, bytes: Uint8Array, expected: string): Promise<RemoteFile | null>;
   /** Moves the file to the bin of the service. */
   trash(id: string): Promise<void>;
+  /** Used and total space of the account, or null when the service does not tell this app. */
+  spaceUsage(): Promise<SpaceUsage | null>;
 }

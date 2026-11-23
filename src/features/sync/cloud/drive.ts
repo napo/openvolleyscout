@@ -8,7 +8,7 @@
  */
 
 import { SYNC_FILE_NAME, SYNC_FOLDER_NAME } from './config';
-import { type Fetch, type RemoteFile, type RemoteStorage, StorageError } from './storage';
+import { type Fetch, type RemoteFile, type RemoteStorage, type SpaceUsage, StorageError } from './storage';
 
 const API = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
@@ -115,5 +115,16 @@ export class DriveClient implements RemoteStorage {
       body: new Blob([bytes as BlobPart]),
     });
     return (await response.json()) as RemoteFile;
+  }
+
+  async spaceUsage(): Promise<SpaceUsage | null> {
+    try {
+      const response = await this.request('https://www.googleapis.com/drive/v3/about?fields=storageQuota');
+      const { storageQuota } = (await response.json()) as { storageQuota?: { limit?: string; usage?: string } };
+      if (!storageQuota?.usage) return null;
+      return { used: Number(storageQuota.usage), total: storageQuota.limit ? Number(storageQuota.limit) : null };
+    } catch {
+      return null;
+    }
   }
 }

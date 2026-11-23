@@ -26,6 +26,7 @@ import {
   writeTakeoverMinutes,
 } from './device';
 import { APP_VERSION } from '@src/lib/constants/app';
+import { CloudSyncVideoSettings } from './CloudSyncVideoSettings';
 
 export function CloudSyncDeviceSettings() {
   const { t, locale } = useTranslation();
@@ -85,6 +86,8 @@ export function CloudSyncDeviceSettings() {
         }}
       />
       <p className="cloud-sync-card__note">{t('cloudSyncTakeoverHelp')}</p>
+
+      <CloudSyncVideoSettings />
 
       <CurrentScoutingMatch />
 

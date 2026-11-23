@@ -49,7 +49,7 @@ function ProviderGlyph({ provider }: { provider: ProviderId }) {
   );
 }
 
-const SERVICE_NAME_KEY: Record<ProviderId, TranslationKey> = {
+export const SERVICE_NAME_KEY: Record<ProviderId, TranslationKey> = {
   'google-drive': 'cloudSyncProviderGoogle',
   dropbox: 'cloudSyncProviderDropbox',
   onedrive: 'cloudSyncProviderOneDrive',

@@ -26,6 +26,13 @@ fn webcam_supported() -> bool {
   true
 }
 
+/// Size in bytes of a local video file, or None when it is missing or not a
+/// file. Read-only: used to tell how much cloud space the videos would need.
+#[tauri::command]
+fn video_file_size(path: String) -> Option<u64> {
+  std::fs::metadata(&path).ok().filter(|meta| meta.is_file()).map(|meta| meta.len())
+}
+
 /// Attempts to turn on WebKitGTK's WebRTC/media-stream support and
 /// auto-approve camera permission requests - both are off by default even
 /// when the underlying library has them compiled in, since neither WRY nor
@@ -80,6 +87,7 @@ pub fn run() {
       video_export::cancel_video_clip_export,
       multi_window_available,
       webcam_supported,
+      video_file_size,
       rtsp_relay::rtsp_relay_available,
       rtsp_relay::start_rtsp_relay,
       rtsp_relay::stop_rtsp_relay,

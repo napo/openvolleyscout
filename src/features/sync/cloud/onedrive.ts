@@ -7,7 +7,7 @@
  */
 
 import { SYNC_FILE_NAME } from './config';
-import { type Fetch, type RemoteFile, type RemoteStorage, StorageError } from './storage';
+import { type Fetch, type RemoteFile, type RemoteStorage, type SpaceUsage, StorageError } from './storage';
 
 const ITEM = `https://graph.microsoft.com/v1.0/me/drive/special/approot:/${SYNC_FILE_NAME}`;
 const CONTENT = `${ITEM}:/content`;
@@ -88,5 +88,17 @@ export class OneDriveClient implements RemoteStorage {
 
   async trash(): Promise<void> {
     await this.request(ITEM, { method: 'DELETE' });
+  }
+
+  /** The app-folder permission may not include the drive quota: null when refused. */
+  async spaceUsage(): Promise<SpaceUsage | null> {
+    try {
+      const response = await this.request('https://graph.microsoft.com/v1.0/me/drive?$select=quota');
+      const { quota } = (await response.json()) as { quota?: { used?: number; total?: number } };
+      if (typeof quota?.used !== 'number') return null;
+      return { used: quota.used, total: typeof quota.total === 'number' ? quota.total : null };
+    } catch {
+      return null;
+    }
   }
 }

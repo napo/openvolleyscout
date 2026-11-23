@@ -73,6 +73,9 @@ export function makeMemoryRemote(): RemoteStorage & { file: { id: string; versio
     async trash(id: string): Promise<void> {
       if (remote.file?.id === id) remote.file = null;
     },
+    async spaceUsage() {
+      return null;
+    },
   };
   return remote;
 }

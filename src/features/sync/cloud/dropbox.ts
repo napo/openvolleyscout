@@ -7,7 +7,7 @@
  */
 
 import { SYNC_FILE_NAME } from './config';
-import { type Fetch, type RemoteFile, type RemoteStorage, StorageError } from './storage';
+import { type Fetch, type RemoteFile, type RemoteStorage, type SpaceUsage, StorageError } from './storage';
 
 const API = 'https://api.dropboxapi.com/2/files';
 const CONTENT = 'https://content.dropboxapi.com/2/files';
@@ -95,5 +95,17 @@ export class DropboxClient implements RemoteStorage {
 
   async trash(): Promise<void> {
     await this.rpc('delete_v2', { path: PATH });
+  }
+
+  /** Needs the "account_info.read" permission, which the app does not ask for: null when refused. */
+  async spaceUsage(): Promise<SpaceUsage | null> {
+    try {
+      const response = await this.request('https://api.dropboxapi.com/2/users/get_space_usage', {});
+      const { used, allocation } = (await response.json()) as { used?: number; allocation?: { allocated?: number } };
+      if (typeof used !== 'number') return null;
+      return { used, total: typeof allocation?.allocated === 'number' ? allocation.allocated : null };
+    } catch {
+      return null;
+    }
   }
 }
