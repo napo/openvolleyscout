@@ -2949,4 +2949,5 @@ export const ja = {
   backupReminderUseCloud: "クラウドサービスを使う",
   backupReminderDownload: "アーカイブをダウンロード",
   cloudSyncPrivacyLink: "プライバシーポリシー",
+  aboutLogoCredit: "ロゴは Maurizio Napolitano と Fabio d'Amico が AI ツールの支援を受けてデザインしました。",
 };

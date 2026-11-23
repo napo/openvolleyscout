@@ -2968,4 +2968,5 @@ export const sl = {
   backupReminderUseCloud: "Uporabi storitev v oblaku",
   backupReminderDownload: "Prenesi arhiv",
   cloudSyncPrivacyLink: "Pravilnik o zasebnosti",
+  aboutLogoCredit: "Logotip sta oblikovala Maurizio Napolitano in Fabio d'Amico s pomočjo orodij umetne inteligence.",
 };

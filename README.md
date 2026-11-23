@@ -294,6 +294,9 @@ and feedback:
   **Alessandro Fellin**, **Cataldo Di Michele** - suggestions, bug reports, and
   testing
 
+The logo was designed by Maurizio Napolitano and Fabio d'Amico with the support
+of AI tools.
+
 ## License
 
 OpenVolleyScout is free software by Maurizio Napolitano, licensed under the

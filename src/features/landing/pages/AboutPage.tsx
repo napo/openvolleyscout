@@ -324,6 +324,7 @@ export function AboutPage() {
                   </li>
                 ))}
               </ul>
+              <p className="about-page__text">{t('aboutLogoCredit')}</p>
             </section>
             <section className="about-page__section">
               <h2 className="about-page__section-title">{t('license')}</h2>

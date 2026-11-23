@@ -2970,4 +2970,5 @@ export const es = {
   backupReminderUseCloud: "Usar un servicio en la nube",
   backupReminderDownload: "Descargar el archivo",
   cloudSyncPrivacyLink: "Política de privacidad",
+  aboutLogoCredit: "El logotipo fue diseñado por Maurizio Napolitano y Fabio d'Amico con el apoyo de herramientas de inteligencia artificial.",
 };

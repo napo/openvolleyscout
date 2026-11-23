@@ -2973,4 +2973,5 @@ export const it = {
   backupReminderUseCloud: "Usa un servizio cloud",
   backupReminderDownload: "Scarica l'archivio",
   cloudSyncPrivacyLink: "Informativa sulla privacy",
+  aboutLogoCredit: "Il logo è stato progettato da Maurizio Napolitano e Fabio d'Amico con il supporto di strumenti di intelligenza artificiale.",
 };

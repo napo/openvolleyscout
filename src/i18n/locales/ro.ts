@@ -2970,4 +2970,5 @@ export const ro = {
   backupReminderUseCloud: "Folosește un serviciu cloud",
   backupReminderDownload: "Descarcă arhiva",
   cloudSyncPrivacyLink: "Politica de confidențialitate",
+  aboutLogoCredit: "Logoul a fost proiectat de Maurizio Napolitano și Fabio d'Amico cu sprijinul unor instrumente de inteligență artificială.",
 };

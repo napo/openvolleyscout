@@ -2973,4 +2973,5 @@ export const en = {
   backupReminderUseCloud: "Use a cloud service",
   backupReminderDownload: "Download the archive",
   cloudSyncPrivacyLink: "Privacy policy",
+  aboutLogoCredit: "The logo was designed by Maurizio Napolitano and Fabio d'Amico with the support of AI tools.",
 };

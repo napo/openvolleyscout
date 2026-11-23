@@ -2968,4 +2968,5 @@ export const zh = {
   backupReminderUseCloud: "使用云服务",
   backupReminderDownload: "下载存档",
   cloudSyncPrivacyLink: "隐私政策",
+  aboutLogoCredit: "标志由 Maurizio Napolitano 和 Fabio d'Amico 在人工智能工具的辅助下设计。",
 };

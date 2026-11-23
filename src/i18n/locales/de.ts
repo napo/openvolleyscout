@@ -2968,4 +2968,5 @@ export const de = {
   backupReminderUseCloud: "Cloud-Dienst nutzen",
   backupReminderDownload: "Archiv herunterladen",
   cloudSyncPrivacyLink: "Datenschutzerklärung",
+  aboutLogoCredit: "Das Logo wurde von Maurizio Napolitano und Fabio d'Amico mit Unterstützung von KI-Werkzeugen gestaltet.",
 };

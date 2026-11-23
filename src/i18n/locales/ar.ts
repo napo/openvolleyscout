@@ -2970,4 +2970,5 @@ export const ar = {
   backupReminderUseCloud: "استخدم خدمة سحابية",
   backupReminderDownload: "نزّل الأرشيف",
   cloudSyncPrivacyLink: "سياسة الخصوصية",
+  aboutLogoCredit: "صمّم الشعار Maurizio Napolitano وFabio d'Amico بدعم من أدوات الذكاء الاصطناعي.",
 };

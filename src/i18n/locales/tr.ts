@@ -2964,4 +2964,5 @@ export const tr = {
   backupReminderUseCloud: "Bulut hizmeti kullan",
   backupReminderDownload: "Arşivi indir",
   cloudSyncPrivacyLink: "Gizlilik politikası",
+  aboutLogoCredit: "Logo, yapay zekâ araçlarının desteğiyle Maurizio Napolitano ve Fabio d'Amico tarafından tasarlandı.",
 };
