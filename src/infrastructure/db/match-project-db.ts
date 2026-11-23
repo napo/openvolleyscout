@@ -154,6 +154,11 @@ export class MatchProjectDatabase extends Dexie {
         }
       }
     });
+
+    // Match summaries now say whether a video is linked: rebuilt once from the matches.
+    this.version(9).stores({}).upgrade(async (tx) => {
+      await tx.table('matchSummaries').clear();
+    });
   }
 }
 

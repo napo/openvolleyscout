@@ -480,8 +480,12 @@ export function AnalysisPage() {
                   aria-selected={statsView === 'video-analysis'}
                   className={`stats-view-tabs__tab${statsView === 'video-analysis' ? ' stats-view-tabs__tab--active' : ''}`}
                   onClick={() => setStatsView('video-analysis')}
+                  title={activeProject?.videoAnalysis?.source ? t('videoAnalysisLinkedHint') : undefined}
                 >
                   {t('videoAnalysis')}
+                  {activeProject?.videoAnalysis?.source ? (
+                    <span className="stats-view-tabs__badge" aria-label={t('videoAnalysisLinkedHint')}> ●</span>
+                  ) : null}
                 </button>
                 {hasPointNotes ? (
                   <button

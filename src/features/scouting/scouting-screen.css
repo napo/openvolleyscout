@@ -8403,3 +8403,9 @@
   padding: 0.1rem 0.3rem;
   cursor: pointer;
 }
+
+/* Dot on the Video analysis tab: the match has a linked video. */
+.stats-view-tabs__badge {
+  color: var(--color-success, #1f9d55);
+  font-size: 0.8em;
+}

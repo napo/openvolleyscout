@@ -187,6 +187,17 @@ export function LoadDataPage() {
     void loadProjects();
   }, [t]);
 
+  const videoKindLabel = (project: MatchSummaryRecord): string => {
+    switch (project.videoKind) {
+      case 'file': return t('tableVideoFile');
+      case 'youtube': return 'YouTube';
+      case 'url': return t('tableVideoLink');
+      case 'webcam':
+      case 'rtsp': return t('tableVideoCamera');
+      default: return '';
+    }
+  };
+
   const openProject = async (project: MatchSummaryRecord) => {
     try {
       setBusyProjectId(project.id);
@@ -1421,6 +1432,16 @@ export function LoadDataPage() {
                     key: 'venue',
                     label: t('venue'),
                     text: (project) => project.venue || '-',
+                  },
+                  {
+                    key: 'video',
+                    label: t('tableColVideo'),
+                    text: (project) => videoKindLabel(project),
+                    render: (project) => (project.videoKind ? (
+                      <span title={project.videoName}>{videoKindLabel(project)}</span>
+                    ) : (
+                      <span aria-label={t('tableVideoNone')}>-</span>
+                    )),
                   },
                   {
                     key: 'result',

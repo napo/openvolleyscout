@@ -134,9 +134,10 @@ export function TeamAnalysisPage() {
           return db.localeCompare(da);
         });
         setAllMatches(filtered);
-        // Matches without any played set would only dilute the figures: not preselected.
+        // Matches without any played set would only dilute the figures: not preselected,
+        // unless it is the only match (then there is nothing else to choose).
         setSelectedIds(new Set(filtered
-          .filter((p) => formatProjectMatchResult(p, { goldenSetLabel: '' }).hasResult)
+          .filter((p) => filtered.length === 1 || formatProjectMatchResult(p, { goldenSetLabel: '' }).hasResult)
           .map((p) => p.metadata.id)));
       } finally {
         setIsLoading(false);

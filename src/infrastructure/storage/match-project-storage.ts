@@ -23,8 +23,20 @@ export function buildMatchSummary(project: MatchProject): MatchSummaryRecord {
     awayTeamId: project.awaySelection?.archivedTeamId || project.awaySelection?.teamId || away.id,
     awayTeamName: away.name,
     result: formatProjectMatchResult(project),
+    ...videoSummary(project),
     updatedAt: project.updatedAt,
   };
+}
+
+function videoSummary(project: MatchProject): Pick<MatchSummaryRecord, 'videoKind' | 'videoName'> {
+  const source = project.videoAnalysis?.source;
+  if (!source) return {};
+  const videoName = source.kind === 'file'
+    ? source.fileName || source.path.split(/[\\/]/).pop() || source.path
+    : source.kind === 'youtube' || source.kind === 'url' || source.kind === 'rtsp'
+      ? source.url
+      : source.deviceLabel || undefined;
+  return { videoKind: source.kind, videoName };
 }
 
 const repairsInFlight = new Set<string>();
