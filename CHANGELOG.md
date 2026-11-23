@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.41.1 - 2026-11-23
+
+### Fixed
+- The base reception system now puts the players in the right places when the setter is in 3: the middle blocker in the front row stays at the net, and the libero who replaced the other middle blocker receives in zone 6. If you have used the app since before July, your device kept an old copy of the base system with the two middle blockers swapped; it is now corrected automatically, together with the two rotations (setter in 4 and in 6) that had players out of position. Rotations you have redrawn yourself are kept as they are.
+
 ## 0.41.0 - 2026-11-23
 
 ### Added
