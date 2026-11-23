@@ -6,6 +6,7 @@
  *   npm run dev                                   # or any server of the app
  *   node tools/docs-screenshots/capture-docs.mjs  # OVS_DOCS_LOCAL=http://localhost:5173/
  *
+ * The booklet pages and example PDFs come from export-booklet.mjs.
  * Live-scouting, tagging and tactical-report pictures are copied from the
  * English tutorial screenshots in public/tutorials/en/, which show those
  * screens mid-match.
@@ -64,7 +65,6 @@ for (const [from, to] of [
   ['court-05', '02-live-scouting'],
   ['tag-05', '03-tags-and-video'],
   ['tr-03-editor', '09-tactical-report'],
-  ['tr-09-preview', '13-tactical-booklet'],
   ['tr-04-serve-targets', '14-tactical-serve-targets'],
   ['tr-07-how-they-serve', '15-tactical-how-they-serve'],
 ]) copyFileSync(`public/tutorials/en/${from}.png`, `${OUT}/${to}.png`);

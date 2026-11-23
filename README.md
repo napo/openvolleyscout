@@ -90,7 +90,14 @@ can edit sheet by sheet, then print it as a booklet for the staff or share it
 as a link.
 
 <p align="center">
-  <img src="docs/images/13-tactical-booklet.png" alt="Tactical report booklet preview" width="860"/>
+  <img src="docs/images/16-tactical-booklet-pages.png" alt="The four sheets of a printed tactical report booklet" width="860"/>
+</p>
+
+<p align="center">
+  Example made with the demo match:
+  <a href="docs/examples/tactical-report-booklet.pdf"><b>download the booklet (PDF)</b></a>
+  (four A4 sheets to fold into an A5 booklet) ·
+  <a href="docs/examples/tactical-report-a4.pdf"><b>A4 version (PDF)</b></a>
 </p>
 
 | | |

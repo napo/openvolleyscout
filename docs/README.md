@@ -95,6 +95,8 @@ does and how to get it, start from the [project README](../README.md).
 
 - `images/` - screenshots used by the README, taken from the app with the demo
   match by `tools/docs-screenshots/capture-docs.mjs`.
+- `examples/` - example tactical report of the demo match, as a booklet and
+  as A4 PDF, made by `tools/docs-screenshots/export-booklet.mjs`.
 - `reference/` - reference pictures for the match report layout.
 - `issue-8-scouting-landscape-optimization.md` - historical notes on the
   smartphone landscape layout.
