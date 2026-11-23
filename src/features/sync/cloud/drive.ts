@@ -20,6 +20,7 @@ import {
   cloudVideoName,
   matchIdFromCloudVideoName,
 } from './storage';
+import { canStreamThroughWorker, registerWorkerStream } from './video-stream-worker';
 
 const API = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
@@ -206,11 +207,18 @@ export class DriveClient implements RemoteStorage, VideoStorage {
     };
   }
 
-  /** Drive serves file contents only with the token in an Authorization header, which a video player cannot send. */
-  readonly canStream = false;
+  /**
+   * Drive serves file contents only with the token in an Authorization header,
+   * which a video player cannot send: the web app streams through its service
+   * worker, which adds it. Elsewhere the video can only be downloaded.
+   */
+  get canStream(): boolean {
+    return canStreamThroughWorker();
+  }
 
-  async videoStreamUrl(): Promise<string> {
-    throw new StorageError(0, 'streaming not supported');
+  async videoStreamUrl(file: CloudVideoFile): Promise<string> {
+    if (!canStreamThroughWorker()) throw new StorageError(0, 'streaming not supported');
+    return registerWorkerStream(`${API}/${file.id}?alt=media`, this.accessToken);
   }
 
   async videoDownloadRequest(file: CloudVideoFile): Promise<{ url: string; headers?: Record<string, string> }> {

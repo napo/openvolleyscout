@@ -88,6 +88,8 @@ export default defineConfig({
               ],
             },
             workbox: {
+              // Streams Google Drive videos with the access token (see the file).
+              importScripts: ['ovs-stream-sw.js'],
               globPatterns: ['**/*.{js,css,html,ico,png,svg,ttf,wasm,dvw}'],
               // The CJK PDF fonts (~10 MB) are only needed for Japanese/Chinese
               // reports: fetched on first use, then kept for offline use.

@@ -2987,7 +2987,7 @@ export const sl = {
   videoOpenFromCloud: "Glej iz oblaka",
   videoUploadToCloud: "Naloži v oblak",
   videoOpenFromCloudHint: "Ta video je v tvojem oblaku: lahko ga gledaš brez prenosa.",
-  videoCloudDownloadOnlyHint: "Video je v tvojem Google Drive. Drive ne dovoli pretakanja zunaj svoje strani: prenesi ga na to napravo (v Chromu, Edgeu ali namizni aplikaciji).",
+  videoCloudDownloadOnlyHint: "Video je v tvojem Google Drive. Tukaj ga lahko samo preneseš v napravo; za pretakanje uporabi spletno različico OpenVolleyScout (če si jo pravkar odprl, znova naloži stran).",
   videoOpenFromCloudError: "Videa ni bilo mogoče odpreti iz oblaka. Preveri povezavo in poskusi znova.",
   videoDownloadFromCloud: "Prenesi na to napravo",
   videoDownloadFromCloudConfirm: "Prenesem video ({{size}}) na to napravo?",

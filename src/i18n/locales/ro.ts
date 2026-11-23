@@ -2989,7 +2989,7 @@ export const ro = {
   videoOpenFromCloud: "Vezi din cloud",
   videoUploadToCloud: "Încarcă în cloud",
   videoOpenFromCloudHint: "Acest videoclip este în cloud-ul tău: îl poți vedea fără să-l descarci.",
-  videoCloudDownloadOnlyHint: "Videoclipul este în Google Drive. Drive nu permite redarea în streaming în afara site-ului său: descarcă-l pe acest dispozitiv (din Chrome, Edge sau aplicația pentru computer).",
+  videoCloudDownloadOnlyHint: "Videoclipul este în Google Drive. Aici îl poți doar descărca pe dispozitiv; pentru streaming folosește versiunea web OpenVolleyScout (dacă abia ai deschis-o, reîncarcă pagina).",
   videoOpenFromCloudError: "Videoclipul nu a putut fi deschis din cloud. Verifică conexiunea și încearcă din nou.",
   videoDownloadFromCloud: "Descarcă pe acest dispozitiv",
   videoDownloadFromCloudConfirm: "Descarci videoclipul ({{size}}) pe acest dispozitiv?",

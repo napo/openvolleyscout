@@ -129,10 +129,37 @@ describe('review fixes', () => {
     vi.useRealTimers();
   });
 
-  it('Google Drive downloads with the token in the Authorization header and never streams', async () => {
+  it('Google Drive downloads with the token in the Authorization header', async () => {
     const drive = new DriveClient('tok', vi.fn());
+    // No service worker controls the page here: no streaming.
     expect(drive.canStream).toBe(false);
+    await expect(drive.videoStreamUrl({ id: 'g1', matchId: 'm1', name: 'x', size: 1 })).rejects.toThrow();
     expect(await drive.videoDownloadRequest({ id: 'g1', matchId: 'm1', name: 'x', size: 1 }))
       .toEqual({ url: 'https://www.googleapis.com/drive/v3/files/g1?alt=media', headers: { Authorization: 'Bearer tok' } });
+  });
+
+  it('Google Drive streams through the service worker, which receives the token', async () => {
+    const posted: unknown[] = [];
+    const controller = {
+      postMessage(message: unknown, ports: MessagePort[]) {
+        posted.push(message);
+        ports[0].postMessage({ ok: true });
+      },
+    };
+    Object.defineProperty(navigator, 'serviceWorker', { value: { controller }, configurable: true });
+    try {
+      const drive = new DriveClient('tok', vi.fn());
+      expect(drive.canStream).toBe(true);
+      const url = await drive.videoStreamUrl({ id: 'g1', matchId: 'm1', name: 'x', size: 1 });
+      expect(url).toMatch(/\/ovs-stream\/[0-9a-f-]+$/);
+      expect(posted).toEqual([expect.objectContaining({
+        type: 'ovs-stream-register',
+        url: 'https://www.googleapis.com/drive/v3/files/g1?alt=media',
+        token: 'tok',
+      })]);
+      expect(url).not.toContain('tok');
+    } finally {
+      delete (navigator as { serviceWorker?: unknown }).serviceWorker;
+    }
   });
 });

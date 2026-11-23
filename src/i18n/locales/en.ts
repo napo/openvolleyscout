@@ -2992,7 +2992,7 @@ export const en = {
   videoOpenFromCloud: "Watch from the cloud",
   videoUploadToCloud: "Upload to the cloud",
   videoOpenFromCloudHint: "This video is in your cloud: you can watch it without downloading it.",
-  videoCloudDownloadOnlyHint: "The video is in your Google Drive. Drive does not let it be streamed outside its own site: download it to this device (from Chrome, Edge or the desktop app).",
+  videoCloudDownloadOnlyHint: "The video is in your Google Drive. Here you can only download it to this device; to watch it streaming, use the web version of OpenVolleyScout (if you just opened it, reload the page).",
   videoOpenFromCloudError: "Could not open the video from the cloud. Check the connection and try again.",
   videoDownloadFromCloud: "Download to this device",
   videoDownloadFromCloudConfirm: "Download the video ({{size}}) to this device?",

@@ -2987,7 +2987,7 @@ export const zh = {
   videoOpenFromCloud: "从云端观看",
   videoUploadToCloud: "上传到云端",
   videoOpenFromCloudHint: "此视频在你的云端：无需下载即可观看。",
-  videoCloudDownloadOnlyHint: "视频在你的 Google Drive 中。Drive 不允许在其网站之外在线播放：请下载到此设备（使用 Chrome、Edge 或桌面应用）。",
+  videoCloudDownloadOnlyHint: "视频在你的 Google Drive 中。这里只能下载到设备；要在线播放，请使用 OpenVolleyScout 网页版（如果刚打开，请刷新页面）。",
   videoOpenFromCloudError: "无法从云端打开视频。请检查网络后重试。",
   videoDownloadFromCloud: "下载到此设备",
   videoDownloadFromCloudConfirm: "要将视频（{{size}}）下载到此设备吗？",
