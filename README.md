@@ -1,288 +1,188 @@
 # OpenVolleyScout
 
 <p align="center">
-  <img src="src/assets/openvolleyscout-logo.png" alt="OpenVolleyScout Logo" width="400"/>
+  <img src="src/assets/openvolleyscout-logo.png" alt="OpenVolleyScout logo" width="360"/>
 </p>
 
 <p align="center">
-  <b>Analyze. Scout. Improve.</b>
+  <b>Free volleyball scouting and match analysis.</b><br/>
+  Scout live, study the numbers, link every action to the video, prepare the next opponent.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-active%20development-orange"/>
-  <img src="https://img.shields.io/badge/license-AGPL--3.0--or--later-blue"/>
-  <img src="https://img.shields.io/badge/platform-web-blue"/>
-  <img src="https://img.shields.io/badge/made%20with-React%20%2B%20Vite-61dafb"/>
+  <a href="https://scout.volleyserve.it"><b>Open the web app</b></a> ·
+  <a href="https://github.com/napo/openvolleyscout/releases/latest"><b>Download</b></a> ·
+  <a href="docs/user-guide.md">User guide</a> ·
+  <a href="https://scout.volleyserve.it/privacy.html">Privacy</a>
 </p>
 
-OpenVolleyScout is a local-first volleyball scouting and analysis application
-for match setup, live rally recording, DataVolley import/export,
-tactical-system editing, video review, team data study, and match reporting.
+<p align="center">
+  <a href="https://github.com/napo/openvolleyscout/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/napo/openvolleyscout?label=release&color=0b3d91"/></a>
+  <img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0--or--later-0b3d91"/>
+  <img alt="Platforms" src="https://img.shields.io/badge/platforms-web%20%7C%20Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-2ec4e6"/>
+  <img alt="Languages" src="https://img.shields.io/badge/languages-10-2ec4e6"/>
+</p>
 
-The application runs in the browser and can also be packaged as a desktop app
-with Tauri. Match projects, team archives, rosters, competition names, and
-video-analysis metadata are persisted on the device with IndexedDB. Locale and
-tactical-system editor state are stored in `localStorage`.
+<p align="center">
+  <img src="docs/images/02-live-scouting.png" alt="Live scouting on the court" width="860"/>
+</p>
 
-Live demo: https://scout.volleyserve.it
+OpenVolleyScout is a volleyball scouting application for coaches, scouts and
+analysts. It records every touch of a match, produces DataVolley-style reports
+and statistics, synchronises actions with the match video and builds tactical
+reports on the next opponent. It works in the browser and as an app for
+Windows, macOS, Linux and Android, also offline in the gym.
 
-> The project is under active development. Some workflows are complete enough
-> to use as foundations, while analysis and advanced tactical automation are
-> still evolving.
+Your data stays on your device. There are no accounts and no tracking; if you
+want the same archive on several devices, connect your own Google Drive,
+OneDrive or Dropbox.
 
-## Installation & Downloads
+## What you can do
 
-### Desktop Application
+**Scout live**
+- Three ways to enter a match, switchable at any time: **Court** (large touch
+  buttons, draw zones and ball directions), **Detailed** (full DataVolley code
+  input) and **Tags** (buttons only, also while watching the video).
+- Lineups, substitutions, libero exchanges, timeouts, score corrections and undo;
+  the match resumes after a page reload.
+- Scout only your own team when you do not need the opponent.
+- Watch a local file, YouTube, a webcam or an RTSP camera while scouting, with
+  each touch remembering its video time.
 
-Download packaged builds from the
-[latest GitHub release](https://github.com/napo/openvolleyscout/releases/latest)
-for Windows, macOS (Apple Silicon and Intel), Linux, and Android.
-Available artifacts can vary by release and platform.
+**Analyse**
+- Match report (the DataVolley scoresheet), team and player performance,
+  play-by-play, side-out study, cross-rotation analysis, heatmaps and radar charts.
+- Trends across matches: priorities against your own wins, season trend,
+  competition comparison, similarity between teams.
+- Team data study across many matches, with the same views.
+- Export to PDF, PPTX, ODS and SVG, or share a link that opens the same page
+  on any device.
 
-#### macOS: unsigned builds
+**Video**
+- Synchronise a local or YouTube video with the actions, filter clips, fix codes
+  and export selected clips.
+- Build playlists of actions and share them as a link.
 
-The macOS builds are **not signed or notarized by Apple**: this is a free
-software project without an Apple Developer account. macOS will therefore
-warn that the app "cannot be opened" or "is damaged". Whether to run it is
-**your decision**. If you trust the file downloaded from the official release
-page, you can open it in one of these ways:
+**Prepare the next opponent**
+- Tactical reports built from the opponent's matches: priorities, serve targets
+  by rotation, setting distribution, block and defence, "How they serve" sheet
+  and free drawing sheets, printable as a booklet.
+- Reception and defence systems per team, starting from P-S-C / P-C-S presets,
+  with a positional-fault check.
+
+**Your data**
+- Import DataVolley (`.dvw`) and Tiebreak Tech (`.db`, `.sqlite`) matches;
+  export back to DataVolley and Tiebreak Tech.
+- One-file backup (`.ovs`) of everything, to keep wherever you like.
+- Optional synchronisation with your own **Google Drive**, **OneDrive** or
+  **Dropbox**. Only one device at a time scouts a match; the others follow it
+  and can take over when it stops or is handed over.
+- English, Italian, German, Spanish, Romanian, Slovenian, Turkish, Chinese,
+  Arabic and Japanese.
+
+Step-by-step tutorials are inside the app, under **About → Tutorials**, and on
+the home page.
+
+## Tactical report and booklet
+
+Pick the opponent's matches and OpenVolleyScout drafts a scouting report you
+can edit sheet by sheet, then print it as a booklet for the staff or share it
+as a link.
+
+<p align="center">
+  <img src="docs/images/13-tactical-booklet.png" alt="Tactical report booklet preview" width="860"/>
+</p>
+
+| | |
+|---|---|
+| ![Where to serve](docs/images/14-tactical-serve-targets.png)<br/>**Where to serve**, rotation by rotation | ![How they serve](docs/images/15-tactical-how-they-serve.png)<br/>**How they serve**: the main servers on one page |
+
+The booklet brings together tactical priorities, serve targets by rotation,
+setting distribution, block and defence, "How they serve" and your own drawing
+sheets with players, arrows and areas. Choose the format, reorder or hide the
+sheets, then export PDF, PPTX/ODP or SVG.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Home](docs/images/01-home.png)<br/>**Home** | ![Tags and video](docs/images/03-tags-and-video.png)<br/>**Tags mode**, also next to the video |
+| ![Match report](docs/images/04-match-report.png)<br/>**Match report** | ![Team performance](docs/images/05-team-performance.png)<br/>**Team performance** |
+| ![Side-out study](docs/images/06-side-out-study.png)<br/>**Side-out study** | ![Play-by-play](docs/images/07-play-by-play.png)<br/>**Play-by-play** |
+| ![Trends](docs/images/08-trends.png)<br/>**Trends: priorities** | ![Tactical report](docs/images/09-tactical-report.png)<br/>**Tactical report editor** |
+| ![Systems](docs/images/10-systems.png)<br/>**Reception and defence systems** | ![Data and sync](docs/images/11-data-and-sync.png)<br/>**Data, backup and cloud sync** |
+
+The screenshots use the demo match included in the app (fictional teams).
+
+## Get it
+
+### In the browser
+
+Open **[scout.volleyserve.it](https://scout.volleyserve.it)**: nothing to
+install. It is also an installable offline app (PWA): add it to the home
+screen of a tablet or phone and it starts without network. New versions are
+offered with an "Update now" button, never in the middle of a rally.
+
+**iPhone and iPad:** there is no App Store app. Open the web app in Safari and
+choose **Share → Add to Home Screen**.
+
+### Desktop and Android
+
+Download the installer from the
+[latest release](https://github.com/napo/openvolleyscout/releases/latest):
+Windows, macOS (Apple Silicon and Intel), Linux and Android (APK). The desktop
+apps update themselves.
+
+<details>
+<summary><b>macOS: the app is not signed by Apple</b></summary>
+
+This free software project has no Apple Developer account, so macOS warns that
+the app "cannot be opened" or "is damaged". Whether to run it is your decision.
+If you trust the file from the official release page, open it in one of these ways:
 
 - right-click the app → **Open**, then confirm;
-- **System Settings → Privacy & Security → Open Anyway** after the first
-  blocked attempt;
-- from a terminal, remove the quarantine flag:
-  `xattr -dr com.apple.quarantine /Applications/OpenVolleyScout.app`
+- **System Settings → Privacy & Security → Open Anyway** after the first blocked attempt;
+- from a terminal: `xattr -dr com.apple.quarantine /Applications/OpenVolleyScout.app`
 
 Automatic updates keep working afterwards.
+</details>
 
-### Web Browser (No Installation)
+## Privacy
 
-No installation needed - use the [live demo](https://scout.volleyserve.it) directly in any modern browser.
-
-The web version is also an **installable offline app** (PWA): add it to the
-home screen of a tablet or phone and it starts without network, which is
-handy in a gym. New versions are offered with an "Update now" button instead
-of reloading in the middle of a rally.
-
-#### iPhone and iPad
-
-There is no App Store or signed iOS app. Open the
-[web version](https://scout.volleyserve.it) in Safari and choose
-**Share → Add to Home Screen**: it then starts like an app and works offline.
-
-See all [releases](https://github.com/napo/openvolleyscout/releases) for older versions.
-
-## Current Capabilities
-
-- Create and manage archived teams and rosters, also by jersey number only
-  (quick entry such as `1-12 L13`, names added later on the Teams page and
-  copied into saved matches); players can join a match roster at set start or
-  during a substitution.
-- Browse the team archive in a searchable, sortable table with a separate row
-  of actions for each team. Create or edit in a dedicated full-width form;
-  Save commits team/roster changes and synchronizes names, while Cancel discards
-  pending edits. Returning preserves the list's search, sort and scroll position.
-- Import and export rosters in JSON/CSV formats.
-- Create match projects from competition metadata, selected teams, and
-  match-specific rosters.
-- Configure match-level scouting settings such as set targets and tie-break
-  targets.
-- Start sets from selected lineups and serving team.
-- Record rally events, touches, points, substitutions, timeouts, score
-  corrections, undo, set endings, and match endings through an event log.
-- Choose how much detail to enter while scouting live, at any time: **Court**
-  (large touch buttons, draw zones and ball directions), **Detailed** (the
-  full DataVolley input) or **Tags** (buttons only, also while watching the
-  video). The first time, the app suggests the level that suits the device.
-- Resume the match being scouted after a page reload (e.g. a tablet browser
-  discarding the tab), with undo still available.
-- Persist scouting progress back into the active `MatchProject`.
-- Generate live quick stats, set summaries, rally summaries, and DataVolley-like
-  rally strings from recorded events.
-- Import DataVolley `.dvw` files with preview, diagnostics, duplicate handling,
-  team archive merge, and validation (non-blocking import warnings can be
-  hidden from a Settings toggle; blocking errors always stop the import).
-- Export OpenVolleyScout matches back to DataVolley-compatible `.dvw` files;
-  when the match has Video analysis sync points, the exported video times
-  follow them, so the file lines up with the synchronized video.
-- Build match reports with printable, PNG, and vector PDF export; analytics
-  widgets export to vector PDF too.
-- Explore team and player dashboards with filters, evaluation distributions,
-  efficiency, points/errors, side-out study (by court zone or by setter
-  call/attack combination), heatmaps, and radar comparison charts.
-- Link local or YouTube videos to matches, synchronize actions with several
-  sync points (jump or gradual correction between them), filter clips, edit
-  action codes, and export selected clips where supported.
-- Watch a local file, YouTube, webcam, or RTSP video while scouting live -
-  floating over the court by default, or docked flush beside it when the
-  court is in vertical orientation - with touches recording their video
-  position automatically.
-- Switch the live scouting court between landscape and portrait orientation,
-  with an in-toolbar rotate button and a team-swap button usable at any
-  point during a rally.
-- Aggregate saved matches for team-level study, cross-database similarity
-  comparison, and multi-match video analysis.
-- Create editable tactical reports from selected matches of one opposing
-  team. Start with a competition/season from imported metadata, optionally
-  include other matches, and compare the two teams with the same similarity
-  engine as Trends (at least three matches per team and five shared metrics).
-- Edit the generated report directly: priorities, per-rotation serve targets,
-  setting distribution, block/defence and serve cards. Add, duplicate and
-  reorder analysis or free drawing sheets with players, arrows, cones, target
-  areas and text; drawings support mouse and touch and travel in `.ovs` backups.
-  A shared SVG toolbar provides contextual color, number, text, size, curve and
-  opacity controls, direct handles, duplication, undo/redo, keyboard shortcuts,
-  zoom and pan. Coordinates remain available in advanced options.
-- Print a "How they serve" sheet: full-court diagrams per serve type with
-  start-to-target cones grouped by preference, the most-ace route, and errors,
-  aces, difficult serves and serves in a row for the six main servers on one
-  page. Without scouted serve directions the known facts are kept as text.
-  The block and defence sheet is optional in every booklet format.
-- Inspect a point-by-point Play-by-play in team Data Study, single-match
-  analysis and end-of-set/match statistics. A continuous stepped score band
-  follows the DataVolley reference. Switch between the two teams using their name
-  buttons, filter sets, and export the selected team's vector PDF with
-  scores, serving, setter positions, break points, timeouts and corrections.
-- Export branded PDF reports and editable SVG sheets in a ZIP, or share a web
-  snapshot with a reader-checked expiry, like video playlists. This expiry is
-  not server-enforced access control; editing the link data can bypass it.
-  Shared snapshots do not change when the source report is edited. Large
-  reports may exceed the link size limit and can be exported as PDF/SVG instead.
-- Open individual reception and attack video playlists across selected matches
-  when synced YouTube video is available, with playable-action coverage shown
-  separately from the analysis sample.
-- Review a "Priorities" view under Trends that ranks a team's or player's
-  technical and tactical-rotation indicators against their own benchmark
-  (their wins within the selected match window), with radar/bar charts and
-  a per-category drill-down of evaluation mix over time.
-- Draw reception and defense systems per team, starting from P-S-C / P-C-S
-  presets, with a positional-fault check; export and import them as
-  configuration files and include them in the .ovs backup.
-- Optionally synchronize matches, teams, rosters, competitions, tactical
-  reports, and reception/defense systems across devices using your own personal
-  cloud storage (**Google Drive**, **OneDrive**, or **Dropbox**), with 3-way
-  merge, deletion tombstones, and conflict-preserving match copies.
-- Use the app in multiple UI languages (English, Italian, German, Spanish,
-  Romanian, Slovenian, Turkish, Chinese, Arabic, Japanese).
-
-## Technical Stack
-
-- React 18
-- TypeScript
-- Vite
-- Tauri 2
-- React Router
-- Zustand
-- Dexie / IndexedDB
-- Recharts
-- simpleheat
-- pdfmake
-
-## Local Development
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-Build for production:
-
-```bash
-npm run build
-```
-
-Preview a production build:
-
-```bash
-npm run preview
-```
-
-Run the current validation script:
-
-```bash
-npm test
-```
-
-`npm test` currently runs match-stat validation, live scouting flow validation,
-DataVolley export validation, and the unit test suite.
-
-## Main Application Routes
-
-The app uses hash routing, so routes are rendered under `#/...`.
-
-- `#/` - landing page
-- `#/teams` - archived team and roster management
-- `#/team-analysis` - multi-match team data study
-- `#/match` - match setup workflow
-- `#/scouting` - live scouting workflow
-- `#/systems` - reception and defense system editors
-- `#/analysis` - match report, dashboards, DataVolley export, and video analysis
-- `#/load-data` - saved match project loading
-- `#/settings` - locale and local-data actions
-- `#/about` - project information
+OpenVolleyScout has no server of its own. Matches, teams and statistics are
+stored on your device; cloud synchronisation is optional and goes straight to
+your own cloud, where the app sees only its own folder. Details in the
+[privacy policy](https://scout.volleyserve.it/privacy.html).
 
 ## Documentation
 
-Start with [docs/README.md](docs/README.md).
+- [User guide](docs/user-guide.md) and [scouting guide](docs/scouting-guide.md) ([italiano](docs/scouting-guide_it.md))
+- [Cloud synchronisation](docs/cloud-sync.md)
+- [Shared statistics links](docs/shared-stats-link.md)
+- [Documentation index](docs/README.md): architecture, data model, persistence,
+  scouting, systems, import/export formats
 
-Important entry points:
+## Development
 
-- [User Guide](docs/user-guide.md)
-- Step-by-step tutorials (getting started, scouting, video and sharing, tactical report) are inside the app, under About → Tutorials
-- [Architecture](docs/architecture.md)
-- [Data Model](docs/data-model.md)
-- [Domain Model](docs/domain-model.md)
-- [Persistence](docs/persistence.md)
-- [Personal Cloud Sync (Google Drive, OneDrive, Dropbox)](docs/cloud-sync.md)
-- [Scouting Architecture](docs/scouting.md)
-- [Tactical Systems](docs/systems.md)
-- [Code Structure](docs/code-structure.md)
-- [Developer Guidelines](docs/developer-guidelines.md)
+Built with React 18, TypeScript and Vite; Tauri 2 for the desktop and Android
+apps; Dexie (IndexedDB) for storage; Zustand for state.
 
-## Project Status
+```bash
+npm install
+npm run dev          # web app at http://localhost:5173
+npm test             # lint, validation scripts and unit tests
+npm run build        # production web build
+npm run tauri dev    # desktop app
+```
 
-Implemented foundations:
+Cloud synchronisation needs OAuth client ids at build time (`.env.local`, see
+[docs/cloud-sync.md](docs/cloud-sync.md)); without them the services are shown
+as unavailable and everything else works. Start with
+[Architecture](docs/architecture.md), [Code structure](docs/code-structure.md)
+and [Developer guidelines](docs/developer-guidelines.md).
 
-- local match and archive persistence
-- match creation and readiness validation
-- event-sourced scouting session replay
-- scouting persistence into `MatchProject.events` and `MatchProject.scoutingSession`
-- DataVolley import and export
-- match statistics builder and validation fixtures
-- match report generation with print, PNG, and PDF export
-- performance dashboards, side-out study, heatmaps, and team aggregation
-- video analysis with synchronization and clip workflows
-- reception and defense system editors backed by `localStorage`
-- multilingual UI with persisted locale choice
-
-Still in progress:
-
-- broader DataVolley compatibility for edge cases
-- advanced player suggestion from tactical systems
-- persistent tactical-system repository in IndexedDB
-- deeper team/system association workflows
-- broader automated test coverage
-
-## Preview
-
-![home](docs/images/00-home.png)  
-![team](docs/images/01-team.png)  
-![match](docs/images/02-match.png)  
-![configurematch](docs/images/03-prematch.png)  
-![roster](docs/images/04-roster.png)  
-![start](docs/images/05-start.png)  
-![start_scouting](docs/images/06-scouting_start.png)  
-![scouting](docs/images/07-scouting_reception.png)  
-![matchreporto](docs/images/08-matchreport.png)  
-![charts](docs/images/09-charts.png)  
-![systems](docs/images/10-system_reception.png)
+Bug reports and ideas are welcome in the
+[issues](https://github.com/napo/openvolleyscout/issues).
 
 ## Acknowledgements
 

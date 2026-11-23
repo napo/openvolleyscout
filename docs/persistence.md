@@ -18,7 +18,7 @@ Database name:
 
 Current schema version:
 
-- `6`
+- `8`
 
 Tables:
 
@@ -29,6 +29,13 @@ Tables:
 - `matchSyncState: 'id, matchId, peerDeviceId'` (since v4)
 - `archiveSyncState: 'id, peerDeviceId'` (since v5)
 - `opponentReports: 'id, updatedAt'` (since v6)
+- `matchSummaries: 'id, updatedAt, playedAt, homeTeamId, awayTeamId'` (since v7)
+- `syncDeletions: 'key'` (since v8) - deletions remembered for cloud sync,
+  keyed by `collection:id`, written in the same transaction as the deletion
+- `syncMeta: 'key'` (since v8) - cloud sync state (enabled, provider, remote
+  file id, base stamps, last sync)
+- `systemBlocks: 'key, kind'` (since v8) - reception and defense systems,
+  keyed by `kind:id`
 
 IndexedDB currently stores:
 
@@ -38,15 +45,21 @@ IndexedDB currently stores:
 - archived competition names
 - `.ovs` match and backup sync state (3-way merge bases per peer device)
 - opponent reports
+- reception and defense systems (since v8; the system stores keep a copy in
+  `localStorage` only to start synchronously)
+- cloud sync deletions and state (since v8)
+
+Version 8 moves the cloud sync state, its deletions and the reception/defense
+systems from `localStorage` into the database on upgrade. See
+[cloud-sync.md](cloud-sync.md).
 
 Match projects include optional `videoAnalysis` metadata. This metadata stores
 only a local path/file name or YouTube URL, sync points, and clip-padding
 preferences. It does not store video bytes.
 
-IndexedDB does not yet store:
+IndexedDB does not store:
 
-- generic tactical-system definitions
-- the current reception/defense system editor libraries
+- generic tactical-system definitions (`system-storage.ts`, unused by the Systems page)
 - exported reports, playlists, or clip files
 
 ## Video File Handles
@@ -68,10 +81,13 @@ serialization used for `MatchProject`.
 `localStorage` is used intentionally in a few places:
 
 - `openvolleyscout.locale` - persisted UI locale from `I18nProvider`.
-- `openvolleyscout.defenseSystemBlocks` - defense-system editor library from
-  `useDefenseSystemStore`.
-- `openvolleyscout.receptionSystemBlocks` - reception-system editor library
-  from `useReceptionSystemStore`.
+- `openvolleyscout.defenseSystemBlocks` and
+  `openvolleyscout.receptionSystemBlocks` - start-up copy of the systems held
+  in the `systemBlocks` table (the database is the source cloud sync reads).
+- `openvolleyscout.sync.deviceName`, `openvolleyscout.sync.takeoverMinutes` -
+  cloud sync device name and scouting takeover minutes.
+- Cloud service refresh tokens (`openvolleyscout.dropbox.refresh-token` and
+  similar), kept on the device only.
 - `openvolleyscout.systems` - generic tactical-system storage helper in
   `system-storage.ts`; this helper exists but is not the main state path used by
   `SystemsPage`.
@@ -214,15 +230,13 @@ Generated files are outside the app database:
 - Use repository wrappers from feature code when they exist.
 - Normalize match projects before treating them as current schema data.
 - After writes, refresh the feature-local view state or update `useAppStore`.
-- Keep localStorage-backed system editor state documented as browser-local
-  editor persistence, not as durable project data.
+- Write a deletion together with its `syncDeletions` tombstone (see
+  `src/infrastructure/storage/sync-deletions.ts`), so cloud sync can pass it on.
 - Keep video files external; only persist references and synchronization
   metadata.
 
 ## Current Gaps
 
-- Reception/defense system editor state is persisted in `localStorage`, not
-  IndexedDB.
 - Generic tactical-system persistence is not yet unified with the Systems page.
 - Analysis has no dedicated persisted report model; reports and charts are
   regenerated from match projects.

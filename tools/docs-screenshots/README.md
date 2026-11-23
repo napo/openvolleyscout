@@ -1,5 +1,7 @@
 # Tutorial screenshots
 
+`capture-docs.mjs` takes the README screenshots in `docs/images/` (see the comment at the top of the file).
+
 `capture.mjs` takes the screenshots of the two in-app tutorials (About →
 Tutorials: "Video and sharing", "Tactical report", defined in
 `src/features/landing/tutorials/image-tutorials.ts`), in Italian and English, by driving the real web app with the two sample matches in the

@@ -56,7 +56,16 @@ export async function buildDemoMatch(data: ArrayBuffer): Promise<MatchProject> {
  * Imports the demo match on first launch (unless storage is blocked or already seeded).
  * Silent on failure (offline, storage full): the app works the same without it.
  */
-export async function seedDemoMatchOnce(baseUrl: string = import.meta.env.BASE_URL): Promise<boolean> {
+let seeding: Promise<boolean> | null = null;
+
+export function seedDemoMatchOnce(baseUrl: string = import.meta.env.BASE_URL): Promise<boolean> {
+  // One import at a time: two calls at start-up (React StrictMode, a second
+  // render) would otherwise both import the demo before either marks it done.
+  seeding ??= seedDemoMatch(baseUrl).finally(() => { seeding = null; });
+  return seeding;
+}
+
+async function seedDemoMatch(baseUrl: string): Promise<boolean> {
   const seeded = readSeededVersion();
   // Storage blocked: do not import on every visit.
   if (seeded === null || seeded >= DEMO_MATCH_VERSION) return false;
