@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Explains why a YouTube or Dropbox video could not be opened and what to do
+ * Explains why a YouTube, Dropbox, OneDrive or Google Drive video could not be opened and what to do
  * instead. Videos that need an account cannot be played in the installed app:
  * it has no YouTube or Dropbox session of its own, and Google does not allow
  * signing in from inside an app.
@@ -9,15 +9,15 @@
 
 import type { MatchVideoSource } from '@src/domain/video/types';
 import { useTranslation, type TranslationKey } from '@src/i18n';
-import { isDropboxHost } from './remote-video-url';
+import { isDropboxHost, isGoogleDriveHost, isOneDriveHost } from './remote-video-url';
 
 /** YouTube player errors: 100 private or removed, 101 and 150 embedding not allowed by the owner. */
 const YOUTUBE_PRIVATE = 100;
 const YOUTUBE_NOT_EMBEDDABLE = new Set([101, 150]);
 
-function isDropboxUrl(url: string): boolean {
+function hostMatches(url: string, test: (hostname: string) => boolean): boolean {
   try {
-    return isDropboxHost(new URL(url).hostname);
+    return test(new URL(url).hostname);
   } catch {
     return false;
   }
@@ -36,8 +36,14 @@ export function remoteVideoErrorKeys(
     }
     return { title: 'videoYouTubeLoadError', tips: ['videoYouTubeTipUnlisted', 'videoTipDownload'] };
   }
-  if (isDropboxUrl(source.url)) {
+  if (hostMatches(source.url, isDropboxHost)) {
     return { title: 'videoDropboxLoadError', tips: ['videoDropboxTipAnyone', 'videoTipDownload', 'videoDropboxTipSyncedFolder'] };
+  }
+  if (hostMatches(source.url, isOneDriveHost)) {
+    return { title: 'videoOneDriveLoadError', tips: ['videoCloudTipAnyone', 'videoTipDownload', 'videoCloudTipSyncedFolder'] };
+  }
+  if (hostMatches(source.url, isGoogleDriveHost)) {
+    return { title: 'videoGoogleDriveLoadError', tips: ['videoCloudTipAnyone', 'videoTipDownload', 'videoCloudTipSyncedFolder'] };
   }
   return { title: 'videoRemoteLoadError', tips: [] };
 }

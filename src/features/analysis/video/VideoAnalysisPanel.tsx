@@ -72,7 +72,7 @@ import {
   saveVideoFileHandle,
   supportsFileSystemAccess,
 } from './file-handle-store';
-import { resolveRemoteVideoSource } from './remote-video-url';
+import { resolveRemoteVideoSource, remoteVideoUrlErrorKey, type RemoteVideoUrlError } from './remote-video-url';
 import { buildYouTubePlaylistClips } from './youtube-playlist';
 import { buildLocalPlaylistClips } from './playlist-file';
 import { PlaylistFileActions } from './PlaylistFileActions';
@@ -134,7 +134,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const [fileObjectUrl, setFileObjectUrl] = useState<string | null>(null);
   const [filePathDraft, setFilePathDraft] = useState('');
   const [youtubeUrlDraft, setYoutubeUrlDraft] = useState('');
-  const [youtubeUrlError, setYoutubeUrlError] = useState<'invalid' | 'dropbox_folder' | null>(null);
+  const [youtubeUrlError, setYoutubeUrlError] = useState<RemoteVideoUrlError | null>(null);
   const [isPlayable, setIsPlayable] = useState(false);
   const [videoError, setVideoError] = useState(false);
   useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
@@ -907,7 +907,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
           </div>
           {youtubeUrlError ? (
             <p className="video-analysis__error">
-              {t(youtubeUrlError === 'dropbox_folder' ? 'videoDropboxFolderError' : 'videoInvalidYoutubeUrl')}
+              {t(remoteVideoUrlErrorKey(youtubeUrlError))}
             </p>
           ) : null}
         </section>
@@ -1590,7 +1590,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
                 <p className="video-analysis__hint">{t('videoReplaceKeepsSync')}</p>
                 {youtubeUrlError ? (
                   <p className="video-analysis__error">
-                    {t(youtubeUrlError === 'dropbox_folder' ? 'videoDropboxFolderError' : 'videoInvalidYoutubeUrl')}
+                    {t(remoteVideoUrlErrorKey(youtubeUrlError))}
                   </p>
                 ) : null}
               </div>

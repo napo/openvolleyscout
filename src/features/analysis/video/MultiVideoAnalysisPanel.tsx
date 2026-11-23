@@ -75,7 +75,7 @@ import {
   saveVideoFileHandle,
   supportsFileSystemAccess,
 } from './file-handle-store';
-import { resolveRemoteVideoSource } from './remote-video-url';
+import { resolveRemoteVideoSource, remoteVideoUrlErrorKey, type RemoteVideoUrlError } from './remote-video-url';
 import { buildYouTubePlaylistClips } from './youtube-playlist';
 import {
   useYouTubeSourceNotice,
@@ -223,7 +223,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
   const [filePathDraft, setFilePathDraft] = useState('');
   const [youtubeUrlDraft, setYoutubeUrlDraft] = useState('');
-  const [youtubeUrlError, setYoutubeUrlError] = useState<'invalid' | 'dropbox_folder' | null>(null);
+  const [youtubeUrlError, setYoutubeUrlError] = useState<RemoteVideoUrlError | null>(null);
 
   // ── Calibration ─────────────────────────────────────────────────────────────
   const [isCalibrating, setIsCalibrating] = useState(false);
@@ -850,7 +850,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           </div>
           {youtubeUrlError && (
             <p className="video-analysis__error">
-              {t(youtubeUrlError === 'dropbox_folder' ? 'videoDropboxFolderError' : 'videoInvalidYoutubeUrl')}
+              {t(remoteVideoUrlErrorKey(youtubeUrlError))}
             </p>
           )}
         </section>

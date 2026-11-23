@@ -47,3 +47,33 @@ describe('resolveRemoteVideoSource', () => {
     expect(parsed.searchParams.get('raw')).toBeNull();
   });
 });
+
+describe('OneDrive and Google Drive links', () => {
+  const url = (raw: string) => {
+    const res = resolveRemoteVideoSource(raw);
+    return res.ok && res.source.kind === 'url' ? res.source.url : res;
+  };
+
+  it('turns a OneDrive personal share link into the public shares endpoint', () => {
+    const link = 'https://1drv.ms/v/s!AbCdEf123?e=xyz';
+    const encoded = btoa(link).replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
+    expect(url(link)).toBe(`https://api.onedrive.com/v1.0/shares/u!${encoded}/root/content`);
+  });
+
+  it('adds download=1 to OneDrive for work or school links', () => {
+    expect(url('https://club-my.sharepoint.com/:v:/g/personal/coach/EAbc?e=1')).toBe(
+      'https://club-my.sharepoint.com/:v:/g/personal/coach/EAbc?e=1&download=1',
+    );
+  });
+
+  it('turns Google Drive file links into a direct download link', () => {
+    const expected = 'https://drive.usercontent.google.com/download?id=1AbC-d_E&export=download&confirm=t';
+    expect(url('https://drive.google.com/file/d/1AbC-d_E/view?usp=sharing')).toBe(expected);
+    expect(url('https://drive.google.com/open?id=1AbC-d_E')).toBe(expected);
+  });
+
+  it('refuses folder links', () => {
+    expect(resolveRemoteVideoSource('https://drive.google.com/drive/folders/1AbC')).toEqual({ ok: false, reason: 'cloud_folder' });
+    expect(resolveRemoteVideoSource('https://club-my.sharepoint.com/:f:/g/personal/coach/EAbc')).toEqual({ ok: false, reason: 'cloud_folder' });
+  });
+});
