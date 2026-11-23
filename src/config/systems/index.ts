@@ -6,6 +6,7 @@ import { CUSTOM_DEFENSE_SYSTEMS, CUSTOM_RECEPTION_SYSTEMS } from './custom';
 export * from './playing-systems';
 export * from './defense-defaults';
 export * from './reception-defaults';
+export * from './reception-defaults-history';
 export * from './custom';
 export * from './presets';
 

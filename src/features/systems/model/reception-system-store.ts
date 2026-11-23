@@ -8,6 +8,7 @@ import {
   RECEPTION_ROTATIONS,
   RECEPTION_SYSTEM_PRESETS,
   createReceptionRotationsForPreset,
+  upgradeLegacyBaseReceptionRotations,
   getRoleSequenceForOrder,
   type ReceptionSystemPreset,
 } from '@src/config/systems';
@@ -180,7 +181,7 @@ export function normalizeReceptionSystemBlock(value: unknown): ReceptionSystemBl
     teamId: typeof value.teamId === 'string' ? value.teamId : undefined,
     playingSystemId: typeof value.playingSystemId === 'string' ? value.playingSystemId : undefined,
     roleSequence: normalizeRoleSequence(value.roleSequence),
-    rotations: normalizeReceptionRotationSystems(value.rotations),
+    rotations: upgradeLegacyBaseReceptionRotations(normalizeReceptionRotationSystems(value.rotations)),
   };
 }
 
