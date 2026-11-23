@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.41.0 - 2026-11-23
+
+### Added
+- Synchronise with Google Drive, Microsoft OneDrive or Dropbox: in Data, under "Synchronise with", connect your own cloud and your matches, teams, rosters, competitions, tactical reports and reception and defence systems stay the same on all your devices. The data goes straight to your cloud, and OpenVolleyScout only sees its own folder there. Each device uses one service at a time; on Android only Google Drive is available. It is optional: without connecting anything, everything works as before.
+- Only one device at a time can scout a match. The other connected devices can follow it but not change it, and they see which device is scouting, since when and when the last action was recorded. They can take over after 5 minutes without new actions, or at once if the scouting device has been off or offline for 15 minutes. You can change the 5 minutes in Settings, under Cloud synchronisation.
+- In Settings, under Cloud synchronisation, the match being scouted can be handed over to another device: this device stops recording so the other can continue at once, and you can resume here later. The same page lets you name the device and shows the devices using your cloud.
+- A privacy page explains that your data stays on your devices and in your own cloud, with no accounts and no tracking.
+
+### Changed
+- The web app now lives at https://scout.volleyserve.it. The old address opens the new one automatically, but data saved in the browser at the old address does not move: import there the backup (.ovs) you exported before the move. If you had installed the web app, install it again from the new address. The desktop and Android apps are not affected.
+- New logo everywhere: app icons on computers and phones, the browser tab (now the ball alone, readable even when small) and the previews of shared links. On Android the icon is on a blue background and follows the colours of the phone theme on Android 13 and later.
+- The backup reminder in Data is now a small line at the top of the page and lets you choose between connecting a cloud service and downloading the archive. It no longer appears when a cloud service is connected, also at the end of a match.
+- In Video analysis, when a YouTube video or a Dropbox link cannot be opened, the page now explains why (private video, video that cannot be played outside YouTube, Dropbox link that asks to sign in) and what to do instead, such as making the video "Unlisted", sharing the file with "Anyone with the link" or downloading it and opening it as a file.
+- About now credits the logo to Maurizio Napolitano and Fabio d'Amico.
+
 ## 0.40.2 - 2026-11-22
 
 ### Changed
