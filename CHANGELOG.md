@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.42.3 - 2026-11-24
+
+### Fixed
+- Importing a Tiebreak Tech match file (.db) now keeps the official score of every set. Points the file counts without a scouted rally, such as points awarded by the referee, were left out, so a set could end 21-14 instead of 25-16. They are now added as rallies without actions, so the serve and the rotations also follow the official count. Matches imported before keep their old score: import the file again to correct them.
+
 ## 0.42.2 - 2026-11-24
 
 ### Changed

@@ -353,6 +353,35 @@ describe('Tiebreak Tech importer (tiebreak-parser)', () => {
     expect(noVideoEvent1.videoTime).toBeUndefined();
   });
 
+  it('keeps points the file counts without a scouted rally, so the set ends with its official score', async () => {
+    const SQL = await getSql();
+    const db = buildSyntheticTiebreakDb(SQL);
+    let parsed: ParsedDataVolleyMatch;
+    try {
+      // The away team is awarded a point between rallies 4 and 5 (e.g. by the referee) and the
+      // home team one after the last rally: Tiebreak Tech stamps them on the score of the
+      // following events and in the set total, but records no azione for them.
+      db.run('UPDATE event SET visitorscore = visitorscore + 1 WHERE id >= 19');
+      db.run('UPDATE sset SET homescore = 6, visitorscore = 4 WHERE id = 1');
+      parsed = parseTiebreakFromDb(db as never, { sourceName: 'synthetic.db' });
+    } finally {
+      db.close();
+    }
+
+    expect(parsed.warnings).toEqual([]);
+    const points = parsed.scoutRows.filter((row) => row.type === 'point');
+    expect(points.at(-1)?.type === 'point' ? points.at(-1)?.score : null).toEqual({ home: 6, away: 4 });
+
+    const { project, warnings } = mapDataVolleyMatchToOvsProject(parsed, {});
+    const awarded = project.events.filter((event) => event.type === 'point_awarded');
+    expect(awarded.filter((event) => event.teamSide === 'home')).toHaveLength(6);
+    expect(awarded.filter((event) => event.teamSide === 'away')).toHaveLength(4);
+    expect(project.scoutingSession?.completedSets[0]).toMatchObject({ homeScore: 6, awayScore: 4 });
+    // Only the notice about the points added without actions, no score mismatch.
+    expect(warnings.map((warning) => warning.message).filter((message) => /differs|summary score/.test(message))).toEqual([]);
+    expect(warnings.some((warning) => /without scouted rallies/.test(warning.message))).toBe(true);
+  });
+
   it('generates ball directions for serves, receptions, and attacks when mapped to an OVS project', async () => {
     const SQL = await getSql();
     const db = buildSyntheticTiebreakDb(SQL);
