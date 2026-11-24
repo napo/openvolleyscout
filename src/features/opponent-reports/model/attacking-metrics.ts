@@ -9,11 +9,18 @@ import type {
   SetterDistributionServeType,
   SetterDistributionViewConfig,
 } from '@src/domain/opponent-report/types';
-import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { attackZoneNumber, extractSideOutSequences } from '@src/features/analytics/sideout/sideout-distribution';
 import { classifyAttackPrecedingContext } from '@src/features/analytics/rally-phase/rally-phase-classifier';
 import { extractHeatmapEvents, type HeatmapEvent } from '@src/features/analytics/heatmaps/aggregation/heatmap-aggregation';
 import { buildTouchCourtContext, collectSetterPlayerIds } from './court-context';
+import {
+  BACK_ROW_ZONE_MAP,
+  blockersAfterAttack,
+  getPreviousTouch,
+  isHighBall,
+  previousSet,
+  scoreBeforeRallies,
+} from '@src/features/analytics/attack-context/attack-context';
 import type { ReportMatchInput, ReportPlayer, Ratio } from './report-metrics';
 import { ratio, toReportPlayer } from './report-metrics';
 import { compareReportPlayers } from './report-keys';
@@ -276,59 +283,6 @@ function addAttack(
   }
 }
 
-function getPreviousTouch(
-  sorted: readonly BallTouch[],
-  attackIndex: number,
-  teamSide: TeamSide,
-  skill: BallTouch['skill'],
-): BallTouch | null {
-  for (let index = attackIndex - 1; index >= 0; index -= 1) {
-    const touch = sorted[index];
-    if (touch.teamSide !== teamSide) return null;
-    if (touch.skill === 'set' || touch.skill === 'cover') continue;
-    return touch.skill === skill ? touch : null;
-  }
-  return null;
-}
-
-function previousSet(sorted: readonly BallTouch[], attackIndex: number, teamSide: TeamSide): BallTouch | null {
-  for (let index = attackIndex - 1; index >= 0; index -= 1) {
-    const touch = sorted[index];
-    if (touch.teamSide !== teamSide) return null;
-    if (touch.skill === 'set') return touch;
-    if (touch.skill !== 'cover') return null;
-  }
-  return null;
-}
-
-function blockersAfterAttack(sorted: readonly BallTouch[], attackIndex: number, teamSide: TeamSide): number | undefined {
-  for (let index = attackIndex + 1; index < sorted.length; index += 1) {
-    const touch = sorted[index];
-    if (touch.teamSide === teamSide) continue;
-    return touch.skill === 'block' ? touch.numBlockers : undefined;
-  }
-  return undefined;
-}
-
-function isHighBall(set: BallTouch | null, attack: BallTouch): boolean {
-  return set?.advancedDetails?.set?.tempo === 'high_ball'
-    || set?.advancedDetails?.set?.type === 'high_ball'
-    || set?.setType === 'high_ball'
-    || attack.advancedDetails?.attack?.tempo === 'high_ball';
-}
-
-function scoreBeforeRallies(rallies: readonly RallyStats[]): Map<string, boolean> {
-  const scores = new Map<number, { home: number; away: number }>();
-  const late = new Map<string, boolean>();
-  for (const rally of [...rallies].sort((left, right) => left.setNumber - right.setNumber || left.rallyNumber - right.rallyNumber)) {
-    const score = scores.get(rally.setNumber) ?? { home: 0, away: 0 };
-    late.set(`${rally.setNumber}:${rally.rallyNumber}`, score.home >= 20 || score.away >= 20);
-    if (rally.pointWinner) score[rally.pointWinner] += 1;
-    scores.set(rally.setNumber, score);
-  }
-  return late;
-}
-
 function finishPerformance(value: MutablePerformance): AttackPerformance {
   return {
     attacks: value.attacks,
@@ -351,8 +305,6 @@ function finishPerformance(value: MutablePerformance): AttackPerformance {
       .sort((left, right) => left.blockers - right.blockers),
   };
 }
-
-const BACK_ROW_ZONE_MAP: Record<number, number> = { 7: 5, 8: 6, 9: 1 };
 
 function recordSetterBandChoice(
   band: MutableSetterBand,
