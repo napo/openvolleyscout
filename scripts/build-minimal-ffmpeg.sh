@@ -20,6 +20,8 @@
 #                              the rust triple only names the artifact)
 #   x86_64-apple-darwin        on macOS (clang -arch x86_64)
 #   aarch64-apple-darwin       on macOS (clang -arch arm64)
+#   universal-apple-darwin     on macOS: both of the above, merged with lipo
+#                              (what a universal Tauri build expects)
 set -euo pipefail
 
 FFMPEG_VERSION="${FFMPEG_VERSION:-7.1}"
@@ -30,6 +32,16 @@ BUILD_DIR="${FFMPEG_BUILD_DIR:-$ROOT/.ffmpeg-build}"
 SRC_DIR="$BUILD_DIR/ffmpeg-$FFMPEG_VERSION"
 
 mkdir -p "$BUILD_DIR" "$OUT_DIR"
+
+if [ "$TRIPLE" = "universal-apple-darwin" ]; then
+  "$0" x86_64-apple-darwin
+  "$0" aarch64-apple-darwin
+  OUT_FILE="$OUT_DIR/ovs-ffmpeg-universal-apple-darwin"
+  lipo -create -output "$OUT_FILE" \
+    "$OUT_DIR/ovs-ffmpeg-x86_64-apple-darwin" "$OUT_DIR/ovs-ffmpeg-aarch64-apple-darwin"
+  echo "Built $OUT_FILE ($(du -h "$OUT_FILE" | cut -f1))"
+  exit 0
+fi
 
 if [ ! -d "$SRC_DIR" ]; then
   echo "Downloading ffmpeg $FFMPEG_VERSION sources..."

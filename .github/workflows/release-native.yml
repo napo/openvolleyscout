@@ -110,12 +110,13 @@ jobs:
           - platform: windows-latest
             args: ""
             rust-targets: ""
+          # One universal build (Intel + Apple Silicon) instead of one job per
+          # architecture: macOS runners are the scarce ones, and a job that
+          # never got one left v0.42.1 without its Apple Silicon build.
           - platform: macos-latest
-            args: "--target x86_64-apple-darwin"
-            rust-targets: "x86_64-apple-darwin"
-          - platform: macos-latest
-            args: "--target aarch64-apple-darwin"
-            rust-targets: "aarch64-apple-darwin"
+            args: "--target universal-apple-darwin"
+            rust-targets: "aarch64-apple-darwin,x86_64-apple-darwin"
+            sidecar-triple: "universal-apple-darwin"
 
     runs-on: ${{ matrix.platform }}
 
@@ -166,12 +167,17 @@ jobs:
         id: cache-ffmpeg-macos
         uses: actions/cache@v4
         with:
-          path: src-tauri/binaries/ovs-ffmpeg-${{ matrix.rust-targets }}
-          key: ffmpeg-sidecar-${{ matrix.rust-targets }}-${{ hashFiles('scripts/build-minimal-ffmpeg.sh') }}
+          # The per-architecture binaries too: the universal build compiles each
+          # architecture on its own first.
+          path: |
+            src-tauri/binaries/ovs-ffmpeg-universal-apple-darwin
+            src-tauri/binaries/ovs-ffmpeg-x86_64-apple-darwin
+            src-tauri/binaries/ovs-ffmpeg-aarch64-apple-darwin
+          key: ffmpeg-sidecar-${{ matrix.sidecar-triple }}-${{ hashFiles('scripts/build-minimal-ffmpeg.sh') }}
 
       - name: Build minimal ffmpeg (macOS)
         if: matrix.platform == 'macos-latest' && steps.cache-ffmpeg-macos.outputs.cache-hit != 'true'
-        run: scripts/build-minimal-ffmpeg.sh ${{ matrix.rust-targets }}
+        run: scripts/build-minimal-ffmpeg.sh ${{ matrix.sidecar-triple }}
 
       - name: Download ffmpeg sidecar (Windows)
         if: matrix.platform == 'windows-latest'
@@ -200,20 +206,26 @@ jobs:
         id: cache-go2rtc-macos
         uses: actions/cache@v4
         with:
-          path: src-tauri/binaries/ovs-go2rtc-${{ matrix.rust-targets }}
-          key: go2rtc-sidecar-${{ matrix.rust-targets }}-${{ env.GO2RTC_VERSION }}
+          path: |
+            src-tauri/binaries/ovs-go2rtc-universal-apple-darwin
+            src-tauri/binaries/ovs-go2rtc-x86_64-apple-darwin
+            src-tauri/binaries/ovs-go2rtc-aarch64-apple-darwin
+          key: go2rtc-sidecar-${{ matrix.sidecar-triple }}-${{ env.GO2RTC_VERSION }}
 
       - name: Download go2rtc sidecar (macOS)
         if: matrix.platform == 'macos-latest' && steps.cache-go2rtc-macos.outputs.cache-hit != 'true'
         run: |
-          ASSET="go2rtc_mac_amd64.zip"
-          if [ "${{ matrix.rust-targets }}" = "aarch64-apple-darwin" ]; then
-            ASSET="go2rtc_mac_arm64.zip"
-          fi
-          curl -fsSL -o /tmp/go2rtc.zip "https://github.com/AlexxIT/go2rtc/releases/download/${{ env.GO2RTC_VERSION }}/$ASSET"
-          unzip -o /tmp/go2rtc.zip -d /tmp/go2rtc-extract
-          mv /tmp/go2rtc-extract/go2rtc "src-tauri/binaries/ovs-go2rtc-${{ matrix.rust-targets }}"
-          chmod +x "src-tauri/binaries/ovs-go2rtc-${{ matrix.rust-targets }}"
+          # A universal build needs one sidecar holding both architectures
+          # (and compiles each architecture on its own first).
+          for ARCH in amd64 arm64; do
+            curl -fsSL -o "/tmp/go2rtc-$ARCH.zip" "https://github.com/AlexxIT/go2rtc/releases/download/${{ env.GO2RTC_VERSION }}/go2rtc_mac_$ARCH.zip"
+            unzip -o "/tmp/go2rtc-$ARCH.zip" -d "/tmp/go2rtc-$ARCH"
+          done
+          cp /tmp/go2rtc-amd64/go2rtc src-tauri/binaries/ovs-go2rtc-x86_64-apple-darwin
+          cp /tmp/go2rtc-arm64/go2rtc src-tauri/binaries/ovs-go2rtc-aarch64-apple-darwin
+          lipo -create -output src-tauri/binaries/ovs-go2rtc-universal-apple-darwin \
+            src-tauri/binaries/ovs-go2rtc-x86_64-apple-darwin src-tauri/binaries/ovs-go2rtc-aarch64-apple-darwin
+          chmod +x src-tauri/binaries/ovs-go2rtc-*-apple-darwin
 
       - name: Cache go2rtc sidecar (Windows)
         if: matrix.platform == 'windows-latest'
@@ -319,6 +331,11 @@ jobs:
 
           find "$BUNDLE_DIR" -type f -name "*x64.dmg" | while read f; do
             NEW="OpenVolleyScout-${VERSION}_x64.dmg"
+            cp "$f" "$NEW" && upload "$NEW"
+          done
+
+          find "$BUNDLE_DIR" -type f -name "*universal.dmg" | while read f; do
+            NEW="OpenVolleyScout-${VERSION}_universal.dmg"
             cp "$f" "$NEW" && upload "$NEW"
           done
 
