@@ -158,7 +158,12 @@ interface AppStoreState {
   tagTrackDirections: boolean;
   liberoAutoMiddleReplacement: boolean;
   createProject: () => void;
-  setActiveProject: (project: MatchProject) => void;
+  /**
+   * Makes `project` the open match. It is copied, so later changes to the caller's
+   * object cannot leak into the store; pass `owned` when handing over a copy nobody
+   * else holds (e.g. what the repository just saved) to skip that ~1 MB deep copy.
+   */
+  setActiveProject: (project: MatchProject, options?: { owned?: boolean }) => void;
   closeProject: () => void;
   setShowDebugSubzones: (value: boolean) => void;
   setHideImportWarnings: (value: boolean) => void;
@@ -190,9 +195,10 @@ export const useAppStore = create<AppStoreState>((set, get) => {
     storeActiveProjectId(null);
     set({ activeProject: createEmptyMatchProject() });
   },
-  setActiveProject: (project) => {
+  setActiveProject: (project, options) => {
     storeActiveProjectId(project.metadata.id);
-    set({ activeProject: cloneProject(normalizeMatchProject(project)) });
+    const normalized = normalizeMatchProject(project);
+    set({ activeProject: options?.owned ? normalized : cloneProject(normalized) });
   },
   closeProject: () => {
     storeActiveProjectId(null);

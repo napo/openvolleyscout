@@ -41,7 +41,9 @@ export function useScoutingPersistence(activeProject: MatchProject | null) {
         const persistedProject = await matchRepository.update(nextPersistence.project);
 
         if (createPersistenceKey(persistedProject) === nextPersistence.key) {
-          setActiveProject(persistedProject);
+          // update() returns a fresh copy of what it stored: no need to copy it again
+          // after every scouted touch.
+          setActiveProject(persistedProject, { owned: true });
         }
       }
     } finally {
