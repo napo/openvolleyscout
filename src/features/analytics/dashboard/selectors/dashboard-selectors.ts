@@ -15,6 +15,7 @@ import {
 } from '@src/features/scouting/model/match-stats';
 import { filterTouchesByPhase } from '../../rally-phase/rally-phase-classifier';
 import type { DashboardFilters } from '../filters/dashboard-filters';
+import { filterTouchesByRallyContext, hasRallyContextFilter, type RallyContextFilters } from './rally-context-filters';
 
 function isTrackedSkill(skill: string): skill is TrackedSkill {
   return (TRACKED_SKILLS as readonly string[]).includes(skill);
@@ -35,7 +36,7 @@ export function getFilteredRallies(
 
 export function getFilteredTouches(
   stats: MatchStats,
-  filters: Pick<DashboardFilters, 'set' | 'team' | 'source' | 'rallyPhase' | 'evaluations'>,
+  filters: Pick<DashboardFilters, 'set' | 'team' | 'source' | 'rallyPhase' | 'evaluations'> & Partial<RallyContextFilters>,
 ): BallTouch[] {
   const rallies = getFilteredRallies(stats, { set: filters.set });
   // Phase is a per-touch classification (not a whole-rally one), so it's
@@ -56,7 +57,18 @@ export function getFilteredTouches(
     touches = touches.filter((t) => filters.evaluations.includes(t.evaluation as any));
   }
 
-  return touches;
+  return filterTouchesByRallyContext(rallies, touches, filters);
+}
+
+/** The rally-context part of the dashboard filters, to pass along with the basic ones. */
+export function pickRallyContextFilters(filters: DashboardFilters): RallyContextFilters {
+  return {
+    rotation: filters.rotation,
+    scoreRange: filters.scoreRange,
+    server: filters.server,
+    receiver: filters.receiver,
+    attacker: filters.attacker,
+  };
 }
 
 export function aggregateSkillStatsFromTouches(
@@ -78,9 +90,7 @@ export function getSkillStatsForTeam(
   skill: TrackedSkill,
 ): SkillStats {
   const hasEvaluationFilter = filters.evaluations.length < 6; // 6 is the total number of evaluations
-  const hasAdvancedFilter = filters.rotation !== 'all' || filters.scoreRange !== 'all' ||
-                            filters.server !== 'all' || filters.receiver !== 'all' ||
-                            filters.attacker !== 'all';
+  const hasAdvancedFilter = hasRallyContextFilter(filters);
   const needsReaggregation = filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all' ||
                              hasEvaluationFilter || hasAdvancedFilter;
 
@@ -94,6 +104,7 @@ export function getSkillStatsForTeam(
     source: filters.source,
     rallyPhase: filters.rallyPhase,
     evaluations: filters.evaluations,
+    ...pickRallyContextFilters(filters),
   });
   return aggregateSkillStatsFromTouches(touches, teamSide, skill);
 }
@@ -216,7 +227,8 @@ export function getFilteredTeamStats(
     || filters.rallyPhase !== 'all'
     || filters.player !== 'all'
     || filters.role !== 'all'
-    || hasEvaluationFilter;
+    || hasEvaluationFilter
+    || hasRallyContextFilter(filters);
   const teamName = stats.teamStats[teamSide].teamName;
 
   if (!needsReaggregation) {
@@ -233,6 +245,7 @@ export function getFilteredTeamStats(
     source: filters.source,
     rallyPhase: filters.rallyPhase,
     evaluations: filters.evaluations,
+    ...pickRallyContextFilters(filters),
   });
 
   if (filters.player !== 'all') {
@@ -265,6 +278,7 @@ export function getFullyFilteredTouches(
     source: filters.source,
     rallyPhase: filters.rallyPhase,
     evaluations: filters.evaluations,
+    ...pickRallyContextFilters(filters),
   });
 
   if (filters.player !== 'all') {
@@ -287,7 +301,7 @@ export function getTeamStatsForFilters(
   stats: MatchStats,
   filters: DashboardFilters,
 ): Record<TeamSide, TeamStats> | null {
-  if (filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all') {
+  if (filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all' || hasRallyContextFilter(filters)) {
     return null;
   }
   return stats.teamStats;

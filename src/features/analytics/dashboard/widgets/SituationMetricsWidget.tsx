@@ -13,6 +13,7 @@ import {
 } from '../situation/situation-metrics';
 import { computeRallyExchangeStats } from '../situation/rally-exchange-metrics';
 import { safeDivide } from '@src/features/scouting/model/match-stats';
+import { filterRalliesForTeam } from '../selectors/rally-context-filters';
 
 const FBSO_SHARE_WARNING_THRESHOLD = 0.55;
 
@@ -162,32 +163,44 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
     [stats, filters.set],
   );
 
+  // Rotation and score situation are read from each team's point of view, so
+  // each team's numbers come from its own filtered rallies.
+  const { rotation, scoreRange, server, receiver, attacker } = filters;
+  const homeRallies = useMemo(
+    () => filterRalliesForTeam(rallies, { rotation, scoreRange, server, receiver, attacker }, 'home'),
+    [rallies, rotation, scoreRange, server, receiver, attacker],
+  );
+  const awayRallies = useMemo(
+    () => filterRalliesForTeam(rallies, { rotation, scoreRange, server, receiver, attacker }, 'away'),
+    [rallies, rotation, scoreRange, server, receiver, attacker],
+  );
+  const homeName = stats.teamStats.home.teamName;
+  const awayName = stats.teamStats.away.teamName;
+
   const metrics = useMemo(
-    () => computeSituationMetrics(
-      rallies,
-      stats.teamStats.home.teamName,
-      stats.teamStats.away.teamName,
-    ),
-    [rallies, stats.teamStats.home.teamName, stats.teamStats.away.teamName],
+    () => ({
+      home: computeSituationMetrics(homeRallies, homeName, awayName).home,
+      away: computeSituationMetrics(awayRallies, homeName, awayName).away,
+    }),
+    [homeRallies, awayRallies, homeName, awayName],
   );
 
   const homeTrend = useMemo(
-    () => computeSetPhaseTrend(rallies, 'home'),
-    [rallies],
+    () => computeSetPhaseTrend(homeRallies, 'home'),
+    [homeRallies],
   );
 
   const awayTrend = useMemo(
-    () => computeSetPhaseTrend(rallies, 'away'),
-    [rallies],
+    () => computeSetPhaseTrend(awayRallies, 'away'),
+    [awayRallies],
   );
 
   const exchangeStats = useMemo(
-    () => computeRallyExchangeStats(
-      rallies,
-      stats.teamStats.home.teamName,
-      stats.teamStats.away.teamName,
-    ),
-    [rallies, stats.teamStats.home.teamName, stats.teamStats.away.teamName],
+    () => ({
+      home: computeRallyExchangeStats(homeRallies, homeName, awayName).home,
+      away: computeRallyExchangeStats(awayRallies, homeName, awayName).away,
+    }),
+    [homeRallies, awayRallies, homeName, awayName],
   );
 
   const selectedPlayer = filters.player !== 'all' ? getSelectedPlayer(stats, filters.player) : null;

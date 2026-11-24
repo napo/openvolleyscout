@@ -15,6 +15,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import type { DashboardFilters } from '../filters/dashboard-filters';
 import { filterTouchesByPhase } from '../../rally-phase/rally-phase-classifier';
 import type { FilteredTeamStats } from '../selectors/dashboard-selectors';
+import { filterTouchesByRallyContext, type RallyContextFilters } from '../selectors/rally-context-filters';
 
 export interface EfficiencyMetrics {
   serveTotal: number;
@@ -260,7 +261,7 @@ export function computePerformanceBySet(stats: MatchStats): SetPerformanceRow[] 
 
 export function computeFilteredPerformanceBySet(
   stats: MatchStats,
-  filters: Pick<DashboardFilters, 'team' | 'player' | 'role' | 'source' | 'rallyPhase'>,
+  filters: Pick<DashboardFilters, 'team' | 'player' | 'role' | 'source' | 'rallyPhase'> & Partial<RallyContextFilters>,
 ): SetPerformanceRow[] {
   const rolePlayerIds: Set<string> | null = filters.role !== 'all'
     ? new Set(stats.playerStats.filter((p) => p.role === filters.role).map((p) => p.playerId))
@@ -286,6 +287,8 @@ export function computeFilteredPerformanceBySet(
     if (rolePlayerIds) {
       touches = touches.filter((t) => t.playerId != null && rolePlayerIds.has(t.playerId));
     }
+
+    touches = filterTouchesByRallyContext(setData.rallies, touches, filters);
 
     const home = (skill: string, evaluation: string) =>
       touches.filter((t) => t.teamSide === 'home' && t.skill === skill && t.evaluation === evaluation).length;

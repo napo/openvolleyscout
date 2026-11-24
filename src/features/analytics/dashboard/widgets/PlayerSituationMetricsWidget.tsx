@@ -12,6 +12,7 @@ import {
   type PhaseEfficiencyMetrics,
   type PhaseContribution,
 } from '../situation/situation-metrics';
+import { filterRalliesForTeam } from '../selectors/rally-context-filters';
 
 const PLAYER_BAR_COLOR = '#6366f1';
 
@@ -109,9 +110,15 @@ export function PlayerSituationMetricsWidget({ stats, filters, player }: PlayerS
   // This widget's own breakdown (side-out/break-point/...) is a rally-outcome
   // classification, not the shared touch-level phase filter - so filters.rallyPhase
   // isn't applied here.
+  // Rotation and score situation are read from the athlete's team point of view.
+  const { rotation, scoreRange, server, receiver, attacker } = filters;
   const rallies = useMemo(
-    () => getFilteredRalliesForSituation(stats, { set: filters.set }),
-    [stats, filters.set],
+    () => filterRalliesForTeam(
+      getFilteredRalliesForSituation(stats, { set: filters.set }),
+      { rotation, scoreRange, server, receiver, attacker },
+      player.teamSide,
+    ),
+    [stats, filters.set, rotation, scoreRange, server, receiver, attacker, player.teamSide],
   );
 
   const teamMetrics = useMemo(

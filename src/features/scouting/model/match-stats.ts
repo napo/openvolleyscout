@@ -213,6 +213,12 @@ export interface RallyStats {
   servingTeam: TeamSide | null;
   pointWinner: TeamSide | null;
   terminalReason: string | null;
+  /** Each team's points when the rally started (filled by buildMatchStats). */
+  scoreBefore?: Record<TeamSide, number>;
+  /** Points needed to win the set: 25, or 15 in a deciding set (filled by buildMatchStats). */
+  setTargetPoints?: number;
+  /** Each team's rotation (1-6) when the rally started (filled by buildMatchStats). */
+  rotations?: Record<TeamSide, RotationNumber>;
 }
 
 export interface SetStats {
@@ -685,6 +691,59 @@ export function buildAdvancedStats(input: {
   };
 
   return finalizeAdvancedStats(stats);
+}
+
+/**
+ * Adds to each rally the context the analysis filters need: the score before it,
+ * the set's target points and both teams' rotations. Its own pass, like the cross
+ * rotation stats, with the same rotation tracking as buildAdvancedStats.
+ */
+function annotateRallyContext(input: {
+  rallyStats: readonly RallyStats[];
+  setStartedEvents: readonly SetStartedEvent[];
+  pointEvents: readonly PointAwardedEvent[];
+  completedSets: readonly CompletedSetSummary[];
+  rallyRotations?: RallyRotations;
+}): RallyStats[] {
+  const setStartedEventBySetNumber = getSetStartedEventBySetNumber(input.setStartedEvents);
+  const pointEventByRallyKey = getPointEventByRallyKey(input.pointEvents);
+  // A completed set won with fewer than 25 points was a deciding set to 15.
+  const targetBySet = new Map(input.completedSets.map((set) => [
+    set.setNumber,
+    Math.max(set.homeScore, set.awayScore) < 25 ? 15 : 25,
+  ]));
+  const annotated = new Map<RallyStats, RallyStats>();
+  let activeSetNumber: number | null = null;
+  let score: Record<TeamSide, number> = { home: 0, away: 0 };
+  let currentRotations: Record<TeamSide, RotationNumber> = getInitialRotationState(undefined);
+
+  input.rallyStats
+    .slice()
+    .sort((left, right) => left.setNumber - right.setNumber || left.rallyNumber - right.rallyNumber)
+    .forEach((rally) => {
+      if (rally.setNumber !== activeSetNumber) {
+        activeSetNumber = rally.setNumber;
+        score = { home: 0, away: 0 };
+        currentRotations = getInitialRotationState(setStartedEventBySetNumber.get(rally.setNumber));
+      }
+      currentRotations = resolveRallyRotations(rally, currentRotations, input.rallyRotations);
+      annotated.set(rally, {
+        ...rally,
+        scoreBefore: { ...score },
+        setTargetPoints: targetBySet.get(rally.setNumber) ?? 25,
+        rotations: { ...currentRotations },
+      });
+
+      if (!rally.pointWinner) return;
+      score[rally.pointWinner] += 1;
+      if (!rally.servingTeam) return;
+      const pointEvent = pointEventByRallyKey.get(createRallyKey(rally.setNumber, rally.rallyNumber));
+      if (rally.pointWinner !== rally.servingTeam && !pointEvent?.skipRotation) {
+        currentRotations[rally.pointWinner] = rotateRotationAfterSideOut(currentRotations[rally.pointWinner]);
+      }
+    });
+
+  return input.rallyStats.map((rally) => annotated.get(rally) ?? rally);
 }
 
 function createEmptyCrossRotationAggregate(): CrossRotationAggregate {
@@ -1894,12 +1953,19 @@ export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
     setStartedEvents,
     pointEvents,
   });
+  const rallyStatsWithContext = annotateRallyContext({
+    rallyRotations,
+    rallyStats,
+    setStartedEvents,
+    pointEvents,
+    completedSets,
+  });
 
   return {
     teamStats,
     playerStats,
-    setStats: buildSetStats(completedSets, rallyStats, pointEvents),
-    rallyStats,
+    setStats: buildSetStats(completedSets, rallyStatsWithContext, pointEvents),
+    rallyStats: rallyStatsWithContext,
     setsWon: getSetsWon(completedSets),
     totalTouches: touches.length,
     quickStats: buildMatchStatsQuickStats({ teamStats, playerStats }),

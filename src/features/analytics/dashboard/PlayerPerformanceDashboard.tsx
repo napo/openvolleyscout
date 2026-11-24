@@ -14,6 +14,7 @@ import {
   getAvailableSets,
   resolveSelectedPlayers,
   getFilteredTouches,
+  pickRallyContextFilters,
   computeFilteredPlayerStats,
 } from './selectors/dashboard-selectors';
 import { useAdvancedFilters } from '../stores/filter-selectors';
@@ -26,6 +27,7 @@ import { PlayerAnalyticsWidget } from './widgets/PlayerAnalyticsWidget';
 import { PlayerSituationMetricsWidget } from './widgets/PlayerSituationMetricsWidget';
 import { PlayerRadarWidget } from './widgets/PlayerRadarWidget';
 import { HeatmapWidget } from '../heatmaps';
+import { RallyContextFilterControls } from './filters/RallyContextFilterControls';
 import './performance-dashboard.css';
 
 const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
@@ -129,6 +131,8 @@ function FilterBar({ filters, stats, selectedPlayerIds, onSelectedPlayersChange,
         onChange={(evaluations) => updateFilter('evaluations', evaluations)}
       />
 
+      <RallyContextFilterControls filters={filters} stats={stats} />
+
       {activeCount > 0 && (
         <button
           type="button"
@@ -162,6 +166,7 @@ function PlayerPerformanceBlock({ stats, player, filters }: { stats: MatchStats;
       source: filters.source,
       rallyPhase: filters.rallyPhase,
       evaluations: filters.evaluations,
+      ...pickRallyContextFilters(filters),
     });
     return computeFilteredPlayerStats(player, touches);
   }, [player, filters, stats]);

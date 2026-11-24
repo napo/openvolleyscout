@@ -32,6 +32,8 @@ function normalizeRally(rally: RallyStats, shouldFlip: boolean): RallyStats {
     touches: rally.touches.map((touch) => normalizeTouchSide(touch, true)),
     servingTeam: rally.servingTeam ? flipSide(rally.servingTeam) : rally.servingTeam,
     pointWinner: rally.pointWinner ? flipSide(rally.pointWinner) : rally.pointWinner,
+    ...(rally.scoreBefore ? { scoreBefore: { home: rally.scoreBefore.away, away: rally.scoreBefore.home } } : {}),
+    ...(rally.rotations ? { rotations: { home: rally.rotations.away, away: rally.rotations.home } } : {}),
   };
 }
 

@@ -16,6 +16,7 @@ import {
   getAvailableSets,
   getSelectedPlayer,
   getFilteredTouches,
+  pickRallyContextFilters,
   computeFilteredPlayerStats,
 } from './selectors/dashboard-selectors';
 import { useAdvancedFilters } from '../stores/filter-selectors';
@@ -29,6 +30,7 @@ import { PlayerPointsErrorsWidget } from './widgets/PlayerPointsErrorsWidget';
 import { PlayerAnalyticsWidget } from './widgets/PlayerAnalyticsWidget';
 import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
 import { HeatmapWidget } from '../heatmaps';
+import { RallyContextFilterControls } from './filters/RallyContextFilterControls';
 import './performance-dashboard.css';
 
 const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
@@ -175,102 +177,7 @@ function FilterBar({ filters, stats, showTeam = true, showRole = true, showSourc
         onChange={(evaluations) => updateFilter('evaluations', evaluations)}
       />
 
-      {/* Advanced Tactical Filters */}
-      <div className="perf-dashboard__filter-group">
-        <label className="perf-dashboard__filter-label" htmlFor="dash-filter-rotation">
-          {t('filterRotation', { defaultValue: 'Rotation' })}
-        </label>
-        <select
-          id="dash-filter-rotation"
-          className="perf-dashboard__filter-select"
-          value={filters.rotation}
-          onChange={(e) => updateFilter('rotation', e.target.value === 'all' ? 'all' : Number(e.target.value) as DashboardFilters['rotation'])}
-        >
-          <option value="all">{t('allRotations', { defaultValue: 'All' })}</option>
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <option key={n} value={n}>{t('rotationLabel', { rotationNumber: n, defaultValue: `Rotation ${n}` })}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="perf-dashboard__filter-group">
-        <label className="perf-dashboard__filter-label" htmlFor="dash-filter-score-range">
-          {t('filterScoreRange', { defaultValue: 'Score Range' })}
-        </label>
-        <select
-          id="dash-filter-score-range"
-          className="perf-dashboard__filter-select"
-          value={filters.scoreRange}
-          onChange={(e) => updateFilter('scoreRange', e.target.value as DashboardFilters['scoreRange'])}
-        >
-          <option value="all">{t('allScoreRanges', { defaultValue: 'All' })}</option>
-          <option value="tied">{t('scoreRangeTied', { defaultValue: 'Tied' })}</option>
-          <option value="leading">{t('scoreRangeLeading', { defaultValue: 'Leading' })}</option>
-          <option value="trailing">{t('scoreRangeTrailing', { defaultValue: 'Trailing' })}</option>
-          <option value="clutch">{t('scoreRangeClutch', { defaultValue: 'Clutch (14+)' })}</option>
-        </select>
-      </div>
-
-      {players.length > 0 && (
-        <>
-          <div className="perf-dashboard__filter-group">
-            <label className="perf-dashboard__filter-label" htmlFor="dash-filter-server">
-              {t('filterServer', { defaultValue: 'Server' })}
-            </label>
-            <select
-              id="dash-filter-server"
-              className="perf-dashboard__filter-select"
-              value={filters.server}
-              onChange={(e) => updateFilter('server', e.target.value as DashboardFilters['server'])}
-            >
-              <option value="all">{t('allServers', { defaultValue: 'All' })}</option>
-              {players.map((p) => (
-                <option key={p.playerId} value={p.playerId}>
-                  {p.playerName || `Player ${p.playerId}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="perf-dashboard__filter-group">
-            <label className="perf-dashboard__filter-label" htmlFor="dash-filter-receiver">
-              {t('filterReceiver', { defaultValue: 'Receiver' })}
-            </label>
-            <select
-              id="dash-filter-receiver"
-              className="perf-dashboard__filter-select"
-              value={filters.receiver}
-              onChange={(e) => updateFilter('receiver', e.target.value as DashboardFilters['receiver'])}
-            >
-              <option value="all">{t('allReceivers', { defaultValue: 'All' })}</option>
-              {players.map((p) => (
-                <option key={p.playerId} value={p.playerId}>
-                  {p.playerName || `Player ${p.playerId}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="perf-dashboard__filter-group">
-            <label className="perf-dashboard__filter-label" htmlFor="dash-filter-attacker">
-              {t('filterAttacker', { defaultValue: 'Attacker' })}
-            </label>
-            <select
-              id="dash-filter-attacker"
-              className="perf-dashboard__filter-select"
-              value={filters.attacker}
-              onChange={(e) => updateFilter('attacker', e.target.value as DashboardFilters['attacker'])}
-            >
-              <option value="all">{t('allAttackers', { defaultValue: 'All' })}</option>
-              {players.map((p) => (
-                <option key={p.playerId} value={p.playerId}>
-                  {p.playerName || `Player ${p.playerId}`}
-                </option>
-              ))}
-            </select>
-          </div>
-        </>
-      )}
+      <RallyContextFilterControls filters={filters} stats={stats} />
 
       {activeCount > 0 && (
         <button
@@ -315,6 +222,7 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
       source: filters.source,
       rallyPhase: filters.rallyPhase,
       evaluations: filters.evaluations,
+      ...pickRallyContextFilters(filters),
     });
     return computeFilteredPlayerStats(selectedPlayer, touches);
   }, [selectedPlayer, filters, stats]);

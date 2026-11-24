@@ -14,6 +14,7 @@ import { EfficiencyWidget } from './widgets/EfficiencyWidget';
 import { PointsErrorsWidget } from './widgets/PointsErrorsWidget';
 import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
 import { TeamRadarWidget } from './widgets/TeamRadarWidget';
+import { RallyContextFilterControls } from './filters/RallyContextFilterControls';
 import './performance-dashboard.css';
 
 const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
@@ -77,6 +78,8 @@ function FilterBar({ filters, stats, lockedTeam }: FilterBarProps) {
           ))}
         </select>
       </div>
+
+      <RallyContextFilterControls filters={filters} stats={stats} />
 
       {activeCount > 0 && (
         <button

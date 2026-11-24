@@ -9,6 +9,7 @@ import {
   countInferredEvents,
   type HeatmapEvent,
 } from '../aggregation/heatmap-aggregation';
+import { filterTouchesByRallyContext } from '../../dashboard/selectors/rally-context-filters';
 
 export interface HeatmapSelectionResult {
   events: HeatmapEvent[];
@@ -52,7 +53,7 @@ export function getHeatmapTouches(
     touches = touches.filter((t) => t.skill === skillFilter);
   }
 
-  return touches;
+  return filterTouchesByRallyContext(rallies, touches, dashFilters);
 }
 
 export function getHeatmapTouchesForTeam(
