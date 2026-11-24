@@ -3025,6 +3025,7 @@ export const it = {
   videoCloudFolderError: "Questo è il link a una cartella: apri il file video e copia il link al singolo file.",
   videoOneDriveLoadError: "Questo link OneDrive non si può riprodurre. Probabilmente chiede l'accesso: il video viene caricato senza il tuo account Microsoft.",
   videoGoogleDriveLoadError: "Questo link Google Drive non si può riprodurre. Probabilmente chiede l'accesso, oppure Drive non permette di riprodurre questo file fuori dal suo sito.",
+  videoGoogleDriveApiLoadError: "Questo video di Google Drive non si può riprodurre. Controlla che sia condiviso con \"Chiunque abbia il link\": un video condiviso solo con persone specifiche qui non si apre. Se oggi è stato visto da molte persone, Google può bloccarlo per qualche ora.",
   videoCloudTipAnyone: "Condividi il file con \"Chiunque abbia il link\".",
   videoCloudTipSyncedFolder: "Se usi l'app OneDrive o Google Drive su questo computer, apri il video dalla cartella sincronizzata come un normale file.",
   videoDropboxTipAnyone: "In Dropbox condividi il file con \"Chiunque abbia il link\".",

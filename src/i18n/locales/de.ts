@@ -3020,6 +3020,7 @@ export const de = {
   videoCloudFolderError: "Das ist ein Link zu einem Ordner: Öffne die Videodatei und kopiere den Link zu dieser einzelnen Datei.",
   videoOneDriveLoadError: "Dieser OneDrive-Link kann nicht abgespielt werden. Wahrscheinlich verlangt er eine Anmeldung: Das Video wird ohne dein Microsoft-Konto geladen.",
   videoGoogleDriveLoadError: "Dieser Google-Drive-Link kann nicht abgespielt werden. Wahrscheinlich verlangt er eine Anmeldung, oder Drive erlaubt das Abspielen dieser Datei außerhalb der eigenen Seite nicht.",
+  videoGoogleDriveApiLoadError: "Dieses Google-Drive-Video kann nicht abgespielt werden. Prüfe, ob es mit \"Jeder, der über den Link verfügt\" geteilt ist: Ein nur mit bestimmten Personen geteiltes Video öffnet sich hier nicht. Wenn es heute von vielen Personen angesehen wurde, kann Google es für einige Stunden sperren.",
   videoCloudTipAnyone: "Teile die Datei mit \"Jeder, der über den Link verfügt\".",
   videoCloudTipSyncedFolder: "Wenn du die OneDrive- oder Google-Drive-App auf diesem Computer nutzt, öffne das Video aus dem synchronisierten Ordner als normale Datei.",
   videoDropboxTipAnyone: "Teile die Datei in Dropbox mit \"Jeder mit dem Link\".",

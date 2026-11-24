@@ -3022,6 +3022,7 @@ export const es = {
   videoCloudFolderError: "Este es el enlace a una carpeta: abre el archivo de vídeo y copia el enlace a ese archivo.",
   videoOneDriveLoadError: "Este enlace de OneDrive no se puede reproducir. Probablemente pide acceso: el vídeo se carga sin tu cuenta de Microsoft.",
   videoGoogleDriveLoadError: "Este enlace de Google Drive no se puede reproducir. Probablemente pide acceso, o Drive no permite reproducir este archivo fuera de su sitio.",
+  videoGoogleDriveApiLoadError: "Este vídeo de Google Drive no se puede reproducir. Comprueba que esté compartido con \"Cualquier persona que tenga el enlace\": un vídeo compartido solo con personas concretas no se abre aquí. Si hoy lo han visto muchas personas, Google puede bloquearlo durante unas horas.",
   videoCloudTipAnyone: "Comparte el archivo con \"Cualquier persona con el enlace\".",
   videoCloudTipSyncedFolder: "Si usas la app de OneDrive o Google Drive en este ordenador, abre el vídeo desde la carpeta sincronizada como un archivo normal.",
   videoDropboxTipAnyone: "En Dropbox comparte el archivo con \"Cualquier persona con el enlace\".",

@@ -3025,6 +3025,7 @@ export const en = {
   videoCloudFolderError: "This is a link to a folder: open the video file and copy the link to that single file.",
   videoOneDriveLoadError: "This OneDrive link cannot be played. It probably asks for access: the video is loaded without your Microsoft account.",
   videoGoogleDriveLoadError: "This Google Drive link cannot be played. It probably asks for access, or Drive does not allow this file to be played outside its own site.",
+  videoGoogleDriveApiLoadError: "This Google Drive video cannot be played. Check that it is shared with \"Anyone with the link\": a video shared only with specific people does not open here. If many people watched it today, Google may block it for a few hours.",
   videoCloudTipAnyone: "Share the file with \"Anyone with the link\".",
   videoCloudTipSyncedFolder: "If you use the OneDrive or Google Drive app on this computer, open the video from the synced folder as a normal file.",
   videoDropboxTipAnyone: "In Dropbox share the file with \"Anyone with the link\".",

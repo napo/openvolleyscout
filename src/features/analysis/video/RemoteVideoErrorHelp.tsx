@@ -10,6 +10,7 @@
 import type { MatchVideoSource } from '@src/domain/video/types';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { isDropboxHost, isGoogleDriveHost, isOneDriveHost } from './remote-video-url';
+import { googleDriveApiKey } from './google-drive-video';
 
 /** YouTube player errors: 100 private or removed, 101 and 150 embedding not allowed by the owner. */
 const YOUTUBE_PRIVATE = 100;
@@ -43,7 +44,12 @@ export function remoteVideoErrorKeys(
     return { title: 'videoOneDriveLoadError', tips: ['videoCloudTipAnyone', 'videoTipDownload', 'videoCloudTipSyncedFolder'] };
   }
   if (hostMatches(source.url, isGoogleDriveHost)) {
-    return { title: 'videoGoogleDriveLoadError', tips: ['videoCloudTipAnyone', 'videoTipDownload', 'videoCloudTipSyncedFolder'] };
+    // Through the Drive API (key configured) a failure almost always means the file is not
+    // shared with "Anyone with the link", or Google limited it after many views.
+    return {
+      title: googleDriveApiKey() ? 'videoGoogleDriveApiLoadError' : 'videoGoogleDriveLoadError',
+      tips: ['videoCloudTipAnyone', 'videoTipDownload', 'videoCloudTipSyncedFolder'],
+    };
   }
   return { title: 'videoRemoteLoadError', tips: [] };
 }

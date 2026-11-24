@@ -19,10 +19,6 @@
 import { isTauriRuntime } from '@src/features/sync/cloud/platform';
 import { isGoogleDriveHost } from './remote-video-url';
 
-const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
-
-const WEB_KEY = env?.VITE_GOOGLE_DRIVE_API_KEY_WEB?.trim() ?? '';
-const APP_KEY = env?.VITE_GOOGLE_DRIVE_API_KEY_APP?.trim() ?? '';
 const DRIVE_FILES_API = 'https://www.googleapis.com/drive/v3/files';
 
 /**
@@ -30,9 +26,13 @@ const DRIVE_FILES_API = 'https://www.googleapis.com/drive/v3/files';
  * desktop and Android apps, and local development, use the app key.
  */
 export function googleDriveApiKey(): string {
-  if (isTauriRuntime()) return APP_KEY;
-  if (env?.DEV) return APP_KEY || WEB_KEY;
-  return WEB_KEY;
+  // Read on each call (cheap) so tests can stub the variables.
+  const env = import.meta.env as Record<string, string | boolean | undefined> | undefined;
+  const webKey = String(env?.VITE_GOOGLE_DRIVE_API_KEY_WEB ?? '').trim();
+  const appKey = String(env?.VITE_GOOGLE_DRIVE_API_KEY_APP ?? '').trim();
+  if (isTauriRuntime()) return appKey;
+  if (env?.DEV) return appKey || webKey;
+  return webKey;
 }
 
 /** The Drive file id of a share, download or API link; null for other links. */

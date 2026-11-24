@@ -3022,6 +3022,7 @@ export const ar = {
   videoCloudFolderError: "هذا رابط مجلد: افتح ملف الفيديو وانسخ رابط ذلك الملف.",
   videoOneDriveLoadError: "لا يمكن تشغيل رابط OneDrive هذا. على الأرجح يطلب إذن الوصول: يتم تحميل الفيديو بدون حساب Microsoft الخاص بك.",
   videoGoogleDriveLoadError: "لا يمكن تشغيل رابط Google Drive هذا. على الأرجح يطلب إذن الوصول، أو أن Drive لا يسمح بتشغيل هذا الملف خارج موقعه.",
+  videoGoogleDriveApiLoadError: "لا يمكن تشغيل فيديو Google Drive هذا. تحقّق من أنه مشارَك مع \"أي شخص لديه الرابط\": الفيديو المشارَك مع أشخاص محددين فقط لا يُفتح هنا. إذا شاهده كثيرون اليوم، فقد تحظره Google لبضع ساعات.",
   videoCloudTipAnyone: "شارك الملف مع \"أي شخص لديه الرابط\".",
   videoCloudTipSyncedFolder: "إذا كنت تستخدم تطبيق OneDrive أو Google Drive على هذا الكمبيوتر، فافتح الفيديو من المجلد المتزامن كملف عادي.",
   videoDropboxTipAnyone: "في Dropbox شارك الملف مع \"أي شخص لديه الرابط\".",

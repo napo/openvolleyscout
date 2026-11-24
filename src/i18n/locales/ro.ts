@@ -3022,6 +3022,7 @@ export const ro = {
   videoCloudFolderError: "Acesta este linkul unui dosar: deschide fișierul video și copiază linkul către acel fișier.",
   videoOneDriveLoadError: "Acest link OneDrive nu poate fi redat. Probabil cere acces: videoclipul se încarcă fără contul tău Microsoft.",
   videoGoogleDriveLoadError: "Acest link Google Drive nu poate fi redat. Probabil cere acces sau Drive nu permite redarea acestui fișier în afara site-ului său.",
+  videoGoogleDriveApiLoadError: "Acest videoclip Google Drive nu poate fi redat. Verifică dacă este distribuit cu \"Oricine are linkul\": un videoclip distribuit doar anumitor persoane nu se deschide aici. Dacă azi a fost vizionat de multe persoane, Google îl poate bloca pentru câteva ore.",
   videoCloudTipAnyone: "Partajează fișierul cu \"Oricine are linkul\".",
   videoCloudTipSyncedFolder: "Dacă folosești aplicația OneDrive sau Google Drive pe acest computer, deschide videoclipul din dosarul sincronizat ca pe un fișier obișnuit.",
   videoDropboxTipAnyone: "În Dropbox partajează fișierul cu \"Oricine are linkul\".",

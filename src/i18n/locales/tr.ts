@@ -3016,6 +3016,7 @@ export const tr = {
   videoCloudFolderError: "Bu bir klasör bağlantısı: video dosyasını açın ve o dosyanın bağlantısını kopyalayın.",
   videoOneDriveLoadError: "Bu OneDrive bağlantısı oynatılamıyor. Büyük olasılıkla erişim istiyor: video Microsoft hesabınız olmadan yüklenir.",
   videoGoogleDriveLoadError: "Bu Google Drive bağlantısı oynatılamıyor. Büyük olasılıkla erişim istiyor ya da Drive bu dosyanın kendi sitesi dışında oynatılmasına izin vermiyor.",
+  videoGoogleDriveApiLoadError: "Bu Google Drive videosu oynatılamıyor. \"Bağlantıya sahip olan herkes\" ile paylaşıldığını kontrol et: yalnızca belirli kişilerle paylaşılan bir video burada açılmaz. Bugün çok kişi izlediyse Google onu birkaç saat engelleyebilir.",
   videoCloudTipAnyone: "Dosyayı \"Bağlantıya sahip olan herkes\" ile paylaşın.",
   videoCloudTipSyncedFolder: "Bu bilgisayarda OneDrive veya Google Drive uygulamasını kullanıyorsanız videoyu eşitlenen klasörden normal bir dosya gibi açın.",
   videoDropboxTipAnyone: "Dropbox'ta dosyayı \"Bağlantıya sahip herkes\" ile paylaşın.",

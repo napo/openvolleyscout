@@ -11,7 +11,7 @@ import { buildSharedPlaylistUrl, decodeSharedPlaylist, extractSharedPlaylistPayl
 import { formatVideoSeconds } from './video-sync';
 import { decodePlaylistFile, isLocalPlaylist, MAX_PLAYLIST_FILE_BYTES, PLAYLIST_FILE_EXTENSION, type PlaylistDocument } from './playlist-file';
 import { LocalPlaylistVideo } from './LocalPlaylistVideo';
-import { toPlayableVideoUrl } from './google-drive-video';
+import { googleDriveApiKey, googleDriveFileId, toPlayableVideoUrl } from './google-drive-video';
 import './shared-playlist.css';
 
 const YOUTUBE_STATE_ENDED = 0;
@@ -404,7 +404,7 @@ export function SharedPlaylistPage() {
         return (
         <main className="shared-playlist__main">
           <section>
-            {playbackError ? <p className="shared-playlist__notice" role="alert">{t(localPlaylist ? 'videoPlaylistLocalRangeError' : remoteClipUrl ? 'videoRemoteLoadError' : 'videoPlayerPageError')}{playbackErrorCode !== null ? ` (${playbackErrorCode})` : ''}</p> : null}
+            {playbackError ? <p className="shared-playlist__notice" role="alert">{t(localPlaylist ? 'videoPlaylistLocalRangeError' : remoteClipUrl ? (sharedVideoUrl && googleDriveFileId(sharedVideoUrl) && googleDriveApiKey() ? 'videoGoogleDriveApiLoadError' : 'videoRemoteLoadError') : 'videoPlayerPageError')}{playbackErrorCode !== null ? ` (${playbackErrorCode})` : ''}</p> : null}
             <div className="shared-playlist__now-playing" aria-live="polite">
               <div className="shared-playlist__now-playing-info">
                 <span className="shared-playlist__now-playing-count">{activeAction >= 0 ? `${activeAction + 1} / ${actions.length}` : `0 / ${actions.length}`}</span>

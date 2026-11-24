@@ -3020,6 +3020,7 @@ export const sl = {
   videoCloudFolderError: "To je povezava do mape: odpri video datoteko in kopiraj povezavo do te datoteke.",
   videoOneDriveLoadError: "Te povezave OneDrive ni mogoče predvajati. Verjetno zahteva dostop: video se naloži brez tvojega Microsoftovega računa.",
   videoGoogleDriveLoadError: "Te povezave Google Drive ni mogoče predvajati. Verjetno zahteva dostop ali pa Drive ne dovoli predvajanja te datoteke zunaj svoje strani.",
+  videoGoogleDriveApiLoadError: "Tega videa iz Google Drive ni mogoče predvajati. Preveri, ali je deljen z možnostjo \"Vsi, ki imajo povezavo\": video, deljen samo z določenimi osebami, se tukaj ne odpre. Če si ga je danes ogledalo veliko ljudi, ga lahko Google za nekaj ur blokira.",
   videoCloudTipAnyone: "Datoteko deli z možnostjo \"Vsak, ki ima povezavo\".",
   videoCloudTipSyncedFolder: "Če na tem računalniku uporabljaš aplikacijo OneDrive ali Google Drive, odpri video iz sinhronizirane mape kot običajno datoteko.",
   videoDropboxTipAnyone: "V Dropboxu deli datoteko z možnostjo \"Kdorkoli s povezavo\".",

@@ -3020,6 +3020,7 @@ export const zh = {
   videoCloudFolderError: "这是文件夹链接：请打开视频文件并复制该文件的链接。",
   videoOneDriveLoadError: "无法播放此 OneDrive 链接。它可能需要访问权限：视频是在没有你的 Microsoft 账户的情况下加载的。",
   videoGoogleDriveLoadError: "无法播放此 Google Drive 链接。它可能需要访问权限，或者 Drive 不允许在其网站之外播放此文件。",
+  videoGoogleDriveApiLoadError: "无法播放此 Google 云端硬盘视频。请确认它已共享给\"知道链接的任何人\"：仅共享给特定人员的视频无法在此打开。如果今天观看的人很多，Google 可能会将其封锁几个小时。",
   videoCloudTipAnyone: "将文件共享给“知道链接的任何人”。",
   videoCloudTipSyncedFolder: "如果你在这台电脑上使用 OneDrive 或 Google Drive 应用，请从同步文件夹中像普通文件一样打开视频。",
   videoDropboxTipAnyone: "在 Dropbox 中以“任何拥有链接的人”方式共享该文件。",

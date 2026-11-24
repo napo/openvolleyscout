@@ -3001,6 +3001,7 @@ export const ja = {
   videoCloudFolderError: "これはフォルダーへのリンクです。動画ファイルを開き、そのファイルへのリンクをコピーしてください。",
   videoOneDriveLoadError: "この OneDrive のリンクは再生できません。アクセス許可が必要な可能性があります。動画は Microsoft アカウントなしで読み込まれます。",
   videoGoogleDriveLoadError: "この Google ドライブのリンクは再生できません。アクセス許可が必要か、ドライブがサイト外でのこのファイルの再生を許可していない可能性があります。",
+  videoGoogleDriveApiLoadError: "この Google ドライブの動画は再生できません。「リンクを知っている全員」と共有されているか確認してください。特定のユーザーとのみ共有された動画はここでは開けません。今日多くの人が視聴した場合、Google が数時間ブロックすることがあります。",
   videoCloudTipAnyone: "ファイルを「リンクを知っている全員」と共有してください。",
   videoCloudTipSyncedFolder: "このコンピューターで OneDrive または Google ドライブのアプリを使っている場合は、同期フォルダーから通常のファイルとして動画を開いてください。",
   videoDropboxTipAnyone: "Dropboxでファイルを「リンクを知っている全員」で共有してください。",
