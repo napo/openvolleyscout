@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { opponentReportTitle } from '../model/report-title';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { zipSync, strToU8 } from 'fflate';
 import { useTranslation, type TranslationKey } from '@src/i18n';
@@ -18,6 +19,7 @@ import { listMatchesOfTeam, listTeamsInMatches, teamRefKey, type TeamMatch } fro
 import { buildReportSimilarities, listReportScopes, matchScopeKey, type MatchTeamSimilarity } from '../model/report-scope';
 import { buildReportMatchInputs } from '../model/report-inputs';
 import { computeOpponentReportMetrics, toReportPlayer, type ReportPlayer } from '../model/report-metrics';
+import { expandAttackerViews, expandSetterViews } from '../model/split-views';
 import { collectAttackCombinationCodes, computeAttackerDirectionViews, computeAttackingReportMetrics, computeSetterDistributionViews } from '../model/attacking-metrics';
 import { computeServingReportMetrics } from '../model/serving-metrics';
 import { buildPlayerSkillVideoLinks, videoLinkWatchKey, setterBandFilter, type AttackerVideoLink } from '../model/attacker-video-links';
@@ -44,6 +46,9 @@ function countSample(matches: readonly TeamMatch[]) {
         actions: sample.actions + buildProjectMatchStats(project).teamStats[side].totalTouches,
     }), { matches: 0, rallies: 0, actions: 0 });
 }
+const SPLIT_SERVE_TYPE_KEYS = { jump_spin: 'setterViewServeJumpSpin', jump_float: 'setterViewServeJumpFloat', float: 'setterViewServeFloat', other: 'setterViewServeOther' } as const;
+const SPLIT_PHASE_KEYS = { after_receive: 'opponentReportAttackAfterReceive', after_dig: 'opponentReportAttackAfterDig', high_ball: 'opponentReportAttackHighBall', late_set: 'opponentReportAttackLateSet' } as const;
+
 export function OpponentReportEditorPage() {
     const { t, locale } = useTranslation();
     const viewT = useCallback<ViewT>((key, params) => t(key as TranslationKey, params), [t]);
@@ -165,32 +170,33 @@ export function OpponentReportEditorPage() {
     const suggestions = useMemo(() => buildKeySuggestions(metrics, thresholds, attacking, serving), [metrics, thresholds, attacking, serving]);
     // A stable expiry across edits; reopening the editor can refresh generated links.
     const [videoLinkTime] = useState(Date.now);
-    const attackLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, attacking.attackers, report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime), [inputs, attacking.attackers, report?.title, videoLinkTime]);
-    const receiveLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, metrics.receivers, report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime, 'receive'), [inputs, metrics.receivers, report?.title, videoLinkTime]);
-    const serveLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, serving.servers, report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime, 'serve'), [inputs, serving.servers, report?.title, videoLinkTime]);
+    const displayTitle = report ? opponentReportTitle(report) : '';
+    const attackLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, attacking.attackers, displayTitle, APP_METADATA.urls.webApp, videoLinkTime), [inputs, attacking.attackers, displayTitle, videoLinkTime]);
+    const receiveLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, metrics.receivers, displayTitle, APP_METADATA.urls.webApp, videoLinkTime, 'receive'), [inputs, metrics.receivers, displayTitle, videoLinkTime]);
+    const serveLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, serving.servers, displayTitle, APP_METADATA.urls.webApp, videoLinkTime, 'serve'), [inputs, serving.servers, displayTitle, videoLinkTime]);
     const setterLinks = useMemo(() => {
         const links = new Map<string, AttackerVideoLink>();
         for (const setter of attacking.setters) {
             for (const band of ['positive', 'negative'] as const) {
-                const link = buildPlayerSkillVideoLinks(inputs, [setter], report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime, 'set', setterBandFilter(band)).get(setter.player.key);
+                const link = buildPlayerSkillVideoLinks(inputs, [setter], displayTitle, APP_METADATA.urls.webApp, videoLinkTime, 'set', setterBandFilter(band)).get(setter.player.key);
                 if (link) links.set(`${setter.player.key}:${band}`, link);
             }
         }
         return links;
-    }, [inputs, attacking.setters, report?.title, videoLinkTime]);
+    }, [inputs, attacking.setters, displayTitle, videoLinkTime]);
     const system = findReceptionSystemForTeam(systems, report?.opponent.archivedTeamId) ?? DEFAULT_RECEPTION_SYSTEM_BLOCK;
     const setterCustomGroups = useMemo(
         () => report?.setterViews?.length
-            ? computeSetterDistributionViews(inputs, report.setterViews, attacking.setters)
+            ? computeSetterDistributionViews(inputs, expandSetterViews(report.setterViews, (field, value) => field === 'serveTypes' ? t(SPLIT_SERVE_TYPE_KEYS[value as keyof typeof SPLIT_SERVE_TYPE_KEYS]) : `${t('zone')} ${value}`), attacking.setters)
             : [],
-        [inputs, report?.setterViews, attacking.setters],
+        [inputs, report?.setterViews, attacking.setters, t],
     );
     const attackCombinationCodes = useMemo(() => collectAttackCombinationCodes(inputs), [inputs]);
     const attackerCustomViews = useMemo(
         () => report?.attackerViews?.length
-            ? computeAttackerDirectionViews(inputs, report.attackerViews, attacking.attackers)
+            ? computeAttackerDirectionViews(inputs, expandAttackerViews(report.attackerViews, (field, value) => field === 'attackZones' ? `Z${value}` : field === 'rotations' ? `P${value}` : t(SPLIT_PHASE_KEYS[value as keyof typeof SPLIT_PHASE_KEYS])), attacking.attackers)
             : [],
-        [inputs, report?.attackerViews, attacking.attackers],
+        [inputs, report?.attackerViews, attacking.attackers, t],
     );
     const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, { serve: serveLinks, setter: setterLinks }, setterCustomGroups, attackerCustomViews) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, serveLinks, setterLinks, setterCustomGroups, attackerCustomViews]);
     useEffect(() => {
@@ -255,7 +261,7 @@ export function OpponentReportEditorPage() {
             await yieldToUi();
             if (kind === 'pptx' || kind === 'odp') {
                 const { exportReportPresentation } = await import('../model/report-presentation-export');
-                await exportReportPresentation(plan, kind, name, report.title);
+                await exportReportPresentation(plan, kind, name, opponentReportTitle(report));
             } else if (kind === 'pdf') {
                 await exportReportBooklet(plan, layout !== 'a4', name);
             } else if (kind === 'preview') {
@@ -297,9 +303,8 @@ export function OpponentReportEditorPage() {
             opponent,
             sourceScopeKey: scope,
             matchIds: matches.filter(({ project }) => matchScopeKey(project) === scope).map(({ project }) => project.metadata.id),
-            title: !current.opponent.name || current.title === t('opponentReportDefaultTitle', { team: current.opponent.name })
-                ? t('opponentReportDefaultTitle', { team: team.name })
-                : current.title,
+            // An automatic title (old reports) follows the new opponent: empty = date + team name.
+            title: current.title === t('opponentReportDefaultTitle', { team: current.opponent.name }) ? '' : current.title,
         }));
     };
     const createDraft = () => {
@@ -310,7 +315,7 @@ export function OpponentReportEditorPage() {
     const visibleMatches = opponentMatches.filter(({ project }) => showOthers || matchScopeKey(project) === scopeKey || selectedIds.has(project.metadata.id));
     return <AppPageLayout dir={locale === 'ar' ? 'rtl' : 'ltr'} className="app-page-card opponent-report" headerClassName="app-page-card__header" contentClassName="app-page-card__content" header={<div className="app-page-card__header-copy">
     <button type="button" className="btn-secondary btn-small" onClick={() => navigate('/opponent-reports')}>← {t('opponentReports')}</button>
-    <input className="opponent-report__title" value={report.title} aria-label={t('opponentReportTitle')} onChange={(event) => update((current) => ({ ...current, title: event.target.value }))}/>
+    <input className="opponent-report__title" value={report.title} placeholder={opponentReportTitle({ ...report, title: '' })} aria-label={t('opponentReportTitle')} onChange={(event) => update((current) => ({ ...current, title: event.target.value }))}/>
     <p role="status">{t(saveState === 'saving' ? 'opponentReportSaving' : saveState === 'error' ? 'tacticalSaveError' : 'opponentReportSaved')}{saveState === 'error' ? <button type="button" onClick={() => { if (pendingRef.current)
             persist(pendingRef.current); }}>{t('tacticalRetrySave')}</button> : null}</p>
     {!preparing ? <div className="opponent-report__actions">
@@ -319,7 +324,7 @@ export function OpponentReportEditorPage() {
       {exportMenu('slides', 'PPTX · ODP')}
       {exportMenu('svg', 'SVG')}
       <details className="tactical-share-menu"><summary><ActionIcon name="web" />{t('tacticalShareLink')}</summary>
-        <ReportShareControl key={revision} getSvgs={exportSvgs} title={report.title} links={resolveBoardPieces(report, view, viewT).flatMap((piece) => piece.videoLink ? [{ label: `${piece.title} · ${t(videoLinkWatchKey(piece.videoLink) as Parameters<typeof t>[0])}`, url: piece.videoLink.url, expiresAt: piece.videoLink.expiresAt }] : [])}/>
+        <ReportShareControl key={revision} getSvgs={exportSvgs} title={opponentReportTitle(report)} links={resolveBoardPieces(report, view, viewT).flatMap((piece) => piece.videoLink ? [{ label: `${piece.title} · ${t(videoLinkWatchKey(piece.videoLink) as Parameters<typeof t>[0])}`, url: piece.videoLink.url, expiresAt: piece.videoLink.expiresAt }] : [])}/>
       </details>
       <button type="button" className="btn-secondary" onClick={() => setPreparing(true)}><ActionIcon name="edit" />{t('reportSources')}</button>
     </div> : null}
@@ -360,7 +365,7 @@ export function OpponentReportEditorPage() {
     </> : <>
       <p>{t('opponentReportSampleText', sample)}</p>
       {sample.actions < thresholds.minSample ? <p className="opponent-report__warning">{t('opponentReportLowSampleWarning', { n: thresholds.minSample })}</p> : null}
-      {preview.length ? <details open><summary><ActionIcon name="preview" />{t('tacticalPreview')}</summary>{preview.map((svg, index) => <img className="tactical-preview" key={index} alt={`${report.title} · ${index + 1}`} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}/>)}</details> : null}
+      {preview.length ? <details open><summary><ActionIcon name="preview" />{t('tacticalPreview')}</summary>{preview.map((svg, index) => <img className="tactical-preview" key={index} alt={`${opponentReportTitle(report)} · ${index + 1}`} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}/>)}</details> : null}
 
       <TacticalBoardSheet report={report} plan={booklet!} staffNotes={fullPlan?.staffNotes ?? []} view={view} viewT={viewT} rosterPlayers={players} attackCombinationCodes={attackCombinationCodes} suggestions={suggestions} update={update}/>
     </>}

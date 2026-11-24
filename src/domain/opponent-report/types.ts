@@ -208,6 +208,8 @@ export interface SetterDistributionViewConfig {
   receptionZones?: string[];
   /** Empty or omitted = all receivers (ReportPlayer.key). */
   receiverKeys?: string[];
+  /** Draw one card per value of this filter ("draw separately"); omitted = one card ("draw together"). */
+  splitBy?: 'serveStartZones' | 'receptionZones' | 'serveTypes';
 }
 
 /** Custom attacker direction view filter (phase, reception, rotation, zone, subtype, base/combination, blockers, evaluation). */
@@ -233,6 +235,8 @@ export interface AttackerDirectionViewConfig {
   attackSubtypes?: AttackSubtype[];
   /** Empty or omitted = all attack combination / base codes (e.g. 'X5', 'V5', 'XP', 'K1'). */
   combinationCodes?: string[];
+  /** Draw one card per value of this filter ("draw separately"); omitted = one card ("draw together"). */
+  splitBy?: 'attackZones' | 'rotations' | 'phases';
 }
 
 export interface OpponentReport {

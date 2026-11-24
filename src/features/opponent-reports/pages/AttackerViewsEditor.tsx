@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from '@src/i18n';
+import { SplitToggle } from './SplitToggle';
 import { attackerViewFilterLabel } from '../model/attacker-view-label';
 import { getEvaluationColor, getEvaluationInk, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
@@ -216,6 +217,7 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
                   <div className="setter-views-editor__filters">
                     <div className={`setter-views-editor__group${view.phases?.length ? ' is-filtered' : ''}`}>
                       <span className="setter-views-editor__group-title">{t('attackerViewPhaseLabel')}</span>
+                      <SplitToggle separate={view.splitBy === 'phases'} onChange={(separate) => patchView(index, { splitBy: separate ? 'phases' : undefined })} />
                       <div className="setter-views-editor__chips">
                         <button
                           type="button"
@@ -287,6 +289,7 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
 
                     <div className={`setter-views-editor__group${view.rotations?.length ? ' is-filtered' : ''}`}>
                       <span className="setter-views-editor__group-title">{t('opponentReportColRotation')}</span>
+                      <SplitToggle separate={view.splitBy === 'rotations'} onChange={(separate) => patchView(index, { splitBy: separate ? 'rotations' : undefined })} />
                       <div className="setter-views-editor__chips">
                         <button
                           type="button"
@@ -312,6 +315,7 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
 
                     <div className={`setter-views-editor__group${view.attackZones?.length ? ' is-filtered' : ''}`}>
                       <span className="setter-views-editor__group-title">{t('opponentReportAttackZone')}</span>
+                      <SplitToggle separate={view.splitBy === 'attackZones'} onChange={(separate) => patchView(index, { splitBy: separate ? 'attackZones' : undefined })} />
                       <div className="setter-views-editor__chips">
                         <button
                           type="button"

@@ -1,4 +1,5 @@
 import type { OpponentReport, OpponentReportBooklet, OpponentReportComponentId } from '@src/domain/opponent-report/types';
+import { opponentReportTitle } from './report-title';
 import { reportComponentOrder } from './report-components';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, attackerPlayerKeyFromPieceId, attackerViewIdFromPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
@@ -528,7 +529,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     if (options.matchLines?.length) deferred.push({ id: 'sources', title: t('opponentReportPdfMatches'), body: options.matchLines.join('\n') });
   }
   if (report.notes.trim()) deferred.push({ id: 'manual', title: t('bookletNotes'), body: report.notes });
-  const context = [report.title, sampleLine].filter(Boolean).join(' · ');
+  const context = [opponentReportTitle(report), sampleLine].filter(Boolean).join(' · ');
   if (wrapBookletText(context, WIDTH, 6).length > 1) deferred.unshift({ title: t('bookletNotes'), body: context });
   // Preserve long headings in a continuation rather than losing their trailing text.
   for (const page of pages) if (wrapBookletText(page.title, WIDTH, 13).length > 2) deferred.push({ title: t('bookletNotes'), body: page.title });

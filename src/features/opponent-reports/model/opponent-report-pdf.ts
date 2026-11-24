@@ -2,6 +2,7 @@
  * Opponent report PDF (A4, pdfmake): cover, then the enabled sheets in their
  * order. Same wording and colours as the screen (report-view).
  */
+import { opponentReportTitle } from './report-title';
 import { BOOKLET_WIDTH, BOOKLET_HEIGHT, imposeBooklet, type ReportBookletPlan } from './report-booklet';
 import { APP_METADATA } from '@src/lib/constants/app';
 import type { OpponentReport, OpponentReportSheetId } from '@src/domain/opponent-report/types';
@@ -300,7 +301,7 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
 export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInput, t: ViewT): Record<string, unknown> {
   const { report, view } = input;
   const cover = [
-    { text: report.title, style: 'title', margin: [0, 0, 0, 6] },
+    { text: opponentReportTitle(report), style: 'title', margin: [0, 0, 0, 6] },
     { text: t('opponentReportPdfOpponent', { team: report.opponent.name }), fontSize: 11, margin: [0, 0, 0, 3] },
     ...(report.ownTeam ? [{ text: t('opponentReportPdfOwnTeam', { team: report.ownTeam.name }), fontSize: 11, color: COLOR_MUTED }] : []),
     { text: t('opponentReportPdfGenerated', { date: input.generatedOn }), fontSize: 8, color: COLOR_MUTED, margin: [0, 2, 0, 6] },
@@ -401,7 +402,7 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
 }
 
 export function opponentReportFileName(report: OpponentReport, date: string): string {
-  const slug = (report.title || report.opponent.name || 'report')
+  const slug = (opponentReportTitle(report) || 'report')
     .normalize('NFKD')
     .replace(/[^\w\s-]/g, '')
     .trim()

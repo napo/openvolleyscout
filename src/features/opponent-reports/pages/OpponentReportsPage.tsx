@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { opponentReportTitle } from '../model/report-title';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
@@ -56,7 +57,7 @@ export function OpponentReportsPage() {
   const createReport = async (opponent?: OpponentReportTeamRef) => {
     const report = createOpponentReport({
       id: newReportId(),
-      title: opponent ? t('opponentReportDefaultTitle', { team: opponent.name }) : t('opponentReportUntitled'),
+      title: '',
       opponent: opponent ?? { name: '' },
     });
     await opponentReportRepository.save(report);
@@ -77,12 +78,12 @@ export function OpponentReportsPage() {
   }, []);
 
   const duplicate = async (report: OpponentReport) => {
-    await opponentReportRepository.save(duplicateOpponentReport(report, newReportId(), t('opponentReportCopyTitle', { title: report.title })));
+    await opponentReportRepository.save(duplicateOpponentReport(report, newReportId(), t('opponentReportCopyTitle', { title: opponentReportTitle(report) })));
     load();
   };
 
   const remove = async (report: OpponentReport) => {
-    if (!(await confirmAction(t('opponentReportDeleteConfirm', { title: report.title })))) return;
+    if (!(await confirmAction(t('opponentReportDeleteConfirm', { title: opponentReportTitle(report) })))) return;
     await opponentReportRepository.delete(report.id);
     load();
   };
@@ -129,10 +130,10 @@ export function OpponentReportsPage() {
             {
               key: 'title',
               label: t('tableColTitle'),
-              text: (report) => report.title || t('opponentReportUntitled'),
+              text: (report) => opponentReportTitle(report) || t('opponentReportUntitled'),
               render: (report) => (
                 <button type="button" className="teams-library__name" onClick={() => navigate(`/opponent-reports/${report.id}`)}>
-                  {report.title || t('opponentReportUntitled')}
+                  {opponentReportTitle(report) || t('opponentReportUntitled')}
                 </button>
               ),
             },

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from '@src/i18n';
+import { SplitToggle } from './SplitToggle';
 import { getEvaluationColor, getEvaluationInk, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
 import type { SkillEvaluation } from '@src/domain/common/enums';
 import type {
@@ -282,6 +283,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
 
                   <div className={`setter-views-editor__group${view.serveTypes?.length ? ' is-filtered' : ''}`}>
                     <span className="setter-views-editor__group-title">{t('setterViewServeTypeLabel')}</span>
+                    <SplitToggle separate={view.splitBy === 'serveTypes'} onChange={(separate) => patchView(index, { splitBy: separate ? 'serveTypes' : undefined })} />
                     <div className="setter-views-editor__chips">
                       <button
                         type="button"
@@ -310,6 +312,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
 
                   <div className={`setter-views-editor__group${view.serveStartZones?.length ? ' is-filtered' : ''}`}>
                     <span className="setter-views-editor__group-title">{t('setterViewServeStartLabel')}</span>
+                    <SplitToggle separate={view.splitBy === 'serveStartZones'} onChange={(separate) => patchView(index, { splitBy: separate ? 'serveStartZones' : undefined })} />
                     <div className="setter-views-editor__chips">
                       <button
                         type="button"
@@ -338,6 +341,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
 
                   <div className={`setter-views-editor__group${view.receptionZones?.length ? ' is-filtered' : ''}`}>
                     <span className="setter-views-editor__group-title">{t('setterViewReceptionZonesLabel')}</span>
+                    <SplitToggle separate={view.splitBy === 'receptionZones'} onChange={(separate) => patchView(index, { splitBy: separate ? 'receptionZones' : undefined })} />
                     <div className="setter-views-editor__chips">
                       <button
                         type="button"

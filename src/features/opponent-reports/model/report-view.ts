@@ -2,6 +2,7 @@
  * What the report sheets show, already worded and coloured, shared by the
  * screen and the PDF so both say exactly the same thing. Pure given `t`.
  */
+import { placeSvgLabels } from '@src/lib/utils/svg-label-placement';
 import { attackerViewFilterLabel } from './attacker-view-label';
 import { reportPriorities, priorityText } from './report-priorities';
 import type { OpponentReport } from '@src/domain/opponent-report/types';
@@ -389,28 +390,39 @@ export function buildAttackerCourtSvg(
     const fill = preferred?.attackZone === attackZone ? '#dc2626' : '#2563eb';
     return `<circle data-attack-origin="${attackZone}" cx="${cone.originX}" cy="${cone.originY}" data-attack-zone="${attackZone}" r="3.2" fill="${fill}" stroke="#ffffff" stroke-width="1"/>`;
   });
+  const scoringTarget = scoring
+    ? { x: average(scoring.kills.map(({ target }) => target.x)), y: average(scoring.kills.map(({ target }) => target.y)) }
+    : null;
+  const summaryText = scoring
+    ? legend.scoring.replace('{{points}}', String(scoring.kills.length)).replace('{{share}}', String(Math.round(scoring.killShare * 100)))
+    : '';
   // Cones under 5% stay drawn but unlabelled, so mixed-zone cards stay readable.
-  const fanLabels = cones.filter((cone) => cone.preference >= 0.05).map((cone) => {
+  const coneLabels = cones.filter((cone) => cone.preference >= 0.05).map((cone) => {
     const middle = perimeterPoint(((cone.cone + 0.5) / ATTACK_CONES) * perimeter);
-    // Inside the court, a little in from the cone's base; cones of different zones on the same
-    // part of the perimeter stack towards the origin.
-    const stack = cones.filter((other) => other.cone === cone.cone && other.preference >= 0.05).indexOf(cone);
-    const pull = 0.1 + stack * 0.09;
-    const x = Math.max(left + 14, Math.min(right - 14, middle.x + (cone.originX - middle.x) * pull));
-    const y = Math.max(courtTop + 10, Math.min(courtBottom - 4, middle.y + (cone.originY - middle.y) * pull));
+    // Inside the court, a little in from the cone's base.
+    const x = Math.max(left + 14, Math.min(right - 14, middle.x + (cone.originX - middle.x) * 0.1));
+    const y = Math.max(courtTop + 10, Math.min(courtBottom - 4, middle.y + (cone.originY - middle.y) * 0.1));
     const zoneLabel = showZone ? `Z${cone.attackZone} ` : '';
-    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" font-size="10" font-weight="bold" fill="#1f2937" stroke="#ffffff" stroke-width="2" paint-order="stroke">${zoneLabel}${Math.round(cone.preference * 100)}%</text>`;
+    return { x, y, fontSize: 10, text: `${zoneLabel}${Math.round(cone.preference * 100)}%`, summary: false };
   });
+  // The point summary first, then the cone labels: none overlaps another.
+  const placedLabels = placeSvgLabels([
+    ...(scoringTarget ? [{ x: Math.max(left + 50, Math.min(right - 50, scoringTarget.x)), y: scoringTarget.y - 5, fontSize: 10, text: summaryText, summary: true }] : []),
+    ...coneLabels,
+  ], { left, right, top: courtTop, bottom: courtBottom });
+  const placedSummary = placedLabels.find((label) => label.summary);
+  const fanLabels = placedLabels.filter((label) => !label.summary).map((label) =>
+    `<text x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}" text-anchor="middle" font-size="10" font-weight="bold" fill="#1f2937" stroke="#ffffff" stroke-width="2" paint-order="stroke">${escapeXml(label.text)}</text>`);
   const arrow = scoring
     ? (() => {
       const strokeWidth = 1.6 + scoring.killShare * 1.8;
       const markerSize = 5 + scoring.killShare * 2.5;
-      const targetX = average(scoring.kills.map(({ target }) => target.x));
-      const targetY = average(scoring.kills.map(({ target }) => target.y));
+      const targetX = scoringTarget!.x;
+      const targetY = scoringTarget!.y;
       return [
         `<defs><marker id="attack-arrow" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${markerSize - 1}" refY="${markerSize / 2}" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L${markerSize},${markerSize / 2} L0,${markerSize} z" fill="#111827"/></marker></defs>`,
         `<line data-scoring-direction="${scoring.cone + 1}" data-attack-zone="${scoring.attackZone}" x1="${scoring.originX}" y1="${scoring.originY}" x2="${targetX.toFixed(1)}" y2="${targetY.toFixed(1)}" stroke="#111827" stroke-width="${strokeWidth}" marker-end="url(#attack-arrow)"/>`,
-        `<text data-scoring-summary="true" x="${Math.max(left + 50, Math.min(right - 50, targetX)).toFixed(1)}" text-anchor="middle" y="${(targetY - 5).toFixed(1)}" font-size="10" font-weight="bold" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">${escapeXml(legend.scoring.replace('{{points}}', String(scoring.kills.length)).replace('{{share}}', String(Math.round(scoring.killShare * 100))))}</text>`,
+        `<text data-scoring-summary="true" x="${placedSummary!.x.toFixed(1)}" text-anchor="middle" y="${placedSummary!.y.toFixed(1)}" font-size="10" font-weight="bold" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">${escapeXml(summaryText)}</text>`,
       ].join('');
     })()
     : '';
@@ -620,7 +632,8 @@ function customAttackerViewsView(
     label: entry.config.label === t('opponentReportAttackAll')
       ? attackerViewFilterLabel(entry.config, t) || t('opponentReportAttackAll')
       : entry.config.label || attackerViewFilterLabel(entry.config, t) || t('opponentReportAttackAll'),
-    attackers: entry.attackers.map((attacker) => {
+    // Attackers without attacks in this view (e.g. a zone they never attack from) get no card.
+    attackers: entry.attackers.filter((attacker) => attacker.attacks > 0).map((attacker) => {
       const filterLabel = attackerViewFilterLabel(entry.config, t);
       const defaultHighlights = !filterLabel
         ? defaultAttackers.find((base) => base.player.key === attacker.player.key)?.highlights
@@ -659,7 +672,7 @@ function customAttackerViewsView(
         videoLink: videoLinks.get(attacker.player.key),
       };
     }),
-  }));
+  })).filter((entry) => entry.attackers.length > 0);
 }
 
 const SETTER_ATTACK_ZONE_LAYOUT: ReadonlyArray<{ zone: number; x: number; y: number }> = [
@@ -851,7 +864,8 @@ function setterDistributionView(
     const positiveByRot = new Map(rotations.map((r) => [r.rotation, r.positive]));
     const bands = custom && custom.views.length > 0
       ? (hasAnySetterChoice
-        ? custom.views.map((customView) => buildSetterBandEntry(
+        // A view (or a "draw separately" part) without any set is not drawn.
+        ? custom.views.filter((customView) => customView.rotations.some((r) => r.band.attempts > 0)).map((customView) => buildSetterBandEntry(
           customView.config.id,
           customView.config.label.trim() || customView.config.id,
           customView.rotations.map((r) => ({

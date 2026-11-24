@@ -1,4 +1,5 @@
 import { nextChartRotation } from '@src/lib/utils/chart-rotation';
+import { expandAttackerViews, expandSetterViews } from '../model/split-views';
 import { BookletSettings } from './BookletSettings';
 import type { ReportBookletPlan, ReportStaffNote } from '../model/report-booklet';
 import { moveReportComponent, reportComponentOrder } from '../model/report-components';
@@ -419,7 +420,7 @@ export function TacticalBoardSheet({
               receivers={view.reception.individual?.map((entry) => entry.player) ?? []}
               onChange={(nextViews) => update((current) => {
                 const targetKeys = nextViews && nextViews.length > 0
-                  ? nextViews.map((v) => v.id)
+                  ? expandSetterViews(nextViews, () => '').map((v) => v.id)
                   : ['positive', 'negative'];
                 const setterPlayerKeys = view.setter.groups.map((g) => g.player.key);
                 const nextSetterPieceIds = setterPlayerKeys.flatMap((playerKey) =>
@@ -445,7 +446,7 @@ export function TacticalBoardSheet({
               onChange={(nextViews) => update((current) => {
                 const attackerPlayerKeys = view.attackers.map((a) => a.player.key);
                 const nextAttackerPieceIds = nextViews && nextViews.length > 0
-                  ? nextViews.flatMap((v) => attackerPlayerKeys.map((playerKey) => `attacker:${playerKey}:${v.id}`))
+                  ? expandAttackerViews(nextViews, () => '').flatMap((v) => attackerPlayerKeys.map((playerKey) => `attacker:${playerKey}:${v.id}`))
                   : attackerPlayerKeys.map((playerKey) => `attacker:${playerKey}`);
                 let nextBoardPieceIds = current.boardPieceIds;
                 if (nextBoardPieceIds) {
