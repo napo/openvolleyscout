@@ -11,6 +11,7 @@ import { buildSharedPlaylistUrl, decodeSharedPlaylist, extractSharedPlaylistPayl
 import { formatVideoSeconds } from './video-sync';
 import { decodePlaylistFile, isLocalPlaylist, MAX_PLAYLIST_FILE_BYTES, PLAYLIST_FILE_EXTENSION, type PlaylistDocument } from './playlist-file';
 import { LocalPlaylistVideo } from './LocalPlaylistVideo';
+import { toPlayableVideoUrl } from './google-drive-video';
 import './shared-playlist.css';
 
 const YOUTUBE_STATE_ENDED = 0;
@@ -161,7 +162,9 @@ export function SharedPlaylistPage() {
   const playerRef = useRef<YouTubePlayerLike | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const [localReady, setLocalReady] = useState(false);
-  const remoteClipUrl = youtubePlaylist?.clips.find((c) => Boolean(c.videoUrl))?.videoUrl;
+  const sharedVideoUrl = youtubePlaylist?.clips.find((c) => Boolean(c.videoUrl))?.videoUrl;
+  // Google Drive links play through the Drive API, which allows seeking to each clip.
+  const remoteClipUrl = sharedVideoUrl ? toPlayableVideoUrl(sharedVideoUrl) : undefined;
   const usesHtmlVideo = Boolean(localPlaylist || remoteClipUrl);
   const readyToPlay = !localPlaylist || localReady;
   const clipRef = useRef(-1);
@@ -457,7 +460,7 @@ export function SharedPlaylistPage() {
               </button>
               <span>{activeAction >= 0 ? `${activeAction + 1} / ${actions.length}` : ''}</span>
               {remoteClipUrl ? (
-                <ExternalLink href={getDownloadableRemoteUrl(remoteClipUrl)} className="btn-secondary">
+                <ExternalLink href={getDownloadableRemoteUrl(sharedVideoUrl ?? remoteClipUrl)} className="btn-secondary">
                   {t('videoDownloadOriginal')}
                 </ExternalLink>
               ) : null}

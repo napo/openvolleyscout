@@ -9,6 +9,7 @@ import { convertFileSrc, isTauri } from '@tauri-apps/api/core';
 import type { MatchVideoSource } from '@src/domain/video/types';
 import { loadYouTubeIframeApi, type YouTubePlayerLike } from './youtube';
 import { YouTubeFramePlayer } from './YouTubeFramePlayer';
+import { toPlayableVideoUrl } from './google-drive-video';
 
 export interface VideoPlayerHandle {
   seekTo(seconds: number, autoplay: boolean): void;
@@ -146,7 +147,7 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
         ? source.recordingPath
         : null;
     const assetUrl = source.kind === 'url'
-      ? source.url
+      ? toPlayableVideoUrl(source.url)
       : rawFilePath
         ? resolveLocalVideoUrl(rawFilePath, fileObjectUrl)
         : null;

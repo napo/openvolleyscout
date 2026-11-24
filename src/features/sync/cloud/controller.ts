@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react';
 import type { CloudAuth } from './auth';
 import { type CloudSyncArchive, META, forgetSync, synchronise } from './engine';
-import { CloudFileError } from './file';
+import { CloudFileError } from './file-error';
 import { subscribeDataChanges } from './local-change-bus';
 import { syncFetch } from './platform';
 import { currentDevice, readTakeoverMinutes } from './device';

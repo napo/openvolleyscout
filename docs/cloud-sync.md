@@ -50,6 +50,17 @@ VITE_ONEDRIVE_CLIENT_ID=...
    - Add SPA redirect URIs `<web-app-origin>/oauth-callback.html` and `http://localhost:5173/oauth-callback.html`.
    - Add Mobile and desktop redirect URI `http://localhost` (Microsoft ignores the port). Desktop token requests omit the `Origin` header via `tauri-plugin-http`'s `unsafe-headers` feature.
 
+## Google Drive Video Links (API keys)
+
+Match videos linked from Google Drive (shared as "Anyone with the link") play in the app's own player through the Drive API, so seeking and jumping to clips work (also on the shared clip page). Without a key the app falls back to Drive's download link, which often fails for large files. The key is added only when the video plays; saved matches and shared links never contain it.
+
+```
+VITE_GOOGLE_DRIVE_API_KEY_WEB=...   # web app (deploy.yml)
+VITE_GOOGLE_DRIVE_API_KEY_APP=...   # desktop and Android (release-native.yml, build-android-apk.yml); also used by `npm run dev`
+```
+
+Both keys end up in the app, so they are public by design. Create them in a Google Cloud project **without billing**, with the Drive API enabled, and restrict both to the **Google Drive API** only. Restrict the web key to the site (`https://scout.volleyserve.it/*`); the app key cannot have an application restriction (the desktop and Android players send no site). The worst misuse is someone spending the project's daily quota; then regenerate the key and update the repository variable.
+
 ## Desktop Permissions (Tauri)
 
 Installed desktop builds route cloud HTTP calls through `tauri-plugin-http`, scoped strictly to the required provider hosts in:

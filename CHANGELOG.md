@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.42.2 - 2026-11-24
+
+### Changed
+- Google Drive match videos shared with "Anyone with the link" now play in the app's own player, in Video analysis, while scouting and on the clip page you share with your athletes, so you can jump straight to every clip like with Dropbox. Videos shared only with specific people still cannot be played: share them with anyone who has the link.
+- The web app opens faster: it downloads about 13% less before the first screen. The part that reads and writes the cloud synchronisation file is now loaded only when a synchronisation starts.
+- Live scouting does less work after each touch, so the court stays more responsive on tablets during long matches. Nothing changes in how matches are saved.
+
+### Fixed
+- The Scouting screen went blank if the open match stopped being ready to scout (for example when its date or start time was removed) or was closed while the screen was open. It now shows what is missing, or the "set up a match" screen, and goes back to scouting as soon as the match is ready again.
+
 ## 0.42.1 - 2026-11-23
 
 ### Added

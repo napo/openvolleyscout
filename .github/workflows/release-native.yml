@@ -240,6 +240,7 @@ jobs:
           VITE_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ secrets.VITE_GOOGLE_DESKTOP_CLIENT_SECRET }}
           VITE_DROPBOX_APP_KEY: ${{ vars.VITE_DROPBOX_APP_KEY }}
           VITE_ONEDRIVE_CLIENT_ID: ${{ vars.VITE_ONEDRIVE_CLIENT_ID }}
+          VITE_GOOGLE_DRIVE_API_KEY_APP: ${{ vars.VITE_GOOGLE_DRIVE_API_KEY_APP || secrets.VITE_GOOGLE_DRIVE_API_KEY_APP }}
         run: npm run build
 
       - name: Build Tauri app (Release Tag)
@@ -253,6 +254,7 @@ jobs:
           VITE_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ secrets.VITE_GOOGLE_DESKTOP_CLIENT_SECRET }}
           VITE_DROPBOX_APP_KEY: ${{ vars.VITE_DROPBOX_APP_KEY }}
           VITE_ONEDRIVE_CLIENT_ID: ${{ vars.VITE_ONEDRIVE_CLIENT_ID }}
+          VITE_GOOGLE_DRIVE_API_KEY_APP: ${{ vars.VITE_GOOGLE_DRIVE_API_KEY_APP || secrets.VITE_GOOGLE_DRIVE_API_KEY_APP }}
           # Unsigned .app bundles get flagged by Gatekeeper as "damaged" (not
           # just "unidentified developer") once macOS applies the
           # com.apple.quarantine attribute on download. Ad-hoc signing (no
