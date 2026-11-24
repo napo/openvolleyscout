@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.45.0 - 2026-11-24
+
+### Added
+- Short links for sharing now also work with Dropbox: when a shared link to stats, a tactical report or a video playlist is too long for chat apps and Dropbox is connected in Settings, the app shares a short link instead. The data is kept in a small file in the app's Dropbox folder, with a public link. If you connected Dropbox before this version, disconnect it and connect it again in Settings to allow sharing; until then the long link is shared as before.
+
 ## 0.44.0 - 2026-11-24
 
 ### Added
