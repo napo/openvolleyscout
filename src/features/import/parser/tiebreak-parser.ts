@@ -814,6 +814,7 @@ export function parseTiebreakFromDb(
 
     let currentScore = { home: 0, away: 0 };
     let lastAzioneEndEventId = 0;
+    let lastPointRow: Extract<ParsedDataVolleyScoutRow, { type: 'point' }> | null = null;
 
     // azione.team_won is not populated by every Tiebreak Tech export (observed
     // blank across an entire real match file), so the point winner is derived
@@ -881,9 +882,17 @@ export function parseTiebreakFromDb(
       // skip emitting a point for those instead of misattributing it.
       if (!pointWinner) continue;
 
+      // The file also counts points with no azione (awarded by the referee, faults, rallies
+      // not scouted): they show up as a jump in the score stamped on the events. Write the
+      // official score on the point row; the mapper adds the missing points as rallies
+      // without actions, as it does for DataVolley files.
+      currentScore = {
+        home: Math.max(currentScore.home, scoreBefore.home),
+        away: Math.max(currentScore.away, scoreBefore.away),
+      };
       currentScore[pointWinner] += 1;
 
-      const pointRow: ParsedDataVolleyScoutRow = {
+      const pointRow: Extract<ParsedDataVolleyScoutRow, { type: 'point' }> = {
         type: 'point',
         line: azione.endEvent,
         scoutSequence: ++globalSequence,
@@ -903,6 +912,22 @@ export function parseTiebreakFromDb(
         videoTime: undefined,
       };
       scoutRows.push(pointRow);
+      lastPointRow = pointRow;
+    }
+
+    // Points counted after the last scouted rally (or in its place) only appear in the set
+    // total: carry them on the last point row, so the set ends with its official score.
+    if (
+      lastPointRow
+      && homeSetScore >= currentScore.home
+      && awaySetScore >= currentScore.away
+      && (homeSetScore !== currentScore.home || awaySetScore !== currentScore.away)
+    ) {
+      currentScore = { home: homeSetScore, away: awaySetScore };
+      const code = `${markerFromSide(lastPointRow.pointWinnerSide)}p${currentScore.home}:${currentScore.away}`;
+      lastPointRow.score = { ...currentScore };
+      lastPointRow.rawLine = code;
+      lastPointRow.rawCode = code;
     }
 
     const trailingNonRally = nonRallyEvents.filter((e) => e.id > lastAzioneEndEventId);
