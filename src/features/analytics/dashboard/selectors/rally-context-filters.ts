@@ -17,9 +17,27 @@ import type { DashboardFilters } from '../filters/dashboard-filters';
  */
 export type RallyContextFilters = Pick<DashboardFilters, 'rotation' | 'scoreRange' | 'server' | 'receiver' | 'attacker'>;
 
+export type ScoreSituation = Exclude<RallyContextFilters['scoreRange'], 'all'>;
+
 /** Points from which a set is in its final phase: 20 in sets to 25, 12 in a deciding set to 15. */
 function finalPhaseThreshold(setTargetPoints: number | undefined): number {
   return setTargetPoints === 15 ? 12 : 20;
+}
+
+/**
+ * Whether a score (before the rally, seen from one team) is in the given situation.
+ * A close finish is from 20 points (12 in a deciding set) with a gap of 2 or less.
+ */
+export function matchesScoreSituation(
+  own: number,
+  opponent: number,
+  setTargetPoints: number | undefined,
+  situation: ScoreSituation,
+): boolean {
+  if (situation === 'tied') return own === opponent;
+  if (situation === 'leading') return own > opponent;
+  if (situation === 'trailing') return own < opponent;
+  return Math.max(own, opponent) >= finalPhaseThreshold(setTargetPoints) && Math.abs(own - opponent) <= 2;
 }
 
 export function hasRallyContextFilter(filters: Partial<RallyContextFilters>): boolean {
@@ -48,11 +66,7 @@ export function rallyMatchesContext(
     if (!rally.scoreBefore) return false;
     const own = rally.scoreBefore[teamSide];
     const opponent = rally.scoreBefore[teamSide === 'home' ? 'away' : 'home'];
-    const matches = scoreRange === 'tied' ? own === opponent
-      : scoreRange === 'leading' ? own > opponent
-        : scoreRange === 'trailing' ? own < opponent
-          : Math.max(own, opponent) >= finalPhaseThreshold(rally.setTargetPoints) && Math.abs(own - opponent) <= 2;
-    if (!matches) return false;
+    if (!matchesScoreSituation(own, opponent, rally.setTargetPoints, scoreRange)) return false;
   }
 
   if ((filters.server ?? 'all') !== 'all' && !playerDid(rally, 'serve', filters.server!)) return false;
