@@ -60,6 +60,8 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
+import { isDefaultVideoChainFilters, VideoChainFiltersSection } from './VideoChainFiltersSection';
+import { annotateVideoEntries, applyVideoChainFilters, createDefaultVideoChainFilters, type VideoChainFilters } from './video-chain-filters';
 import { cycleSyncPointScope, formatVideoSeconds, isAnchorSyncPoint, shiftVideoSync } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
@@ -156,6 +158,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibrationTarget, setCalibrationTarget] = useState<VideoEventEntry | null>(null);
   const [filters, setFilters] = useState<VideoEventFilters>(createDefaultVideoEventFilters);
+  const [chainFilters, setChainFilters] = useState<VideoChainFilters>(createDefaultVideoChainFilters);
   const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [sortKey, setSortKey] = useState<VideoEventSortKey>('time');
   const [selectedTouchId, setSelectedTouchId] = useState<string | null>(null);
@@ -266,8 +269,16 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     [project.events, videoAnalysis.rallyTimingMode],
   );
   const rallyTimingMode = eventIndex.rallyTimingMode;
+  const annotatedEntries = useMemo(() => annotateVideoEntries(eventIndex.entries), [eventIndex.entries]);
+  // Touches kept by the skill chain (null: chain filters not in use).
+  const chainTouchIds = useMemo(() => (
+    isDefaultVideoChainFilters(chainFilters)
+      ? null
+      : new Set(applyVideoChainFilters(annotatedEntries, chainFilters).map((entry) => entry.touchId))
+  ), [annotatedEntries, chainFilters]);
   const filteredEntries = useMemo(() => {
     let base = sortVideoEventEntries(applyVideoEventFilters(eventIndex.entries, filters), sortKey, getPlayerLabel);
+    if (chainTouchIds) base = base.filter((entry) => chainTouchIds.has(entry.touchId));
     if (showStarredOnly) {
       base = base.filter((entry) => videoAnalysis.starredTouchIds.includes(entry.touchId));
     }
@@ -275,7 +286,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
       base = base.filter((entry) => notesByTouchId.has(entry.touchId));
     }
     return base;
-  }, [eventIndex.entries, filters, sortKey, getPlayerLabel, showStarredOnly, showNotesOnly, videoAnalysis.starredTouchIds, notesByTouchId]);
+  }, [eventIndex.entries, filters, chainTouchIds, sortKey, getPlayerLabel, showStarredOnly, showNotesOnly, videoAnalysis.starredTouchIds, notesByTouchId]);
   // Starred actions are exported independently of whatever filters are active.
   const starredEntries = useMemo(
     () => eventIndex.entries.filter((entry) => videoAnalysis.starredTouchIds.includes(entry.touchId)),
@@ -1487,6 +1498,14 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
         />
         <span>{t('videoFilterNotesOnly')}</span>
       </label>
+      <VideoChainFiltersSection
+        value={chainFilters}
+        onChange={setChainFilters}
+        players={[...homeTeam.players, ...awayTeam.players].map((player) => ({
+          value: player.id,
+          label: `${player.jerseyNumber} ${player.lastName || player.firstName || ''}`,
+        }))}
+      />
     </section>
   );
 
@@ -1789,7 +1808,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
                   </button>
                 )}
                 {!isPlayable ? <p className="video-analysis__play-hint">{t('videoPlayNeedsVideo')}</p> : null}
-                {!isDefaultVideoEventFilters(filters) ? (
+                {!isDefaultVideoEventFilters(filters) || !isDefaultVideoChainFilters(chainFilters) ? (
                   <button
                     type="button"
                     className="btn-primary"

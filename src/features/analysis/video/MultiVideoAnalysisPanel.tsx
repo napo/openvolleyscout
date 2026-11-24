@@ -61,6 +61,8 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
+import { isDefaultVideoChainFilters, VideoChainFiltersSection } from './VideoChainFiltersSection';
+import { annotateVideoEntries, applyVideoChainFilters, createDefaultVideoChainFilters, type VideoChainFilters } from './video-chain-filters';
 import { VideoFilterPresets } from './VideoFilterPresets';
 import { FineTuningBar } from './FineTuningBar';
 import { nudgeActionSyncPoint } from './video-fine-tuning';
@@ -235,6 +237,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     ...createDefaultVideoEventFilters(),
     opponentProjectId: 'all',
   }));
+  const [chainFilters, setChainFilters] = useState<VideoChainFilters>(createDefaultVideoChainFilters);
   const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [showNotesOnly, setShowNotesOnly] = useState(false);
   const [noteModalState, setNoteModalState] = useState<{ entry: MultiVideoEventEntry; note?: PointNote } | null>(null);
@@ -336,8 +339,22 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     [playersById],
   );
 
+  // Both teams' touches feed the chain (e.g. opponent serve, then our attack); the list keeps the focus team.
+  const annotatedEntries = useMemo(
+    () => annotateVideoEntries(projectRecords.flatMap(({ project, focusSide, index }) =>
+      index.entries.map((entry) => ({ ...entry, matchKey: project.metadata.id, focusSide })))),
+    [projectRecords],
+  );
+  const chainKeys = useMemo(() => (
+    isDefaultVideoChainFilters(chainFilters)
+      ? null
+      : new Set(applyVideoChainFilters(annotatedEntries, { ...chainFilters, team: 'focus' })
+        .map((entry) => `${entry.matchKey}|${entry.touchId}`))
+  ), [annotatedEntries, chainFilters]);
+
   const filteredEntries = useMemo<MultiVideoEventEntry[]>(() => {
     let entries = allEntries;
+    if (chainKeys) entries = entries.filter((e) => chainKeys.has(`${e.projectId}|${e.touchId}`));
     if (filters.opponentProjectId !== 'all') {
       entries = entries.filter((e) => e.projectId === filters.opponentProjectId);
     }
@@ -356,7 +373,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
       if (showNotesOnly && !(va.notes ?? []).some((n) => n.touchId === entry.touchId)) return false;
       return true;
     });
-  }, [allEntries, filters, sortKey, getPlayerLabel, showStarredOnly, showNotesOnly, getProjectVideoAnalysis]);
+  }, [allEntries, chainKeys, filters, sortKey, getPlayerLabel, showStarredOnly, showNotesOnly, getProjectVideoAnalysis]);
 
   const filteredEntriesRef = useRef(filteredEntries);
   useEffect(() => { filteredEntriesRef.current = filteredEntries; }, [filteredEntries]);
@@ -1202,6 +1219,11 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         />
         <span>{t('videoFilterNotesOnly')}</span>
       </label>
+      <VideoChainFiltersSection
+        value={chainFilters}
+        onChange={setChainFilters}
+        players={[...playersById].map(([id, player]) => ({ value: id, label: `${player.jerseyNumber} ${player.name}` }))}
+      />
     </section>
   );
 
