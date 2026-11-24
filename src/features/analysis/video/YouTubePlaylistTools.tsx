@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { shareBaseUrl } from '@src/lib/utils/share-base-url';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
@@ -6,7 +7,6 @@ import { ExternalLink } from '@src/components/ExternalLink';
 import { saveFile } from '@src/lib/utils/save-file';
 import { buildQrPng, buildQrSvg } from '@src/lib/utils/qr';
 import { todayLocalDate } from '@src/lib/utils/local-date';
-import { APP_METADATA } from '@src/lib/constants/app';
 import { copyText } from '@src/lib/utils/copy-text';
 import { PlaylistFileActions } from './PlaylistFileActions';
 import { SYNC_POINTS_PAGE_SIZE_OPTIONS } from './SyncPointsTable';
@@ -39,13 +39,10 @@ const SHARE_DURATION_LABELS: Record<string, TranslationKey> = {
 };
 
 /**
- * Where shared links point: the web app's own address on the web (also right
- * for forks and after a move), the configured hosting address on desktop,
- * whose webview has no public address of its own.
+ * Where shared links point: the official web app (see shareBaseUrl).
  */
 function getShareBaseUrl(): string {
-  if (isTauri()) return APP_METADATA.urls.webApp;
-  return `${window.location.origin}${window.location.pathname}`;
+  return shareBaseUrl();
 }
 
 const YOUTUBE_NOTICE_DISMISSED_KEY = 'openvolleyscout.youtubeSourceNoticeDismissed';

@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { isTauri } from '@tauri-apps/api/core';
+import { shareBaseUrl } from '@src/lib/utils/share-base-url';
 import { ActionIcon } from '@src/components/ActionIcon';
 import { ExternalLink } from '@src/components/ExternalLink';
-import { APP_METADATA } from '@src/lib/constants/app';
 import { copyText } from '@src/lib/utils/copy-text';
 import { saveFile } from '@src/lib/utils/save-file';
 import { useTranslation } from '@src/i18n';
@@ -17,7 +16,7 @@ export function PlaylistFileActions({ playlist, fileBaseName, expiresInDays }: {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
-  const base = isTauri() ? APP_METADATA.urls.webApp : `${window.location.origin}${window.location.pathname}`;
+  const base = shareBaseUrl();
   const playerUrl = `${base.replace(/\/+$/, '')}/#/player`;
   const instructions = t(isLocalPlaylist(playlist) ? 'videoPlaylistLocalInstructions' : 'videoPlaylistFileInstructions', { url: playerUrl });
   const save = async () => {

@@ -1,4 +1,5 @@
 import { flushSync } from 'react-dom';
+import { shareBaseUrl } from '@src/lib/utils/share-base-url';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { ActionIcon } from '@src/components/ActionIcon';
 import { ExternalLink } from '@src/components/ExternalLink';
@@ -91,9 +92,7 @@ export function TabExportControl({ panelRef, title, matchLabel, tabId = 'generic
         // A local dev server shares links to itself, so the viewer can be tested before
         // publishing; only the desktop app (tauri.localhost) links to the public site.
         && !/^tauri\.localhost$/i.test(window.location.hostname);
-      const baseUrl = isPublicWeb
-        ? `${window.location.origin}${window.location.pathname}`
-        : APP_METADATA.urls.webApp;
+      const baseUrl = shareBaseUrl();
       // The dev server has no static preview page (it is made by the build): link straight
       // to the viewer route there, which every version of the app opens.
       const toUrl = (stats: SharedMatchStats) => (import.meta.env.DEV && isPublicWeb
