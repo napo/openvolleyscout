@@ -25,7 +25,8 @@ const CONTENT = 'https://content.dropboxapi.com/2/files';
 const PATH = `/${SYNC_FILE_NAME}`;
 const VIDEO_FOLDER = '/videos';
 
-export const DROPBOX_SCOPE = 'files.content.read files.content.write files.metadata.read';
+/** `sharing.write`: short shared links (a public link to a small file in the app folder). */
+export const DROPBOX_SCOPE = 'files.content.read files.content.write files.metadata.read sharing.write';
 
 class DropboxError extends StorageError {
   constructor(
@@ -197,5 +198,32 @@ export class DropboxClient implements RemoteStorage, VideoStorage {
 
   async trashVideo(file: CloudVideoFile): Promise<void> {
     await this.rpc('delete_v2', { path: file.id });
+  }
+
+  /**
+   * A small shared-link file in the app folder with a public link. Returns its
+   * reference as `<link id>~<rlkey>~<name>`, enough to download it without
+   * signing in (see `dropboxSharedFileUrl`).
+   */
+  async createSharedFile(text: string, name: string): Promise<string> {
+    const stamp = `${name.replace(/\.json$/, '').replace(/[^\w-]+/g, '-')}-${Math.random().toString(36).slice(2, 8)}`;
+    const path = `/shares/${stamp}.json`;
+    await this.request(`${CONTENT}/upload`, {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Dropbox-API-Arg': JSON.stringify({ path, mode: 'add', autorename: true, mute: true }),
+      },
+      body: new Blob([text]),
+    });
+    const response = await this.request('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, settings: { requested_visibility: 'public', audience: 'public', access: 'viewer' } }),
+    });
+    const { url } = (await response.json()) as { url: string };
+    const parsed = new URL(url);
+    const match = parsed.pathname.match(/^\/scl\/fi\/([\w-]+)\/([\w-]+)\.json$/);
+    const rlkey = parsed.searchParams.get('rlkey');
+    if (!match || !rlkey) throw new StorageError(0, 'unexpected shared link');
+    return `${match[1]}~${rlkey}~${match[2]}`;
   }
 }

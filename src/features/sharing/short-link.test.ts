@@ -31,4 +31,11 @@ describe('short shared links', () => {
     expect(await resolveShortLink('x', '1AbCdEfGhIjK', 'key', reply({ v: 1, hash: route }))).toBeNull();
     expect(await resolveShortLink('g', '1AbCdEfGhIjK', 'key', vi.fn(async () => new Response('', { status: 404 })) as unknown as typeof fetch)).toBeNull();
   });
+
+  it('reads Dropbox short links through the public link, without a key', async () => {
+    const fetchFn = vi.fn(async (_url: string) => new Response(JSON.stringify({ v: 1, hash: route })));
+    expect(await resolveShortLink('d', 'abc123XYZ~rl9key~share-2026-11-24-ab12', '', fetchFn as unknown as typeof fetch)).toBe(route);
+    expect(fetchFn.mock.calls[0][0]).toBe('https://dl.dropboxusercontent.com/scl/fi/abc123XYZ/share-2026-11-24-ab12.json?rlkey=rl9key&dl=1');
+    expect(await resolveShortLink('d', 'not-a-dropbox-id', '', fetchFn as unknown as typeof fetch)).toBeNull();
+  });
 });

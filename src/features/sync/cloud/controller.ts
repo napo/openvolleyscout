@@ -8,6 +8,7 @@
  */
 
 import { DriveClient } from './drive';
+import { DropboxClient } from './dropbox';
 import { useEffect, useState } from 'react';
 import type { CloudAuth } from './auth';
 import { type CloudSyncArchive, META, forgetSync, synchronise } from './engine';
@@ -159,13 +160,18 @@ export class CloudSyncController {
    * reference to it, or null when this cloud cannot share files publicly yet
    * (only Google Drive does), when not connected or when the upload fails.
    */
-  async createShortShare(text: string, name: string): Promise<{ provider: 'g'; id: string } | null> {
-    if (!this.auth || this.current.state === 'off' || this.provider.id !== 'google-drive') return null;
+  async createShortShare(text: string, name: string): Promise<{ provider: 'g' | 'd'; id: string } | null> {
+    if (!this.auth || this.current.state === 'off') return null;
+    if (this.provider.id !== 'google-drive' && this.provider.id !== 'dropbox') return null;
     const token = await this.auth.token(false).catch(() => null);
     if (!token) return null;
     try {
-      const id = await new DriveClient(token, await syncFetch()).createSharedFile(text, name);
-      return { provider: 'g', id };
+      const fetchFn = await syncFetch();
+      // Dropbox accounts connected before 0.45.0 lack the sharing permission: the call fails
+      // and the long link is shared until Dropbox is connected again.
+      return this.provider.id === 'google-drive'
+        ? { provider: 'g', id: await new DriveClient(token, fetchFn).createSharedFile(text, name) }
+        : { provider: 'd', id: await new DropboxClient(token, fetchFn).createSharedFile(text, name) };
     } catch {
       return null;
     }

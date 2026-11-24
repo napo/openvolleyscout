@@ -3,16 +3,16 @@
  * Short shared links. Every shared link of the app carries its data in the
  * address (after #), so big stats or reports make links of tens of thousands
  * of characters that chat apps refuse. When the user's Google Drive is
- * connected, the data part goes into a small file there, readable by anyone
+ * (or Dropbox) is connected, the data part goes into a small file there, readable by anyone
  * with the link, and the shared link carries only that file's id:
- * `<web app>/#/s/g/<file id>`. Without a connected cloud the long link stays.
+ * `<web app>/#/s/g/<file id>` (Google Drive) or `#/s/d/<link id>~<rlkey>~<name>` (Dropbox). Without a connected cloud the long link stays.
  */
 
 /** Longer links than this are shortened when possible (chat apps cut or refuse long links). */
 export const SHORT_LINK_THRESHOLD = 1500;
 
 export interface ShortShareStore {
-  createShortShare(text: string, name: string): Promise<{ provider: 'g'; id: string } | null>;
+  createShortShare(text: string, name: string): Promise<{ provider: 'g' | 'd'; id: string } | null>;
 }
 
 interface StoredLink {
@@ -21,7 +21,7 @@ interface StoredLink {
   hash: string;
 }
 
-export function shortLinkRoute(provider: 'g', id: string): string {
+export function shortLinkRoute(provider: 'g' | 'd', id: string): string {
   return `#/s/${provider}/${id}`;
 }
 
@@ -50,9 +50,10 @@ export async function resolveShortLink(
   apiKey: string,
   fetchFn: typeof fetch = (input, init) => fetch(input, init),
 ): Promise<string | null> {
-  if (provider !== 'g' || !/^[\w-]{10,}$/.test(id) || !apiKey) return null;
+  const url = sharedFileUrl(provider, id, apiKey);
+  if (!url) return null;
   try {
-    const response = await fetchFn(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&key=${encodeURIComponent(apiKey)}`);
+    const response = await fetchFn(url);
     if (!response.ok) return null;
     const stored = (await response.json()) as Partial<StoredLink>;
     // Only routes of this app: never an address elsewhere.
@@ -67,4 +68,18 @@ export async function shortenWithCloud(longUrl: string, route: string, baseUrl: 
   if (longUrl.length <= SHORT_LINK_THRESHOLD) return longUrl;
   const { cloudSyncController } = await import('@src/features/sync/cloud/archive-adapter');
   return shortenShareLink(longUrl, route, baseUrl, cloudSyncController);
+}
+
+/** Where anyone can read a shared-link file: Drive with the app's API key, Dropbox through its public link. */
+function sharedFileUrl(provider: string, id: string, apiKey: string): string | null {
+  if (provider === 'g') {
+    return /^[\w-]{10,}$/.test(id) && apiKey
+      ? `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&key=${encodeURIComponent(apiKey)}`
+      : null;
+  }
+  if (provider === 'd') {
+    const match = id.match(/^([\w-]+)~([\w-]+)~([\w-]+)$/);
+    return match ? `https://dl.dropboxusercontent.com/scl/fi/${match[1]}/${match[3]}.json?rlkey=${match[2]}&dl=1` : null;
+  }
+  return null;
 }
