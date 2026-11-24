@@ -1654,6 +1654,8 @@ export const sl = {
   opponentReportDelete: "Izbriši",
   opponentReportNotFound: "Poročila ni mogoče najti.",
   opponentReportTitle: "Naslov poročila",
+  shortLinkOpening: "Odpiranje deljene povezave…",
+  shortLinkUnavailable: "Ta povezava ni več na voljo: morda je bila odstranjena iz oblaka osebe, ki jo je delila.",
   reportViewSplitLabel: "Kako narisati ta filter",
   reportViewDrawTogether: "Nariši skupaj",
   reportViewDrawSeparately: "Nariši ločeno",

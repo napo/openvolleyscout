@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { shortenWithCloud } from '@src/features/sharing/short-link';
 import { shareBaseUrl } from '@src/lib/utils/share-base-url';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { useTranslation, type TranslationKey } from '@src/i18n';
@@ -219,19 +220,22 @@ export function YouTubePlaylistActions({
     const expiresAt = sharedPlaylistExpiryAfter(shareDays);
     const playlist = { ...selection, expiresAt };
     const baseUrl = getShareBaseUrl();
-    const urls = buildMessagePlaylistUrls(baseUrl, playlist);
-    const statuses = urls.map((url) => {
+    const longUrls = buildMessagePlaylistUrls(baseUrl, playlist);
+    const statuses = longUrls.map((url) => {
       const payload = extractSharedPlaylistPayload(url);
       const part = payload ? decodeSharedPlaylist(payload) : null;
       return part ? getSharedPlaylistLinkStatus(part, url) : 'too_long';
     });
     setQrSaveError(null);
-    if (!urls.length || statuses.includes('too_long')) {
+    if (!longUrls.length || statuses.includes('too_long')) {
       setShareUrls([]);
       setShareStatus('too_long');
       return;
     }
-    setShareStatus(statuses.includes('long') ? 'long' : 'ok');
+    // Too long for chat apps: short links through the connected Google Drive, when there is one.
+    const shortened = await Promise.all(longUrls.map((url) => shortenWithCloud(url, url.slice(url.indexOf('#')), baseUrl)));
+    const urls = shortened;
+    setShareStatus(shortened.every((url, index) => url !== longUrls[index]) ? 'ok' : statuses.includes('long') ? 'long' : 'ok');
     setShareExpiresAt(expiresAt);
     const message = urls.length < 2
       ? urls[0]

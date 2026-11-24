@@ -1656,6 +1656,8 @@ export const ro = {
   opponentReportDelete: "Șterge",
   opponentReportNotFound: "Raport negăsit.",
   opponentReportTitle: "Titlul raportului",
+  shortLinkOpening: "Se deschide linkul partajat…",
+  shortLinkUnavailable: "Acest link nu mai este disponibil: poate a fost șters din cloudul persoanei care l-a partajat.",
   reportViewSplitLabel: "Cum se desenează acest filtru",
   reportViewDrawTogether: "Desenează împreună",
   reportViewDrawSeparately: "Desenează separat",

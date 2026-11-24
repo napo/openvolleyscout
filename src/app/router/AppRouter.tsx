@@ -28,6 +28,7 @@ const videoPopoutPage = lazyPage(() => import('../../features/scouting/live/vide
 // Shared YouTube playlist links: standalone, everything it plays comes from the link.
 const sharedTacticalReportPage = lazyPage(() => import('../../features/opponent-reports/pages/SharedTacticalReportPage'), 'SharedTacticalReportPage');
 const sharedPlaylistPage = lazyPage(() => import('../../features/analysis/video/SharedPlaylistPage'), 'SharedPlaylistPage');
+const shortLinkPage = lazyPage(() => import('../../features/sharing/ShortLinkPage'), 'ShortLinkPage');
 const sharedStatsViewerPage = lazyPage(() => import('../../features/analytics/export/SharedStatsViewerPage'), 'SharedStatsViewerPage');
 
 const DevLiveScoutingSmokePage = import.meta.env.DEV
@@ -74,6 +75,7 @@ export function AppRouter() {
         <Route path="/tactical-report/:payload" element={sharedTacticalReportPage} />
         <Route path="/stats-viewer" element={sharedStatsViewerPage} />
         <Route path="/stats-viewer/:payload" element={sharedStatsViewerPage} />
+        <Route path="/s/:provider/:id" element={shortLinkPage} />
         <Route path="/player" element={sharedPlaylistPage} />
         <Route path="/player/:payload" element={sharedPlaylistPage} />
         <Route path="*" element={<Navigate to="/" replace />} />

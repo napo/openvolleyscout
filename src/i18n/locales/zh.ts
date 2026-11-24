@@ -1654,6 +1654,8 @@ export const zh = {
   opponentReportDelete: "删除",
   opponentReportNotFound: "未找到报告。",
   opponentReportTitle: "报告标题",
+  shortLinkOpening: "正在打开共享链接…",
+  shortLinkUnavailable: "此链接已不可用:可能已从分享者的云端删除。",
   reportViewSplitLabel: "此筛选的绘制方式",
   reportViewDrawTogether: "合并绘制",
   reportViewDrawSeparately: "分开绘制",

@@ -1694,6 +1694,8 @@ export const it = {
   opponentReportDelete: "Elimina",
   opponentReportNotFound: "Report non trovato.",
   opponentReportTitle: "Titolo del report",
+  shortLinkOpening: "Apertura del link condiviso…",
+  shortLinkUnavailable: "Questo link non è più disponibile: potrebbe essere stato rimosso dal cloud di chi lo ha condiviso.",
   reportViewSplitLabel: "Come disegnare questo filtro",
   reportViewDrawTogether: "Disegna unite",
   reportViewDrawSeparately: "Disegna separate",

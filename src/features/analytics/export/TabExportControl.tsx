@@ -1,4 +1,5 @@
 import { flushSync } from 'react-dom';
+import { shortenWithCloud } from '@src/features/sharing/short-link';
 import { shareBaseUrl } from '@src/lib/utils/share-base-url';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { ActionIcon } from '@src/components/ActionIcon';
@@ -134,6 +135,9 @@ export function TabExportControl({ panelRef, title, matchLabel, tabId = 'generic
       } else {
         url = await blocksUrl();
       }
+      // Too long for chat apps: a short link through the connected Google Drive, when there is one.
+      const payload = url.slice(url.indexOf('#') + 1).replace(/^\/stats-viewer\//, '');
+      url = await shortenWithCloud(url, `#/stats-viewer/${payload}`, baseUrl);
       setShareUrl(url);
     } catch (cause) {
       console.error('Tab share link failed:', cause);

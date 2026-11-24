@@ -1656,6 +1656,8 @@ export const ar = {
   opponentReportDelete: "حذف",
   opponentReportNotFound: "التقرير غير موجود.",
   opponentReportTitle: "عنوان التقرير",
+  shortLinkOpening: "جارٍ فتح الرابط المشترك…",
+  shortLinkUnavailable: "هذا الرابط لم يعد متاحًا: ربما أُزيل من سحابة الشخص الذي شاركه.",
   reportViewSplitLabel: "طريقة رسم هذا المرشح",
   reportViewDrawTogether: "ارسمها معًا",
   reportViewDrawSeparately: "ارسمها منفصلة",

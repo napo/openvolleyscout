@@ -228,4 +228,36 @@ export class DriveClient implements RemoteStorage, VideoStorage {
   trashVideo(file: CloudVideoFile): Promise<void> {
     return this.trash(file.id);
   }
+
+  /**
+   * A small shared-link file in the app folder, readable by anyone with its id
+   * (the short link carries only that id). Returns the file id.
+   */
+  async createSharedFile(text: string, name: string): Promise<string> {
+    const metadata = {
+      name,
+      parents: [await this.folder()],
+      mimeType: 'application/json',
+      appProperties: { [PROPERTY]: 'share' },
+    };
+    const boundary = `openvolleyscout${Math.random().toString(36).slice(2)}`;
+    const body = new Blob([
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`,
+      `--${boundary}\r\nContent-Type: application/json\r\n\r\n`,
+      text,
+      `\r\n--${boundary}--`,
+    ]);
+    const response = await this.request(`${UPLOAD}?uploadType=multipart&fields=id`, {
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body,
+    });
+    const { id } = (await response.json()) as { id: string };
+    await this.request(`${API}/${id}/permissions?fields=id`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' }),
+    });
+    return id;
+  }
 }

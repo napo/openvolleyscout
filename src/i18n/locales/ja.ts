@@ -1652,6 +1652,8 @@ export const ja = {
   opponentReportDelete: "削除",
   opponentReportNotFound: "レポートが見つかりません。",
   opponentReportTitle: "レポートのタイトル",
+  shortLinkOpening: "共有リンクを開いています…",
+  shortLinkUnavailable: "このリンクは利用できなくなりました。共有した人のクラウドから削除された可能性があります。",
   reportViewSplitLabel: "このフィルターの描き方",
   reportViewDrawTogether: "まとめて描く",
   reportViewDrawSeparately: "分けて描く",

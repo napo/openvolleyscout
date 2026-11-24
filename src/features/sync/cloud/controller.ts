@@ -7,6 +7,7 @@
  * while visible, and when the browser comes back online.
  */
 
+import { DriveClient } from './drive';
 import { useEffect, useState } from 'react';
 import type { CloudAuth } from './auth';
 import { type CloudSyncArchive, META, forgetSync, synchronise } from './engine';
@@ -151,6 +152,23 @@ export class CloudSyncController {
     const token = await this.auth.token(false).catch(() => null);
     if (!token) return null;
     return this.provider.videos(token, await syncFetch());
+  }
+
+  /**
+   * Stores a shared-link payload in the connected cloud and returns a short
+   * reference to it, or null when this cloud cannot share files publicly yet
+   * (only Google Drive does), when not connected or when the upload fails.
+   */
+  async createShortShare(text: string, name: string): Promise<{ provider: 'g'; id: string } | null> {
+    if (!this.auth || this.current.state === 'off' || this.provider.id !== 'google-drive') return null;
+    const token = await this.auth.token(false).catch(() => null);
+    if (!token) return null;
+    try {
+      const id = await new DriveClient(token, await syncFetch()).createSharedFile(text, name);
+      return { provider: 'g', id };
+    } catch {
+      return null;
+    }
   }
 
   async disconnect(deleteRemote = false): Promise<void> {

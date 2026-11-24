@@ -3,6 +3,7 @@ import { ExternalLink } from '@src/components/ExternalLink';
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { APP_METADATA } from '@src/lib/constants/app';
+import { shortenWithCloud } from '@src/features/sharing/short-link';
 import { sharedPlaylistExpiryAfter } from '@src/features/analysis/video/youtube-share-link';
 import { buildSharedReportUrl, type SharedTacticalReport } from '../model/report-share-link';
 export function ReportShareControl({ getSvgs, title, links = [] }: {
@@ -23,7 +24,9 @@ export function ReportShareControl({ getSvgs, title, links = [] }: {
             const pages = await getSvgs();
             if (!pages.length)
                 throw new Error('Empty report');
-            setUrl(buildSharedReportUrl(APP_METADATA.urls.webApp, { title, pages, links, expiresAt: sharedPlaylistExpiryAfter(days)! }));
+            const longUrl = buildSharedReportUrl(APP_METADATA.urls.webApp, { title, pages, links, expiresAt: sharedPlaylistExpiryAfter(days)! });
+            // Too long for chat apps: a short link through the connected Google Drive, when there is one.
+            setUrl(await shortenWithCloud(longUrl, longUrl.slice(longUrl.indexOf('#')), APP_METADATA.urls.webApp));
         }
         catch {
             setError(true);

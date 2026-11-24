@@ -1650,6 +1650,8 @@ export const tr = {
   opponentReportDelete: "Sil",
   opponentReportNotFound: "Rapor bulunamadı.",
   opponentReportTitle: "Rapor başlığı",
+  shortLinkOpening: "Paylaşılan bağlantı açılıyor…",
+  shortLinkUnavailable: "Bu bağlantı artık kullanılamıyor: paylaşan kişinin bulutundan kaldırılmış olabilir.",
   reportViewSplitLabel: "Bu filtre nasıl çizilsin",
   reportViewDrawTogether: "Birlikte çiz",
   reportViewDrawSeparately: "Ayrı çiz",
