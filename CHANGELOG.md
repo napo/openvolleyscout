@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.44.0 - 2026-11-24
+
+### Added
+- Short links for sharing: when a shared link to filtered stats, a tactical report or a video playlist for your athletes is too long for WhatsApp and other chat apps, and Google Drive is connected in Settings, the app now shares a short link of about 70 characters. The data is kept in a small file in the app's folder in your Drive, readable by anyone with the link; the person who opens it needs no account. If you delete that file, the link stops working. Without Google Drive connected (or with Dropbox or OneDrive) the long link is shared as before.
+- Tactical report views can now be drawn together or separately. Under the attack zone, rotation and phase filters of the attacker views, and under the serve type, serve start zone and reception zone filters of the setter views, choose Draw separately to get one card per value: for example one card per attack zone for each attacker.
+
+### Changed
+- A tactical report without a title is now named after the day it was created followed by the opponent's name. New reports start without a title: type one to replace it. Reports you already have keep their titles.
+- Cards with no data are no longer drawn in the tactical report: for example an attacker in a zone she never attacks from, or a setter view without any set.
+
+### Fixed
+- Shared links (stats, video playlists, player page) now always point to scout.volleyserve.it. When the app was opened or installed from the old address, links still pointed to the old site.
+- The percentages and the point summary on the attack direction drawings no longer overlap each other.
+
 ## 0.43.0 - 2026-11-24
 
 ### Added
