@@ -3,6 +3,7 @@ import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../filters/dashboard-filters';
+import { getScoreSituationSettings, isLateInSet } from '../../score-situation/score-situation-settings';
 
 /**
  * The rally-context filters of the analysis dashboards: rotation, score
@@ -19,14 +20,10 @@ export type RallyContextFilters = Pick<DashboardFilters, 'rotation' | 'scoreRang
 
 export type ScoreSituation = Exclude<RallyContextFilters['scoreRange'], 'all'>;
 
-/** Points from which a set is in its final phase: 20 in sets to 25, 12 in a deciding set to 15. */
-function finalPhaseThreshold(setTargetPoints: number | undefined): number {
-  return setTargetPoints === 15 ? 12 : 20;
-}
-
 /**
- * Whether a score (before the rally, seen from one team) is in the given situation.
- * A close finish is from 20 points (12 in a deciding set) with a gap of 2 or less.
+ * Whether a score (before the rally, seen from one team) is in the given situation, with the
+ * rules of Settings > Analysis. By default a close finish is from 20 points (12 in a deciding
+ * set) with a gap of 2 or less, and leading/trailing means at least one point ahead/behind.
  */
 export function matchesScoreSituation(
   own: number,
@@ -34,10 +31,11 @@ export function matchesScoreSituation(
   setTargetPoints: number | undefined,
   situation: ScoreSituation,
 ): boolean {
+  const settings = getScoreSituationSettings();
   if (situation === 'tied') return own === opponent;
-  if (situation === 'leading') return own > opponent;
-  if (situation === 'trailing') return own < opponent;
-  return Math.max(own, opponent) >= finalPhaseThreshold(setTargetPoints) && Math.abs(own - opponent) <= 2;
+  if (situation === 'leading') return own - opponent >= settings.leadMinGap;
+  if (situation === 'trailing') return opponent - own >= settings.leadMinGap;
+  return isLateInSet(own, opponent, setTargetPoints) && Math.abs(own - opponent) <= settings.closeMaxGap;
 }
 
 export function hasRallyContextFilter(filters: Partial<RallyContextFilters>): boolean {

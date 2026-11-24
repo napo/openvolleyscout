@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { useSyncExternalStore } from 'react';
 import { useTranslation } from '@src/i18n';
+import { getScoreSituationSettings, subscribeScoreSituationSettings } from '../../score-situation/score-situation-settings';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { useFilterActions } from '../../stores/filter-selectors';
 import { getAvailablePlayers, type PlayerOption } from '../selectors/dashboard-selectors';
@@ -14,6 +16,8 @@ type PlayerFilterKey = 'server' | 'receiver' | 'attacker';
 export function RallyContextFilterControls({ filters, stats }: { filters: DashboardFilters; stats: MatchStats }) {
   const { t } = useTranslation();
   const { updateFilter } = useFilterActions();
+  // The rules of Settings > Analysis, shown under the score filter so the reading is clear.
+  const scoreRules = useSyncExternalStore(subscribeScoreSituationSettings, getScoreSituationSettings, getScoreSituationSettings);
   const players = getAvailablePlayers(stats);
   const teams = (['home', 'away'] as const)
     .map((side) => ({ side, name: stats.teamStats[side].teamName, players: players.filter((p) => p.teamSide === side) }))
@@ -76,6 +80,13 @@ export function RallyContextFilterControls({ filters, stats }: { filters: Dashbo
           <option value="trailing">{t('scoreRangeTrailing')}</option>
           <option value="clutch">{t('scoreRangeClutch')}</option>
         </select>
+        {filters.scoreRange === 'clutch' || filters.scoreRange === 'leading' || filters.scoreRange === 'trailing' ? (
+          <span className="perf-dashboard__filter-hint">
+            {filters.scoreRange === 'clutch'
+              ? t('scoreSituationCloseRule', { from: scoreRules.closeFrom, decidingFrom: scoreRules.closeFromDecidingSet, gap: scoreRules.closeMaxGap })
+              : t('scoreSituationLeadRule', { gap: scoreRules.leadMinGap })}
+          </span>
+        ) : null}
       </div>
 
       {teams.length > 0 && (

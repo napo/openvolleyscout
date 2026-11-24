@@ -51,6 +51,12 @@
     white-space: nowrap;
 }
 
+/* The score-situation rule in force (Settings > Analysis), under its filter. */
+.perf-dashboard__filter-hint {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+}
+
 .perf-dashboard__filter-select {
     min-height: 1.85rem;
     padding: 0.15rem 1.6rem 0.15rem 0.45rem;

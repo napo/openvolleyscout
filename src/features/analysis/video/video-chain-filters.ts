@@ -20,6 +20,7 @@ import {
 import { attackZoneNumber } from '@src/features/analytics/sideout/sideout-distribution';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import type { VideoEventEntry } from './video-event-index';
+import { isLateInSet } from '@src/features/analytics/score-situation/score-situation-settings';
 
 /**
  * Contextual video filters: a team in focus, a phase, a chain of skills, each
@@ -147,7 +148,7 @@ export function annotateVideoEntries<E extends Annotatable>(entries: readonly E[
     const phases = classifyRallyTouchPhases(rally);
     const preceding = classifyAttackPrecedingContext(rally);
     const target = (finalScore.get(`${first.matchKey ?? ''}|${first.setNumber}`) ?? 25) < 25 ? 15 : 25;
-    const lateInSet = first.homeScore >= 20 || first.awayScore >= 20;
+    const lateInSet = isLateInSet(first.homeScore, first.awayScore, target);
     const orderOf = new Map(touches.map((touch, index) => [touch.id, index]));
 
     for (const entry of rallyEntries) {

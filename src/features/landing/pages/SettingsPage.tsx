@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
 import { EfficiencySettings } from './EfficiencySettings';
+import { ScoreSituationSettings } from './ScoreSituationSettings';
 import { CloudSyncDeviceSettings } from '@src/features/sync/cloud/CloudSyncDeviceSettings';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
@@ -473,6 +474,7 @@ export function SettingsPage() {
             hidden={activeTab !== 'analysis'}
           >
             <EfficiencySettings />
+            <ScoreSituationSettings />
             <OpponentReportThresholdsSettings />
           </div>
           <div
