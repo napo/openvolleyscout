@@ -44,6 +44,7 @@ jobs:
           VITE_GOOGLE_WEB_CLIENT_ID: ${{ vars.VITE_GOOGLE_WEB_CLIENT_ID }}
           VITE_DROPBOX_APP_KEY: ${{ vars.VITE_DROPBOX_APP_KEY }}
           VITE_ONEDRIVE_CLIENT_ID: ${{ vars.VITE_ONEDRIVE_CLIENT_ID }}
+          VITE_GOOGLE_DRIVE_API_KEY_WEB: ${{ vars.VITE_GOOGLE_DRIVE_API_KEY_WEB || secrets.VITE_GOOGLE_DRIVE_API_KEY_WEB }}
         run: npm run build
 
       - name: Upload Pages artifact

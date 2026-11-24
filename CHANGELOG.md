@@ -3,6 +3,7 @@
 ## 0.42.2 - 2026-11-24
 
 ### Changed
+- Google Drive match videos shared with "Anyone with the link" now play in the app's own player, in Video analysis, while scouting and on the clip page you share with your athletes, so you can jump straight to every clip like with Dropbox. Videos shared only with specific people still cannot be played: share them with anyone who has the link.
 - The web app opens faster: it downloads about 13% less before the first screen. The part that reads and writes the cloud synchronisation file is now loaded only when a synchronisation starts.
 - Live scouting does less work after each touch, so the court stays more responsive on tablets during long matches. Nothing changes in how matches are saved.
 
