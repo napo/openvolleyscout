@@ -59,15 +59,16 @@ describe('attacker half-court direction drawing', () => {
 
     expect(svg).toContain('<line x1="20" y1="76" x2="250" y2="76"');
     expect(svg).toContain('<rect x="20" y="76" width="230" height="212"');
-    // Attacker at the top facing down: its left (targets at small y) is drawn on the right (direction 3).
-    expect(svg).toContain('data-direction="3"');
-    expect(svg).toContain('data-attack-origin="3"');
+    // Attacker at the top facing down: its left (targets at small y) is drawn on the right.
+    // Seven cones split the court perimeter; deep line shots end in cone 5 (end line, right).
+    expect(svg).toContain('data-direction="5"');
+    expect(svg).toContain('data-attack-origin="4"');
     expect(svg).not.toContain('data-direction="1"');
-    expect(svg).toContain('data-scoring-direction="2"');
+    expect(svg).toContain('data-scoring-direction="4"');
     expect(svg).toContain('2 points · 67% of points');
     expect(svg).toContain('Fans: attack share; red = preferred.');
     expect(svg).toContain('Arrow: most points; label = count and share.');
-    expect(svg).toMatch(/data-scoring-direction="2"[^>]*stroke-width="2\./);
+    expect(svg).toMatch(/data-scoring-direction="4"[^>]*stroke-width="2\./);
   });
 
   it('places the triangle vertex closer to the net for front-row attacks and deeper for back-row attacks', () => {
@@ -86,8 +87,8 @@ describe('attacker half-court direction drawing', () => {
       scoring: '{{points}} points · {{share}}%',
     });
 
-    const frontMatch = frontRowSvg.match(/data-attack-origin="1" cx="([^"]+)" cy="([^"]+)"/);
-    const backMatch = backRowSvg.match(/data-attack-origin="1" cx="([^"]+)" cy="([^"]+)"/);
+    const frontMatch = frontRowSvg.match(/data-attack-origin="4" cx="([^"]+)" cy="([^"]+)"/);
+    const backMatch = backRowSvg.match(/data-attack-origin="6" cx="([^"]+)" cy="([^"]+)"/);
     expect(frontMatch).not.toBeNull();
     expect(backMatch).not.toBeNull();
 
@@ -111,15 +112,29 @@ describe('attacker half-court direction drawing', () => {
       attack('front', side, 74.32, '#', 25.68, 24),
       attack('back', side, 74.32, '+', 50, 68),
     ], 'Mixed origins', { fans: 'Share', arrow: 'Points', scoring: '{{points}} points · {{share}}%' });
-    const origins = [...svg.matchAll(/data-attack-origin="1" cx="([^"]+)" cy="([^"]+)" data-attack-zone="(\d)"/g)];
+    const origins = [...svg.matchAll(/data-attack-origin="\d" cx="([^"]+)" cy="([^"]+)" data-attack-zone="(\d)"/g)];
     expect(origins).toHaveLength(2);
     expect(origins.map((origin) => origin[3])).toEqual(['4', '6']);
     expect(Number(origins[0][2])).toBeGreaterThan(51);
     expect(Number(origins[1][2])).toBeLessThan(51);
     expect(svg).toContain('Z4 50%');
     expect(svg).toContain('Z6 50%');
-    // The point summary still counts the entire receiving direction.
+    // The arrow starts from the scoring cone's own origin (zone 4), not from an average.
+    expect(svg).toMatch(/data-scoring-direction="\d" data-attack-zone="4" x1="([^"]+)"/);
     expect(svg).toContain('1 points · 100%');
+  });
+
+  it('ends sharp cross-court cones on the sideline and starts the arrow at their attack point', () => {
+    // Zone 4 attack landing near the net on the far side: a short, sharp diagonal.
+    const sharp = { ...attack('sharp', 'home', 74, '#'), end: { x: 59, y: 74 } };
+    const svg = buildAttackerCourtSvg([sharp], 'Sharp', { fans: 'Share', arrow: 'Points', scoring: '{{points}} points · {{share}}%' });
+    expect(svg).toContain('data-direction="1"');
+    // The cone's base lies on the left sideline (x = 20), above the end line.
+    expect(svg).toMatch(/data-direction="1"[^>]*points="[^ ]+ 20\.0,76\.0 20\.0,169\.4"/);
+    const origin = svg.match(/data-attack-origin="4" cx="([^"]+)" cy="([^"]+)"/);
+    const arrow = svg.match(/data-scoring-direction="1" data-attack-zone="4" x1="([^"]+)" y1="([^"]+)"/);
+    expect(arrow?.[1]).toBe(origin?.[1]);
+    expect(arrow?.[2]).toBe(origin?.[2]);
   });
 
   it('orients away-side attacks into the same receiving-half drawing', () => {
@@ -132,7 +147,7 @@ describe('attacker half-court direction drawing', () => {
     });
 
     // Away-side attack towards the attacker's right: drawn on the left of the card, as for home attacks.
-    expect(svg).toContain('data-scoring-direction="1"');
+    expect(svg).toContain('data-scoring-direction="3"');
     expect(svg).toContain('x1="');
     expect(svg).toContain('marker-end="url(#attack-arrow)"');
   });

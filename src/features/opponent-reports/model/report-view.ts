@@ -277,6 +277,9 @@ function attackDirectionSample(
   return { event, origin, target, lane, attackZone };
 }
 
+/** Cones per attack zone, as in DataVolley: the opposite court's perimeter split in equal parts. */
+const ATTACK_CONES = 7;
+
 export function buildAttackerCourtSvg(
   events: AttackingReportMetrics['attackers'][number]['directionsForDrawing'],
   title: string,
@@ -308,68 +311,106 @@ export function buildAttackerCourtSvg(
   const toCourtY = (value: number) => courtTop
     + (Math.min(SCOUTING_SURFACE_WIDTH / 2, Math.abs(value - 50)) / (SCOUTING_SURFACE_WIDTH / 2)) * courtHeight;
   const directions = events.map(attackDirectionSample);
-  // Keep separate origins for each attack zone, including the back row. Averaging
-  // all origins by target lane hides pipes and other back-row attacks in mixed views.
-  const groups = [...new Map(directions.map(({ lane, attackZone }) => [
-    `${attackZone}:${lane}`, { lane, attackZone },
-  ])).values()];
-  const summarize = (lane: number, samples: AttackDirectionSample[]) => {
-    const kills = samples.filter(({ event }) => event.evaluation === '#');
-    const average = (values: number[]) => values.length > 0
-      ? values.reduce((sum, value) => sum + value, 0) / values.length
-      : 0;
-    return {
-      lane,
-      samples,
-      kills,
-      preference: directions.length > 0 ? samples.length / directions.length : 0,
-      originX: toOriginX(average(samples.map(({ origin }) => origin.y))),
-      originY: average(samples.map(({ origin }) => toOriginY(origin.x))),
-      targetX: toCourtX(average(samples.map(({ target }) => target.y))),
-      targetY: courtTop + (average(samples.map(({ target }) => toCourtY(target.x) - courtTop))),
-      killShare: directions.filter(({ event }) => event.evaluation === '#').length > 0
-        ? kills.length / directions.filter(({ event }) => event.evaluation === '#').length
-        : 0,
-    };
+  // DataVolley-style cones: seen from the attack point, the opposite court's perimeter (left
+  // sideline, end line, right sideline) is split into equal parts, so a sharp cross-court
+  // shot gets a cone ending on the sideline, not on the end line.
+  const left = margin;
+  const right = margin + courtWidth;
+  const perimeter = courtHeight * 2 + courtWidth;
+  const perimeterPoint = (position: number): { x: number; y: number } => {
+    const clamped = Math.max(0, Math.min(perimeter, position));
+    if (clamped <= courtHeight) return { x: left, y: courtTop + clamped };
+    if (clamped <= courtHeight + courtWidth) return { x: left + (clamped - courtHeight), y: courtBottom };
+    return { x: right, y: courtBottom - (clamped - courtHeight - courtWidth) };
   };
-  const lanes = groups.map(({ lane, attackZone }) => ({
-    ...summarize(lane, directions.filter((direction) => direction.lane === lane && direction.attackZone === attackZone)),
-    attackZone,
-  }));
-  // Keep preference and scoring based on total target-direction counts.
-  const targetLanes = [0, 1, 2].map((lane) => summarize(lane, directions.filter((direction) => direction.lane === lane)))
-    .filter((lane) => lane.samples.length > 0);
-  const preferredLane = [...targetLanes].sort((left, right) => right.preference - left.preference)[0]?.lane;
-  const scoringLane = [...targetLanes]
-    .filter((lane) => lane.kills.length > 0)
-    .sort((left, right) => right.kills.length - left.kills.length)[0];
-  const fans = lanes.map((lane) => {
-    const left = margin + (lane.lane / 3) * courtWidth;
-    const right = margin + ((lane.lane + 1) / 3) * courtWidth;
-    const fill = lane.lane === preferredLane ? '#dc2626' : '#2563eb';
-    const opacity = lane.lane === preferredLane ? 0.3 : 0.12 + lane.preference * 0.25;
-    return `<polygon data-direction="${lane.lane + 1}" data-attack-zone="${lane.attackZone}" points="${lane.originX},${lane.originY} ${left},${courtBottom} ${right},${courtBottom}" fill="${fill}" fill-opacity="${opacity}" stroke="${fill}" stroke-opacity="0.55" stroke-width="1"/>`;
+  const perimeterPosition = (origin: { x: number; y: number }, target: { x: number; y: number }): number => {
+    const dx = target.x - origin.x;
+    const dy = target.y - origin.y;
+    const hits: number[] = [];
+    if (dy > 0) hits.push((courtBottom - origin.y) / dy);
+    if (dx < 0) hits.push((left - origin.x) / dx);
+    if (dx > 0) hits.push((right - origin.x) / dx);
+    const step = Math.min(...hits.filter((value) => value > 0));
+    if (!Number.isFinite(step)) return dx < 0 ? 0 : perimeter;
+    const x = origin.x + dx * step;
+    const y = Math.max(courtTop, origin.y + dy * step);
+    if (x <= left + 0.01) return y - courtTop;
+    if (x >= right - 0.01) return courtHeight * 2 + courtWidth - (y - courtTop);
+    return courtHeight + (x - left);
+  };
+  const average = (values: number[]) => values.length > 0
+    ? values.reduce((sum, value) => sum + value, 0) / values.length
+    : 0;
+  const totalKills = directions.filter(({ event }) => event.evaluation === '#').length;
+
+  // One origin per attack zone (back row included), so pipes are not merged with zone 3.
+  const zones = [...new Set(directions.map(({ attackZone }) => attackZone))];
+  const cones = zones.flatMap((attackZone) => {
+    const zoneSamples = directions.filter((direction) => direction.attackZone === attackZone);
+    const originX = toOriginX(average(zoneSamples.map(({ origin }) => origin.y)));
+    const originY = average(zoneSamples.map(({ origin }) => toOriginY(origin.x)));
+    const placed = zoneSamples.map((sample) => {
+      const target = { x: toCourtX(sample.target.y), y: toCourtY(sample.target.x) };
+      const position = perimeterPosition({ x: originX, y: originY }, target);
+      const cone = Math.max(0, Math.min(ATTACK_CONES - 1, Math.floor((position / perimeter) * ATTACK_CONES)));
+      return { sample, target, cone };
+    });
+    return [...new Set(placed.map(({ cone }) => cone))].sort((l, r) => l - r).map((cone) => {
+      const inCone = placed.filter((item) => item.cone === cone);
+      const kills = inCone.filter(({ sample }) => sample.event.evaluation === '#');
+      return {
+        attackZone,
+        cone,
+        originX,
+        originY,
+        count: inCone.length,
+        kills,
+        preference: directions.length > 0 ? inCone.length / directions.length : 0,
+        killShare: totalKills > 0 ? kills.length / totalKills : 0,
+      };
+    });
   });
-  const fanLabels = lanes.map((lane) => {
-    const left = margin + (lane.lane / 3) * courtWidth;
-    const right = margin + ((lane.lane + 1) / 3) * courtWidth;
-    const fill = lane.lane === preferredLane ? '#dc2626' : '#2563eb';
-    const sameLane = lanes.filter((other) => other.lane === lane.lane);
-    const labelY = courtBottom - 8 - sameLane.indexOf(lane) * 12;
-    const zoneLabel = sameLane.length > 1 ? `Z${lane.attackZone} ` : '';
-    return [
-      `<circle data-attack-origin="${lane.lane + 1}" cx="${lane.originX}" cy="${lane.originY}" data-attack-zone="${lane.attackZone}" r="3.2" fill="${fill}" stroke="#ffffff" stroke-width="1"/>`,
-      `<text x="${(left + right) / 2}" y="${labelY}" text-anchor="middle" font-size="10" font-weight="bold" fill="#1f2937">${zoneLabel}${Math.round(lane.preference * 100)}%</text>`,
-    ].join('');
+  const preferred = [...cones].sort((l, r) => r.count - l.count)[0];
+  const scoring = [...cones].filter((cone) => cone.kills.length > 0).sort((l, r) => r.kills.length - l.kills.length)[0];
+  const showZone = zones.length > 1;
+  const fans = cones.map((cone) => {
+    const start = (cone.cone / ATTACK_CONES) * perimeter;
+    const end = ((cone.cone + 1) / ATTACK_CONES) * perimeter;
+    const corners = [courtHeight, courtHeight + courtWidth].filter((corner) => corner > start && corner < end);
+    const points = [perimeterPoint(start), ...corners.map(perimeterPoint), perimeterPoint(end)]
+      .map(({ x, y }) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+    const isPreferred = cone === preferred;
+    const fill = isPreferred ? '#dc2626' : '#2563eb';
+    const opacity = isPreferred ? 0.3 : 0.12 + cone.preference * 0.25;
+    return `<polygon data-direction="${cone.cone + 1}" data-attack-zone="${cone.attackZone}" points="${cone.originX},${cone.originY} ${points}" fill="${fill}" fill-opacity="${opacity}" stroke="${fill}" stroke-opacity="0.55" stroke-width="1"/>`;
   });
-  const arrow = scoringLane
+  const origins = zones.map((attackZone) => {
+    const cone = cones.find((item) => item.attackZone === attackZone)!;
+    const fill = preferred?.attackZone === attackZone ? '#dc2626' : '#2563eb';
+    return `<circle data-attack-origin="${attackZone}" cx="${cone.originX}" cy="${cone.originY}" data-attack-zone="${attackZone}" r="3.2" fill="${fill}" stroke="#ffffff" stroke-width="1"/>`;
+  });
+  // Cones under 5% stay drawn but unlabelled, so mixed-zone cards stay readable.
+  const fanLabels = cones.filter((cone) => cone.preference >= 0.05).map((cone) => {
+    const middle = perimeterPoint(((cone.cone + 0.5) / ATTACK_CONES) * perimeter);
+    // Inside the court, a little in from the cone's base; cones of different zones on the same
+    // part of the perimeter stack towards the origin.
+    const stack = cones.filter((other) => other.cone === cone.cone && other.preference >= 0.05).indexOf(cone);
+    const pull = 0.1 + stack * 0.09;
+    const x = Math.max(left + 14, Math.min(right - 14, middle.x + (cone.originX - middle.x) * pull));
+    const y = Math.max(courtTop + 10, Math.min(courtBottom - 4, middle.y + (cone.originY - middle.y) * pull));
+    const zoneLabel = showZone ? `Z${cone.attackZone} ` : '';
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" font-size="10" font-weight="bold" fill="#1f2937" stroke="#ffffff" stroke-width="2" paint-order="stroke">${zoneLabel}${Math.round(cone.preference * 100)}%</text>`;
+  });
+  const arrow = scoring
     ? (() => {
-      const strokeWidth = 1.6 + scoringLane.killShare * 1.8;
-      const markerSize = 5 + scoringLane.killShare * 2.5;
+      const strokeWidth = 1.6 + scoring.killShare * 1.8;
+      const markerSize = 5 + scoring.killShare * 2.5;
+      const targetX = average(scoring.kills.map(({ target }) => target.x));
+      const targetY = average(scoring.kills.map(({ target }) => target.y));
       return [
         `<defs><marker id="attack-arrow" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${markerSize - 1}" refY="${markerSize / 2}" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L${markerSize},${markerSize / 2} L0,${markerSize} z" fill="#111827"/></marker></defs>`,
-        `<line data-scoring-direction="${scoringLane.lane + 1}" x1="${scoringLane.originX}" y1="${scoringLane.originY}" x2="${scoringLane.targetX}" y2="${scoringLane.targetY}" stroke="#111827" stroke-width="${strokeWidth}" marker-end="url(#attack-arrow)"/>`,
-        `<text data-scoring-summary="true" x="${width / 2}" text-anchor="middle" y="${scoringLane.targetY - 5}" font-size="10" font-weight="bold" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">${escapeXml(legend.scoring.replace('{{points}}', String(scoringLane.kills.length)).replace('{{share}}', String(Math.round(scoringLane.killShare * 100))))}</text>`,
+        `<line data-scoring-direction="${scoring.cone + 1}" data-attack-zone="${scoring.attackZone}" x1="${scoring.originX}" y1="${scoring.originY}" x2="${targetX.toFixed(1)}" y2="${targetY.toFixed(1)}" stroke="#111827" stroke-width="${strokeWidth}" marker-end="url(#attack-arrow)"/>`,
+        `<text data-scoring-summary="true" x="${Math.max(left + 50, Math.min(right - 50, targetX)).toFixed(1)}" text-anchor="middle" y="${(targetY - 5).toFixed(1)}" font-size="10" font-weight="bold" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">${escapeXml(legend.scoring.replace('{{points}}', String(scoring.kills.length)).replace('{{share}}', String(Math.round(scoring.killShare * 100))))}</text>`,
       ].join('');
     })()
     : '';
@@ -384,6 +425,7 @@ export function buildAttackerCourtSvg(
     `<line x1="${margin}" y1="${courtTop + courtHeight / 3}" x2="${margin + courtWidth}" y2="${courtTop + courtHeight / 3}" stroke="#64748b" stroke-dasharray="4 3"/>`,
     `<line x1="${margin}" y1="${netY}" x2="${margin + courtWidth}" y2="${netY}" stroke="#002554" stroke-width="4"/>`,
     ...fans,
+    ...origins,
     ...fanLabels,
     arrow,
     '<g data-legend-footer="true" data-legend-top="294" data-legend-height="46">',
