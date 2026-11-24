@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.43.0 - 2026-11-24
+
+### Added
+- Video analysis has a new Skill chain section under the filters. Pick skills in the order they happen in the rally, each with its own details (player, evaluation, serve type and zones, attack situation, attack zone, blockers): the list shows the last one, only in rallies where the earlier ones happened first. For example, serve (jump float) then attack (zone 4) shows the zone 4 attacks of rallies served with a jump float. You can also filter by game phase and score situation. With several matches together, the chain also sees the opponent's touches, such as their serve followed by your attack.
+- Settings, Analysis has a new Score situations section where you choose from which score a set is in its final phase (20 in sets to 25, 12 in the deciding set), the largest gap of a close finish and the smallest gap for leading or trailing. The defaults are the rules used so far. The dashboards, the video filters and the "late set" attacks of the reports all follow them. The reports now also recognise the final phase of a deciding set.
+
+### Changed
+- The rotation, score situation, server, receiver and attacker filters of the dashboards now really change the numbers: before, picking a rotation left every widget unchanged. They are now also in the Analysis tab and in the team data study.
+- When a Google Drive video cannot be played, the message now explains the usual reason: the video is not shared with "Anyone with the link", or Google has limited it after many views. This also applies to the clip page you share with your athletes.
+
+### Fixed
+- The attack direction drawings of the opponent report and of the Team review booklet showed only three cones, always ending on the end line, so sharp cross-court shots were hidden. Each attack zone now has seven cones around the whole opposite court, as in DataVolley, so short diagonals end on the sideline. The black arrow (the direction with the most points) now starts from the zone the attack came from, instead of a point between zones where no cone started. Percentages under 5% are drawn but not written, to keep the card readable. Reports are redrawn automatically.
+
 ## 0.42.3 - 2026-11-24
 
 ### Fixed
