@@ -9,7 +9,6 @@
  */
 
 import type { CloudAuth } from './auth';
-import { readCloudSyncFile, writeCloudSyncFile } from './file';
 import {
   type CloudSnapshot,
   EMPTY_CLOUD_SNAPSHOT,
@@ -22,6 +21,17 @@ import {
 import type { DeviceInfo } from './device';
 import { EMPTY_PRESENCE, type PresenceResult, type ScoutingIntent, resolvePresence } from './presence';
 import { type RemoteFile, type RemoteStorage, StorageError } from './storage';
+
+// The `.ovs` codec (Arrow tables in a zip) is several hundred KB and only needed
+// once a sync round actually runs, so it is fetched then instead of at startup.
+let cloudFileCodec: Promise<typeof import('./file')> | null = null;
+function loadCloudFileCodec(): Promise<typeof import('./file')> {
+  cloudFileCodec ??= import('./file').catch((error) => {
+    cloudFileCodec = null;
+    throw error;
+  });
+  return cloudFileCodec;
+}
 
 export interface CloudSyncArchive {
   /** Everything sync copies, read in one transaction. */
@@ -97,6 +107,7 @@ export async function synchronise(deps: SyncDependencies, interactive = false): 
   }
 
   async function round(client: RemoteStorage): Promise<SyncOutcome> {
+    const { readCloudSyncFile, writeCloudSyncFile } = await loadCloudFileCodec();
     const self = deps.presence ? await deps.presence.self() : null;
     let received = 0;
     let conflicts = 0;

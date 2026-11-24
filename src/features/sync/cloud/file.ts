@@ -14,12 +14,14 @@ import { parseOvsBackupBundleFile } from '../backup-bundle';
 import { getOrCreateDeviceId } from '../ovs-bundle/device-id';
 import type { CloudSnapshot, CloudSystemRecord, DeletionMap } from './merge';
 import { EMPTY_PRESENCE, type Presence, parsePresence } from './presence';
+import { CloudFileError } from './file-error';
 
 const DELETIONS_ENTRY = 'deletions.json';
 const PRESENCE_ENTRY = 'presence.json';
 
-/** Thrown when the remote `.ovs` file cannot be read (corrupt or written by a newer app version). */
-export class CloudFileError extends Error {}
+// Kept in its own module so the controller, loaded at startup, does not pull in
+// this file and the Arrow codec behind it.
+export { CloudFileError };
 
 function asSystemRecords(items: readonly unknown[]): CloudSystemRecord[] {
   return items.filter((item): item is CloudSystemRecord => (
