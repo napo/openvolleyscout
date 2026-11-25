@@ -1048,3 +1048,24 @@ div.video-analysis__error ul {
   padding-left: 1.2rem;
 }
 
+
+.video-chain-filters__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.video-chain-filters.is-collapsed .video-chain-filters__bar {
+  margin-bottom: 0;
+}
+
+.video-chain-filters__state {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.video-chain-filters__state.is-filtering {
+  color: #0f766e;
+  font-weight: 600;
+}

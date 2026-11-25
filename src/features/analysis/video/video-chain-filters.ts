@@ -59,6 +59,8 @@ export interface VideoSkillAttributes {
   attackZones?: string[];
   /** Attack: number of blockers faced (0-3). */
   blockers?: number[];
+  /** Set and attack: base / combination (setter call K1...Kn or attack combination such as X5). */
+  baseCodes?: string[];
 }
 
 export interface VideoChainFilters {
@@ -110,6 +112,8 @@ export interface VideoChainEntry<E extends VideoEventEntry = VideoEventEntry> {
     zone: string | null;
     blockers: number | null;
   };
+  /** Set and attack: base / combination code (upper case), null when the scout wrote none. */
+  baseCode?: string | null;
 }
 
 type Annotatable = VideoEventEntry & { matchKey?: string; focusSide?: TeamSide };
@@ -176,9 +180,11 @@ export function annotateVideoEntries<E extends Annotatable>(entries: readonly E[
           blockers: blockers ?? null,
         };
       }
+      const baseCode = entry.skill === 'set' || entry.skill === 'attack' ? resolveBaseCode(touches, index, entry.teamSide) : undefined;
       result.set(entry, {
         entry,
         rallyKey,
+        baseCode,
         order: index,
         phase: phases.get(entry.touch.id) ?? null,
         setTargetPoints: target,
@@ -188,6 +194,33 @@ export function annotateVideoEntries<E extends Annotatable>(entries: readonly E[
     }
   }
   return entries.map((entry) => result.get(entry)!);
+}
+
+const cleanCode = (code: string | undefined) => (code?.trim() ? code.trim().toUpperCase() : null);
+
+/**
+ * Base / combination of a set or an attack, read as in the heatmap and the tactical report:
+ * the touch's own code, otherwise (attack) the setter's call on the set just before it.
+ */
+export function resolveBaseCode(touches: readonly BallTouch[], index: number, teamSide: TeamSide): string | null {
+  const touch = touches[index];
+  if (touch.skill === 'set') return cleanCode(touch.setterCallCode) ?? cleanCode(touch.combinationCode);
+  const own = cleanCode(touch.combinationCode);
+  if (own) return own;
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const prev = touches[i];
+    if (prev.teamSide !== teamSide) break;
+    if (prev.skill === 'set') return cleanCode(prev.setterCallCode) ?? cleanCode(prev.combinationCode);
+    if (prev.skill !== 'cover') break;
+  }
+  return cleanCode(touch.setterCallCode);
+}
+
+/** Base / combination codes present in the entries, sorted (K1, K2 ... then the others). */
+export function availableBaseCodes(entries: readonly VideoChainEntry[]): string[] {
+  const codes = new Set<string>();
+  entries.forEach((item) => { if (item.baseCode) codes.add(item.baseCode); });
+  return [...codes].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
 }
 
 function includesOrEmpty<T>(selected: readonly T[] | undefined, value: T | null | undefined): boolean {
@@ -209,6 +242,7 @@ export function matchesSkillAttributes(item: VideoChainEntry, attributes: VideoS
   }
   if (!includesOrEmpty(attributes.attackZones, item.attack?.zone)) return false;
   if (!includesOrEmpty(attributes.blockers, item.attack?.blockers)) return false;
+  if (!includesOrEmpty(attributes.baseCodes, item.baseCode)) return false;
   return true;
 }
 

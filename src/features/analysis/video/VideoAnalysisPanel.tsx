@@ -84,6 +84,7 @@ import './video-analysis.css';
 import { confirmAction } from '@src/components/confirm-dialog';
 import {
   annotateVideoEntries,
+  availableBaseCodes,
   applyVideoChainFilters,
   createDefaultVideoChainFilters,
   isDefaultVideoChainFilters,
@@ -259,6 +260,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const rallyTimingMode = eventIndex.rallyTimingMode;
   // Phase, attack description and set target, derived once per index for the chain filters.
   const chainEntries = useMemo(() => annotateVideoEntries(eventIndex.entries), [eventIndex.entries]);
+  const baseCodes = useMemo(() => availableBaseCodes(chainEntries), [chainEntries]);
   const filteredEntries = useMemo(() => {
     let base = sortVideoEventEntries(applyVideoChainFilters(chainEntries, filters), sortKey, getPlayerLabel);
     if (showStarredOnly) {
@@ -1352,6 +1354,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
         ]}
         playerOptions={playerChipOptions}
         setNumbers={eventIndex.setNumbers}
+        baseCodes={baseCodes}
       />
       <label className="video-analysis__auto-advance">
         <input

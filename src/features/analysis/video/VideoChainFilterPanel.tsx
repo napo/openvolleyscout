@@ -1,20 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { useState } from 'react';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { AttackerDirectionPhase, SetterDistributionServeType } from '@src/domain/opponent-report/types';
 import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups, type ChipOption } from '@src/components/filter-chips/FilterChips';
 import { TOUCH_PHASES, type TouchPhase } from '@src/features/analytics/rally-phase/rally-phase-classifier';
 import type { ScoreSituation } from '@src/features/analytics/dashboard/selectors/rally-context-filters';
 import { useTranslation, type TranslationKey } from '@src/i18n';
+import { isSkillIconName, SkillIcon } from '@src/components/skill-icons/SkillIcon';
 import {
   VIDEO_CHAIN_SKILL_ORDER,
   orderVideoChain,
   pruneVideoChainPlayers,
   shownVideoSkill,
+  isDefaultVideoChainFilters,
   type VideoChainFilters,
   type VideoSkillAttributes,
   type VideoTeamScope,
 } from './video-chain-filters';
 import { VIDEO_FILTER_RECEPTION_ZONES, VIDEO_FILTER_SERVE_START_ZONES, VIDEO_FILTER_SERVE_TYPES } from './video-filters';
+
+const skillIcon = (skill: string) => (isSkillIconName(skill) ? <SkillIcon skill={skill} /> : undefined);
 
 const SKILL_LABELS: Partial<Record<SkillType, TranslationKey>> = {
   serve: 'skillServe',
@@ -67,13 +72,15 @@ export interface VideoChainFilterPanelProps {
   /** Players to offer, for the actions shown (team scope) or for a previous link of the chain. */
   playerOptions: (scope: VideoTeamScope) => ChipOption<string>[];
   setNumbers: readonly number[];
+  /** Base / combination codes found in the matches (setter calls K1...Kn, attack combinations). */
+  baseCodes?: readonly string[];
 }
 
 /**
  * The contextual video filters: team, phase, a chain of skills with each skill's
  * attributes, then the rally context. Built from the shared filter chips.
  */
-export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOptions, setNumbers }: VideoChainFilterPanelProps) {
+export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOptions, setNumbers, baseCodes = [] }: VideoChainFilterPanelProps) {
   const { t } = useTranslation();
   const all = t('setterViewReceptionAll');
   // A team or chain change can hide chosen players: drop them so nothing hidden keeps filtering.
@@ -81,6 +88,13 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
   const patch = (next: Partial<VideoChainFilters>) => onChange(pruneVideoChainPlayers({ ...filters, ...next }, playerIdsFor));
   const chain = orderVideoChain(filters.chain);
   const target = shownVideoSkill(filters);
+  // Filtering and watching are two separate moments: the panel folds away to leave room for the list.
+  const [open, setOpen] = useState(readPanelOpen);
+  const toggleOpen = () => setOpen((current) => {
+    try { window.localStorage.setItem(PANEL_OPEN_KEY, current ? '0' : '1'); } catch { /* storage unavailable */ }
+    return !current;
+  });
+  const filtering = !isDefaultVideoChainFilters(filters);
 
   const patchAttributes = (key: SkillType | 'any', next: Partial<VideoSkillAttributes>) => {
     onChange({ ...filters, attributes: { ...filters.attributes, [key]: { ...filters.attributes[key], ...next } } });
@@ -146,6 +160,15 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
             />
           </>
         ) : null}
+        {(key === 'set' || key === 'attack') && baseCodes.length > 0 ? (
+          <ChipSelect
+            label={t('attackerViewBaseLabel')}
+            allLabel={all}
+            options={baseCodes.map((value) => ({ value, label: value }))}
+            selected={attributes.baseCodes ?? []}
+            onChange={(next) => patchAttributes(key, { baseCodes: next })}
+          />
+        ) : null}
         {players.length > 0 ? (
           <ChipSelect
             label={t('player')}
@@ -167,7 +190,16 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
   };
 
   return (
-    <div className="video-chain-filters">
+    <div className={`video-chain-filters${open ? '' : ' is-collapsed'}`}>
+      <div className="video-chain-filters__bar">
+        <button type="button" className="btn-secondary btn-small" aria-expanded={open} onClick={toggleOpen}>
+          {open ? t('videoFiltersHide') : t('videoFiltersShow')}
+        </button>
+        <span className={`video-chain-filters__state${filtering ? ' is-filtering' : ''}`}>
+          {filtering ? t('videoFiltersActive') : t('videoFiltersNone')}
+        </span>
+      </div>
+      {open ? (
       <FilterGroups>
         <FilterGroup title={t('filterTeam')} active={filters.team !== 'all'}>
           <ChipSelect
@@ -189,7 +221,7 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
         <FilterGroup title={t('videoChainSkillsTitle')} active={chain.length > 0} wide>
           <ChipSelect
             allLabel={t('allSkills')}
-            options={VIDEO_CHAIN_SKILL_ORDER.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill') }))}
+            options={VIDEO_CHAIN_SKILL_ORDER.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill'), icon: skillIcon(skill) }))}
             selected={chain}
             onChange={(next) => {
               const nextChain = next.length === VIDEO_CHAIN_SKILL_ORDER.length ? [] : next;
@@ -202,7 +234,7 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
               <ChipSelect
                 single
                 label={t('videoChainShowLabel')}
-                options={chain.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill') }))}
+                options={chain.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill'), icon: skillIcon(skill) }))}
                 selected={target ? [target] : []}
                 onChange={(next) => patch({ shown: next[0] })}
               />
@@ -247,6 +279,17 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
           />
         </FilterGroup>
       </FilterGroups>
+      ) : null}
     </div>
   );
+}
+
+const PANEL_OPEN_KEY = 'ovs.videoFilters.open';
+
+function readPanelOpen(): boolean {
+  try {
+    return window.localStorage.getItem(PANEL_OPEN_KEY) !== '0';
+  } catch {
+    return true;
+  }
 }

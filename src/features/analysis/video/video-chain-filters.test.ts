@@ -8,6 +8,7 @@ import { buildVideoEventIndex } from './video-event-index';
 import {
   annotateVideoEntries,
   applyVideoChainFilters,
+  availableBaseCodes,
   createDefaultVideoChainFilters,
   type VideoChainFilters,
 } from './video-chain-filters';
@@ -153,5 +154,17 @@ describe('choosing the skill shown in the chain', () => {
     const sets = filter({ chain: ['receive', 'set', 'attack'], shown: 'set', attributes: { attack: { evaluations: ['#'] } } });
     expect(sets.every((entry) => entry.skill === 'set')).toBe(true);
     expect(sets.length).toBeLessThan(filter({ chain: ['receive', 'set'] }).length);
+  });
+
+  it('filters sets and attacks by base / combination (setter calls K1...Kn, attack codes)', () => {
+    const codes = availableBaseCodes(items);
+    expect(codes.length).toBeGreaterThan(0);
+    const code = codes[0]!;
+    const attacks = filter({ chain: ['attack'] });
+    const withCode = filter({ chain: ['attack'], attributes: { attack: { baseCodes: [code] } } });
+    expect(withCode.length).toBeGreaterThan(0);
+    expect(withCode.length).toBeLessThanOrEqual(attacks.length);
+    const kept = new Set(withCode);
+    expect(items.filter((item) => kept.has(item.entry)).every((item) => item.baseCode === code)).toBe(true);
   });
 });

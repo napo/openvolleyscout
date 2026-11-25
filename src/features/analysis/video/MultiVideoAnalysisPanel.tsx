@@ -80,6 +80,7 @@ import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { confirmAction } from '@src/components/confirm-dialog';
 import {
   annotateVideoEntries,
+  availableBaseCodes,
   applyVideoChainFilters,
   createDefaultVideoChainFilters,
   pruneVideoChainPlayers,
@@ -301,6 +302,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     [projectRecords],
   );
   const chainEntries = useMemo(() => annotateVideoEntries(allEntries), [allEntries]);
+  const baseCodes = useMemo(() => availableBaseCodes(chainEntries), [chainEntries]);
 
   const availableSetNumbers = useMemo<number[]>(() => {
     if (filters.opponentProjectId !== 'all') {
@@ -1094,6 +1096,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         ]}
         playerOptions={multiPlayerOptions}
         setNumbers={filters.opponentProjectId !== 'all' ? availableSetNumbers : []}
+        baseCodes={baseCodes}
       />
       <label className="video-analysis__auto-advance">
         <input
