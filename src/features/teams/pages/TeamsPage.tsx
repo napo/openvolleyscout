@@ -1,4 +1,6 @@
 import { ActionIcon } from '@src/components/ActionIcon';
+import type { PlayerRole } from '@src/domain/common/enums';
+import { ROLE_GROUP_NAME_KEYS, ROLE_GROUP_SHORT_KEYS, type RoleGroup } from '@src/components/player-role/player-role';
 import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { TeamLibraryTable } from './TeamLibraryTable';
 import { countMatchesByTeamId, groupMatchesByTeamId } from '../model/team-matches';
@@ -39,7 +41,12 @@ import type { RosterImportFormat, RosterImportPayload } from '@src/features/impo
 import { confirmAction } from '@src/components/confirm-dialog';
 import { createEmptyTeamForm, validateTeamForm, type TeamFieldError, type TeamFormData } from '../model/team-form';
 
-type PlayerField = 'jerseyNumber' | 'firstName' | 'lastName' | 'isLibero' | 'isCaptain';
+/** Roles offered in the team list (the filter letters: P, S, O, C, L in Italian). */
+const TEAM_ROLE_OPTIONS: ReadonlyArray<[PlayerRole, RoleGroup]> = [
+  ['setter', 'setter'], ['outside_hitter', 'outside'], ['opposite', 'opposite'], ['middle_blocker', 'middle'], ['libero', 'libero'],
+];
+
+type PlayerField = 'jerseyNumber' | 'firstName' | 'lastName' | 'role' | 'isLibero' | 'isCaptain';
 const RANDOM_ROSTER_SIZE = 14;
 
 export function TeamsPage() {
@@ -345,6 +352,8 @@ export function TeamsPage() {
             field === 'firstName' ? (value as string) : updatedPlayer.firstName,
             field === 'lastName' ? (value as string) : updatedPlayer.lastName,
           );
+        } else if (field === 'role') {
+          updatedPlayer.role = (value as string) ? value as PlayerRole : undefined;
         } else if (field === 'isLibero' || field === 'isCaptain') {
           updatedPlayer[field] = value as boolean;
         }
@@ -767,6 +776,7 @@ export function TeamsPage() {
                               <th>{t('jerseyNumber')}</th>
                               <th>{t('firstName')}</th>
                               <th>{t('lastName')}</th>
+                              <th>{t('tacticalRole')}</th>
                               <th>{t('libero')}</th>
                               <th>{t('captain')}</th>
                               <th />
@@ -811,6 +821,19 @@ export function TeamsPage() {
                                   {errors[`player_${index}_lastName`] && (
                                     <p className="form-error">{errors[`player_${index}_lastName`]}</p>
                                   )}
+                                </td>
+                                <td>
+                                  <select
+                                    className="table-input"
+                                    value={player.role ?? ''}
+                                    onChange={(event) => handlePlayerChange(player.id, 'role', event.target.value)}
+                                    aria-label={t('tacticalRole')}
+                                  >
+                                    <option value="">{t('roleNotSet')}</option>
+                                    {TEAM_ROLE_OPTIONS.map(([role, group]) => (
+                                      <option key={role} value={role}>{t(ROLE_GROUP_SHORT_KEYS[group])} - {t(ROLE_GROUP_NAME_KEYS[group])}</option>
+                                    ))}
+                                  </select>
                                 </td>
                                 <td>
                                   <input

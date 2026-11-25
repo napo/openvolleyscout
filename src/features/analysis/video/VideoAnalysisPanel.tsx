@@ -1,4 +1,5 @@
 import { VideoPaddingControl } from './VideoPaddingControl';
+import { lineupRoles, resolveRoleGroup } from '@src/components/player-role/player-role';
 import { RemoteVideoErrorHelp } from './RemoteVideoErrorHelp';
 import { createPlayerRoleLookup } from '@src/features/scouting/model/player-roles';
 import { SkillOffsetsControl } from './SkillOffsetsControl';
@@ -1078,6 +1079,10 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   );
 
   // ── Fine tuning: nudge the selected action, step frames, save a frame ──────
+  // Roles from the base system in the starting lineups, for athletes with none in the team list.
+  const rolesFromLineups = useMemo(() => lineupRoles(project.events.flatMap((event) => (
+    event.type === 'set_started' ? [event.homeLineup, event.awayLineup] : []
+  ))), [project.events]);
   const knownPlayerIds = useMemo(
     () => new Set(eventIndex.entries.flatMap((entry) => (entry.playerId ? [entry.playerId] : []))),
     [eventIndex.entries],
@@ -1353,6 +1358,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
         firstName: player.firstName,
         lastName: player.lastName,
         rallies: ralliesByPlayer.get(player.id) ?? 0,
+        roleGroup: resolveRoleGroup({ role: player.role, lineupRole: rolesFromLineups.get(player.id), isLibero: player.isLibero }),
       })));
   };
 

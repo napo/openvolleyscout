@@ -1,3 +1,4 @@
+import { resolveRoleGroup, type RoleGroup } from '@src/components/player-role/player-role';
 import type { TeamSide } from '@src/domain/common/enums';
 import { countRalliesByPlayer } from '@src/components/player-sort/player-sort';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -160,6 +161,7 @@ export type PlayerOption = {
   lastName?: string;
   /** Rallies in which the athlete touched the ball. */
   rallies?: number;
+  roleGroup?: RoleGroup | null;
 };
 
 export function getAvailablePlayers(stats: MatchStats): PlayerOption[] {
@@ -175,6 +177,7 @@ export function getAvailablePlayers(stats: MatchStats): PlayerOption[] {
       // Without separate names, the last word of the display name stands for the surname.
       lastName: p.lastName ?? p.playerName.trim().split(/\s+/).pop(),
       rallies: rallies.get(p.playerId) ?? 0,
+      roleGroup: resolveRoleGroup(p),
     }));
 }
 

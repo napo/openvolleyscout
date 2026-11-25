@@ -1086,7 +1086,10 @@
 }
 
 .player-autocomplete__browse-column {
-    width: 190px;
+    /* Wide enough for number, full name, role and rallies on one line. */
+    min-width: 240px;
+    width: max-content;
+    max-width: 340px;
 }
 
 .player-autocomplete__browse-header {
@@ -1100,8 +1103,19 @@
 
 .player-autocomplete__browse-list {
     list-style: none;
-    max-height: 220px;
+    /* A whole roster without scrolling when the screen is tall enough. */
+    max-height: min(75vh, 46rem);
     overflow-y: auto;
+}
+
+.player-role-tag {
+    margin-inline-start: 0.25rem;
+    padding: 0 0.3rem;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--color-primary-light) 35%, var(--color-background));
+    color: var(--color-text-secondary);
+    font-size: 0.68rem;
+    font-weight: 700;
 }
 
 .player-autocomplete__item {
@@ -1148,11 +1162,19 @@
 }
 
 /* Multi-select variant: checkbox rows and removable chips for the picked athletes. */
-.player-autocomplete--multi { max-width: 360px; }
+.player-autocomplete--multi { max-width: 520px; }
 
 .player-autocomplete--multi .player-autocomplete__item {
+    justify-content: flex-start;
     gap: 0.45rem;
-    min-height: 36px;
+    min-height: 30px;
+    margin: 0;
+    padding-block: 0.2rem;
+}
+
+.player-autocomplete--multi .player-autocomplete__item-player {
+    text-align: left;
+    white-space: nowrap;
 }
 
 .player-autocomplete--multi .player-autocomplete__item input[type='checkbox'] {
@@ -1345,6 +1367,9 @@
 }
 
 .player-autocomplete__sort {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
   padding: 0.35rem 0.5rem;
   border-bottom: 1px solid #e2e8f0;
   background: #fff;

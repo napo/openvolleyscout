@@ -4,6 +4,7 @@ import { useTranslation } from '@src/i18n';
 import { togglePlayerId, type PlayerOption } from '../selectors/dashboard-selectors';
 import { readPlayerSort, savePlayerSort, sortPlayers, type PlayerSortKey } from '@src/components/player-sort/player-sort';
 import { PlayerSortChips, RallyCount } from '@src/components/player-sort/PlayerSortChips';
+import { RoleChips, RoleTag } from '@src/components/player-role/RoleChips';
 import '../performance-dashboard.css';
 
 interface PlayerMultiAutocompleteProps {
@@ -61,7 +62,7 @@ export function PlayerMultiAutocomplete({
       <li key={player.playerId}>
         <label className={`player-autocomplete__item ${checked ? 'is-selected' : ''}`}>
           <input type="checkbox" checked={checked} onChange={() => toggle(player.playerId)} />
-          <span className="player-autocomplete__item-player">#{player.jerseyNumber} {player.playerName} <RallyCount rallies={player.rallies} /></span>
+          <span className="player-autocomplete__item-player">#{player.jerseyNumber} {player.playerName} <RoleTag role={player.roleGroup} /> <RallyCount rallies={player.rallies} /></span>
           {showTeam ? <span className="player-autocomplete__item-team">{teamNameOf(player)}</span> : null}
         </label>
       </li>
@@ -115,7 +116,12 @@ export function PlayerMultiAutocomplete({
           </ul>
         )}
 
-        {isOpen ? <div className="player-autocomplete__sort"><PlayerSortChips value={sortKey} onChange={changeSort} /></div> : null}
+        {isOpen ? (
+          <div className="player-autocomplete__sort">
+            <PlayerSortChips value={sortKey} onChange={changeSort} />
+            <RoleChips players={players.map((p) => ({ id: p.playerId, roleGroup: p.roleGroup }))} selected={selectedPlayerIds} onChange={onChange} />
+          </div>
+        ) : null}
 
         {isOpen && isBrowsing && (
           <div className="player-autocomplete__browse">

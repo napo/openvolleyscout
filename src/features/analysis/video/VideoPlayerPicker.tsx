@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { readPlayerSort, savePlayerSort, sortPlayers, type PlayerSortKey, type SortablePlayer } from '@src/components/player-sort/player-sort';
 import { PlayerSortChips, RallyCount } from '@src/components/player-sort/PlayerSortChips';
+import { RoleChips, RoleTag } from '@src/components/player-role/RoleChips';
+import type { RoleGroup } from '@src/components/player-role/player-role';
 import '@src/features/analytics/dashboard/performance-dashboard.css';
 
 export interface VideoPlayerPickOption extends SortablePlayer {
@@ -10,6 +12,7 @@ export interface VideoPlayerPickOption extends SortablePlayer {
   label: string;
   /** Team name, to list the athletes in one column per team. */
   group?: string;
+  roleGroup?: RoleGroup | null;
 }
 
 /**
@@ -89,7 +92,12 @@ export function VideoPlayerPicker({ label, options, selected, onChange }: {
           </ul>
         ) : null}
 
-        {isOpen ? <div className="player-autocomplete__sort"><PlayerSortChips value={sortKey} onChange={changeSort} /></div> : null}
+        {isOpen ? (
+          <div className="player-autocomplete__sort">
+            <PlayerSortChips value={sortKey} onChange={changeSort} />
+            <RoleChips players={options.map((o) => ({ id: o.value, roleGroup: o.roleGroup }))} selected={selected} onChange={onChange} />
+          </div>
+        ) : null}
         {isOpen ? (
           <div className="player-autocomplete__browse">
             {groups.length > 0 ? groups.map((group) => (
@@ -102,7 +110,7 @@ export function VideoPlayerPicker({ label, options, selected, onChange }: {
                       <li key={option.value}>
                         <label className={`player-autocomplete__item ${checked ? 'is-selected' : ''}`}>
                           <input type="checkbox" checked={checked} onChange={() => toggle(option.value)} />
-                          <span className="player-autocomplete__item-player">{option.label} <RallyCount rallies={option.rallies} /></span>
+                          <span className="player-autocomplete__item-player">{option.label} <RoleTag role={option.roleGroup} /> <RallyCount rallies={option.rallies} /></span>
                         </label>
                       </li>
                     );

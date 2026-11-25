@@ -15,6 +15,7 @@ import {
   type ScoringTouch,
 } from './scoring-rules';
 import { getIllegalLiberoStatsViolation } from '../live/libero';
+import { lineupRoles } from '../../../components/player-role/player-role';
 
 export type TrackedSkill =
   | 'serve'
@@ -67,6 +68,8 @@ export interface PlayerStats extends SkillStatMap {
   lastName?: string;
   teamSide: TeamSide;
   role?: Player['role'];
+  /** Role the base system gave the athlete in the starting lineups (for athletes with no role in the team list). */
+  lineupRole?: Player['role'];
   isLibero?: boolean;
   totalTouches: number;
   points: number;
@@ -1940,6 +1943,11 @@ export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
     getJerseyNumber: input.getJerseyNumber,
     getPlayerName: input.getPlayerName,
   });
+  const rolesFromLineups = lineupRoles(setStartedEvents.flatMap((event) => [event.homeLineup, event.awayLineup]));
+  for (const player of playerStats) {
+    const lineupRole = rolesFromLineups.get(player.playerId);
+    if (lineupRole) player.lineupRole = lineupRole;
+  }
   const roles = new Map([...input.homeTeam.players, ...input.awayTeam.players].map((player) => [player.id, player.role]));
   const rallyRotations = buildRallyRotations([
     ...(input.eventLog ?? []),

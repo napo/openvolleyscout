@@ -17,6 +17,7 @@ import type { BallTouch } from '../../../domain/touch/types';
 import type { DataVolleyCodeTables } from '../../../domain/match/code-tables';
 import { findAttackCombination } from '../../../domain/match/code-tables';
 import type { MatchStats, RallyStats, RotationNumber } from '../../scouting/model/match-stats';
+import type { RoleGroup } from '../../../components/player-role/player-role';
 import { getZoneCode } from '../../scouting/model/datavolley-code';
 import { classifyRallyTouchPhases } from '../rally-phase/rally-phase-classifier';
 
@@ -62,11 +63,13 @@ export interface ZoneAnalysisFilters {
   setNumber: 'all' | number;
   rotation: 'all' | RotationNumber;
   playerId: 'all' | string;
+  /** Attacker roles kept (empty = every role). */
+  roles: RoleGroup[];
   evaluations: SkillEvaluation[];
 }
 
 export function createDefaultZoneAnalysisFilters(team: TeamSide = 'home'): ZoneAnalysisFilters {
-  return { team, mode: 'classic', grid: 6, phase: 'all', setNumber: 'all', rotation: 'all', playerId: 'all', evaluations: [] };
+  return { team, mode: 'classic', grid: 6, phase: 'all', setNumber: 'all', rotation: 'all', playerId: 'all', roles: [], evaluations: [] };
 }
 
 /** One attack with everything the filters and the zones need. */
@@ -163,8 +166,13 @@ export function extractZoneAnalysisAttacks(
 export function filterZoneAnalysisAttacks(
   attacks: readonly ZoneAnalysisAttack[],
   filters: ZoneAnalysisFilters,
+  roleOf: (playerId: string | undefined) => RoleGroup | null = () => null,
 ): ZoneAnalysisAttack[] {
   return attacks.filter((attack) => {
+    if (filters.roles.length > 0) {
+      const role = roleOf(attack.touch.playerId);
+      if (!role || !filters.roles.includes(role)) return false;
+    }
     if (attack.teamSide !== filters.team) return false;
     if (filters.phase !== 'all' && attack.phase !== filters.phase) return false;
     if (filters.setNumber !== 'all' && attack.setNumber !== filters.setNumber) return false;

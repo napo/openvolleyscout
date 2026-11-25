@@ -23,6 +23,7 @@ import {
   type ZoneAnalysisValue,
   type ZoneAnalysisZone,
 } from './zone-analysis';
+import { ROLE_GROUPS, ROLE_GROUP_NAME_KEYS, ROLE_GROUP_SHORT_KEYS, resolveRoleGroup } from '@src/components/player-role/player-role';
 import './zone-analysis.css';
 
 interface ZoneAnalysisPanelProps {
@@ -79,9 +80,13 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
   const attacks = useMemo(() => extractZoneAnalysisAttacks(stats.rallyStats, codeTables), [stats.rallyStats, codeTables]);
   const playersById = useMemo(() => new Map(stats.playerStats.map((p) => [p.playerId, p])), [stats.playerStats]);
   const effectiveFilters = { ...filters, team };
-  const filtered = useMemo(() => filterZoneAnalysisAttacks(attacks, effectiveFilters),
+  const roleOf = useMemo(() => {
+    const roles = new Map(stats.playerStats.map((p) => [p.playerId, resolveRoleGroup(p)]));
+    return (id: string | undefined) => (id ? roles.get(id) ?? null : null);
+  }, [stats.playerStats]);
+  const filtered = useMemo(() => filterZoneAnalysisAttacks(attacks, effectiveFilters, roleOf),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [attacks, team, filters]);
+    [attacks, team, filters, roleOf]);
   const result = useMemo(() => computeZoneAnalysis(filtered, filters.mode, filters.grid), [filtered, filters.mode, filters.grid]);
   const extremes = zoneAnalysisExtremes(result, values[0]);
 
@@ -94,6 +99,10 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
       .map((p) => ({ value: p.playerId, label: `${p.jerseyNumber} ${shortName(p)}` }));
   }, [attacks, stats.playerStats, team]);
 
+  const attackerRoles = useMemo(() => {
+    const present = new Set(attacks.filter((a) => a.teamSide === team).map((a) => roleOf(a.touch.playerId)));
+    return ROLE_GROUPS.filter((role) => present.has(role));
+  }, [attacks, team, roleOf]);
   const update = (patch: Partial<ZoneAnalysisFilters>) => { setFilters({ ...filters, ...patch }); setSelectedZone(null); };
   const stepRotation = (step: 1 | -1) => {
     const index = filters.rotation === 'all' ? (step === 1 ? -1 : 0) : ROTATION_ORDER.indexOf(filters.rotation);
@@ -169,7 +178,7 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
                 single
                 options={[{ value: 'home', label: teamName('home') }, { value: 'away', label: teamName('away') }]}
                 selected={[filters.team]}
-                onChange={(next) => update({ team: (next[0] ?? filters.team) as TeamSide, playerId: 'all' })}
+                onChange={(next) => update({ team: (next[0] ?? filters.team) as TeamSide, playerId: 'all', roles: [] })}
               />
             </FilterGroup>
           ) : null}
@@ -227,6 +236,16 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
               onChange={(next) => update({ rotation: (next[0] ?? 'all') as RotationNumber | 'all' })}
             />
           </FilterGroup>
+          {attackerRoles.length > 0 ? (
+            <FilterGroup title={t('roleFilterLabel')} active={filters.roles.length > 0}>
+              <ChipSelect
+                allLabel={all}
+                options={attackerRoles.map((role) => ({ value: role, label: t(ROLE_GROUP_SHORT_KEYS[role]), title: t(ROLE_GROUP_NAME_KEYS[role]) }))}
+                selected={filters.roles}
+                onChange={(next) => update({ roles: next })}
+              />
+            </FilterGroup>
+          ) : null}
           {attackerOptions.length > 0 ? (
             <FilterGroup title={t('zoneAnalysisPlayer')} active={filters.playerId !== 'all'}>
               <ChipSelect
