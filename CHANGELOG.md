@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.46.0 - 2026-11-25
+
+### Added
+- Covers are now read from DataVolley files. DataVolley writes a cover as a dig: the app now recognises it (type of hit C, a dig rated "!" by the team that attacked, or the attacking team's dig right after the opponent's block) and shows it as Cover in the Video analysis filters, in Team performance and in Player performance. To see covers in matches you already imported, import the file again.
+- In the Video analysis skill chain you can now choose which skill is shown with Show, not only the last one. The other skills of the chain count as conditions before or after it in the same rally: for example Reception and Attack, showing Reception with attack "/", lists the receptions followed by a blocked attack.
+
+### Changed
+- All filters now look and work the same way: Video analysis, the dashboards, the heatmaps, the tactical report editors and the Side-out study use the same boxes, the "All" button and the evaluation colours in the order of each skill. In the Side-out study and in the heatmap evaluation filter you no longer switch off what you want to hide: "All" is on and you pick what you want to see.
+- In Video analysis the separate Skill chain section is now part of the filters themselves, with the team, the players and the details of each skill in one place. Players of a team or match that is no longer shown stop filtering, so the list no longer turns empty without a visible reason. Saved filters work in both the single-match and the several-matches view; filters saved before on several matches keep applying to the team you study.
+- The "Phase" filter of the attacks in the tactical report and in the heatmaps is now called "Attack situation", because it describes the attack (after reception, after dig, high ball, late set).
+- Dig numbers drop a little, by about one dig in ten in typical matches, because covers are no longer counted as digs. Matches imported before this version keep the old numbers until you import the file again.
+
+### Fixed
+- The Draw together / Draw separately buttons of the tactical report editors are shown with the same style as the filters again.
+
 ## 0.45.0 - 2026-11-24
 
 ### Added
