@@ -426,8 +426,13 @@ jobs:
           Keep the three .exe files together. This version does not update itself:
           download the new zip from the release page when a new version comes out.
           Requires Microsoft Edge WebView2, already included in Windows 10 and 11.
+          Without it, and with no way to install it: download the WebView2 "Fixed Version"
+          runtime (x64 .cab) from Microsoft, unpack it into a folder named "webview2" next
+          to these files, and start avvia.bat instead of OpenVolleyScout.exe.
           Licence: GNU AGPL v3 or later (AGPL-3.0-or-later).
           "@ | Set-Content -Encoding utf8 "$OUT/README.txt"
+
+          Copy-Item "scripts/windows-portable/avvia.bat" "$OUT/avvia.bat"
 
           Compress-Archive -Path "$OUT/*" -DestinationPath "$OUT.zip" -Force
           gh release upload "${{ github.ref_name }}" "$OUT.zip" --clobber --repo napo/openvolleyscout
