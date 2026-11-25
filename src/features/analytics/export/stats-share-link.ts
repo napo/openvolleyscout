@@ -14,6 +14,7 @@ export type SharedStatsTabId =
   | 'player-performance'
   | 'sideout-study'
   | 'cross-rotation'
+  | 'zone-analysis'
   | 'play-by-play'
   | 'trends'
   | 'notes'
@@ -83,6 +84,7 @@ const TAB_TO_CODE: Record<SharedStatsTabId, string> = {
   'player-performance': 'p',
   'sideout-study': 's',
   'cross-rotation': 'c',
+  'zone-analysis': 'z',
   'play-by-play': 'b',
   trends: 'd',
   notes: 'n',

@@ -38,6 +38,10 @@ import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
 import { hasSideOutStudyData } from '@src/features/analytics/sideout/sideout-distribution';
 import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
+import { ZoneAnalysisPanel } from '@src/features/analytics/zone-analysis/ZoneAnalysisPanel';
+import { hasZoneAnalysisData } from '@src/features/analytics/zone-analysis/zone-analysis';
+import { getMatchCodeTables } from '@src/domain/match/code-tables';
+import { createTouchVideoSecondsResolver } from '../video/video-event-index';
 import { TrendsPanel } from '@src/features/analytics/trends/TrendsPanel';
 import { useIsAnyTrendsFeatureEnabled } from '@src/app/store/experimental-features-store';
 import { filterMatchesForTeam } from '@src/features/teams/model/team-match-filter';
@@ -48,11 +52,11 @@ import '@src/features/scouting/scouting-screen.css';
 const statsViewTitles: Record<StatsView, TranslationKey> = {
   'play-by-play': 'pbpTitle', report: 'matchReport', 'team-performance': 'performanceTeams',
   'player-performance': 'performancePlayer', 'sideout-study': 'sideOutStudy',
-  'cross-rotation': 'crossRotationAnalysis', trends: 'trendsTitle', 'video-analysis': 'videoAnalysis',
+  'zone-analysis': 'zoneAnalysis', 'cross-rotation': 'crossRotationAnalysis', trends: 'trendsTitle', 'video-analysis': 'videoAnalysis',
   notes: 'pointNoteTab',
 };
 
-type StatsView = 'play-by-play' | 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'trends' | 'video-analysis' | 'notes';
+type StatsView = 'play-by-play' | 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'zone-analysis' | 'cross-rotation' | 'trends' | 'video-analysis' | 'notes';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
@@ -63,6 +67,13 @@ export function AnalysisPage() {
   // The home page can open a specific view directly (e.g. the video analysis).
   const [statsView, setStatsView] = useState<StatsView>(() => (location.state as { view?: StatsView } | null)?.view ?? 'report');
   const [isExportingTab, setIsExportingTab] = useState(false);
+  // A zone analysis attack opened in Video analysis.
+  const [videoSeekSeconds, setVideoSeekSeconds] = useState<number | null>(null);
+  const zoneVideoSecondsOf = useMemo(() => {
+    const analysis = activeProject?.videoAnalysis;
+    if (!activeProject || !analysis?.source || statsView !== 'zone-analysis') return undefined;
+    return createTouchVideoSecondsResolver(activeProject.events, analysis);
+  }, [activeProject, statsView]);
   const exportPanelRef = useRef<HTMLDivElement>(null);
   // The play by play on screen, for its share link.
   const playByPlayShareRef = useRef<PlayByPlayShare | null>(null);
@@ -454,6 +465,17 @@ export function AnalysisPage() {
                     {t('sideOutStudy')}
                   </button>
                 ) : null}
+                {matchStats && hasZoneAnalysisData(matchStats) ? (
+                  <button
+                    type="button"
+                    role="tab" disabled={isExportingTab}
+                    aria-selected={statsView === 'zone-analysis'}
+                    className={`stats-view-tabs__tab${statsView === 'zone-analysis' ? ' stats-view-tabs__tab--active' : ''}`}
+                    onClick={() => setStatsView('zone-analysis')}
+                  >
+                    {t('zoneAnalysis')}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   role="tab" disabled={isExportingTab}
@@ -560,6 +582,18 @@ export function AnalysisPage() {
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <SideOutStudyPanel stats={matchStats} />
                 </div>
+              ) : statsView === 'zone-analysis' && matchStats ? (
+                <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+                  <ZoneAnalysisPanel
+                    stats={matchStats}
+                    codeTables={getMatchCodeTables(activeProject)}
+                    videoSecondsOf={zoneVideoSecondsOf}
+                    onPlayVideo={(seconds) => {
+                      setVideoSeekSeconds(Math.max(0, seconds - (activeProject.videoAnalysis?.paddingBeforeSeconds ?? 0)));
+                      setStatsView('video-analysis');
+                    }}
+                  />
+                </div>
               ) : statsView === 'cross-rotation' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <CrossRotationAnalysisPanel stats={matchStats} />
@@ -570,7 +604,7 @@ export function AnalysisPage() {
                 </div>
               ) : statsView === 'video-analysis' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-                  <VideoAnalysisPanel project={activeProject} />
+                  <VideoAnalysisPanel project={activeProject} initialSeekSeconds={videoSeekSeconds} onInitialSeekHandled={() => setVideoSeekSeconds(null)} />
                 </div>
               ) : statsView === 'notes' && hasPointNotes ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">

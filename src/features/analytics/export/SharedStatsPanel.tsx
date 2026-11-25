@@ -4,6 +4,8 @@ import { TeamPerformanceDashboard } from '../dashboard/TeamPerformanceDashboard'
 import { PlayerPerformanceDashboard } from '../dashboard/PlayerPerformanceDashboard';
 import { SideOutStudyPanel } from '../sideout/SideOutStudyPanel';
 import { CrossRotationAnalysisPanel } from '../cross-rotation/CrossRotationAnalysisPanel';
+import { ZoneAnalysisPanel } from '@src/features/analytics/zone-analysis/ZoneAnalysisPanel';
+import { DEFAULT_DATAVOLLEY_CODE_TABLES } from '@src/domain/match/code-tables';
 import { PlayByPlayPanel } from '../play-by-play/PlayByPlayPanel';
 import { MatchReportView } from '@src/features/scouting/components/MatchReportTable';
 import '@src/features/scouting/scouting-screen.css';
@@ -22,6 +24,7 @@ export const SNAPSHOT_TABS: readonly SharedStatsTabId[] = [
   'player-performance',
   'sideout-study',
   'cross-rotation',
+  'zone-analysis',
   'play-by-play',
 ];
 
@@ -91,6 +94,7 @@ export function SharedStatsPanel({ tabId, snapshot }: { tabId: SharedStatsTabId;
         : tabId === 'player-performance' ? <PlayerPerformanceDashboard stats={stats} readOnlyPlayers lockedTeam={snapshot.lockedTeam} />
         : tabId === 'sideout-study' ? <SideOutStudyPanel stats={stats} lockedTeam={snapshot.lockedTeam} />
         : tabId === 'cross-rotation' ? <CrossRotationAnalysisPanel stats={stats} />
+        : tabId === 'zone-analysis' ? <ZoneAnalysisPanel stats={stats} codeTables={DEFAULT_DATAVOLLEY_CODE_TABLES} lockedTeam={snapshot.lockedTeam} />
         : null}
     </div>
   );

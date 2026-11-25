@@ -15,6 +15,7 @@ const TAB_LABEL_KEYS: Partial<Record<SharedStatsTabId, TranslationKey>> = {
   'player-performance': 'performancePlayer',
   'sideout-study': 'sideOutStudy',
   'cross-rotation': 'crossRotationAnalysis',
+  'zone-analysis': 'zoneAnalysis',
   'play-by-play': 'pbpTitle',
   trends: 'trendsTitle',
   notes: 'pointNoteTab',
