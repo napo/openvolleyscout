@@ -81,6 +81,10 @@ export function AnalysisPage() {
   const [exportProgress, setExportProgress] = useState<LoadProgressState | null>(null);
   const [computeProgress, setComputeProgress] = useState<LoadProgressState | null>(null);
   const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
+  const hasZoneAnalysis = useMemo(
+    () => !!matchStats && !!activeProject && hasZoneAnalysisData(matchStats, getMatchCodeTables(activeProject)),
+    [matchStats, activeProject],
+  );
   const [matchReportHtml, setMatchReportHtml] = useState('');
   const [allMatches, setAllMatches] = useState<MatchProject[]>([]);
 
@@ -91,7 +95,11 @@ export function AnalysisPage() {
     if (!hasPointNotes && statsView === 'notes') {
       setStatsView('report');
     }
-  }, [trendsEnabled, hasPointNotes, statsView]);
+    // A match without attack zones has no zone analysis (wait for the stats before deciding).
+    if (matchStats && !hasZoneAnalysis && statsView === 'zone-analysis') {
+      setStatsView('report');
+    }
+  }, [trendsEnabled, hasPointNotes, statsView, matchStats, hasZoneAnalysis]);
 
   useEffect(() => {
     let cancelled = false;
@@ -465,7 +473,7 @@ export function AnalysisPage() {
                     {t('sideOutStudy')}
                   </button>
                 ) : null}
-                {matchStats && hasZoneAnalysisData(matchStats) ? (
+                {hasZoneAnalysis ? (
                   <button
                     type="button"
                     role="tab" disabled={isExportingTab}
@@ -582,7 +590,7 @@ export function AnalysisPage() {
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <SideOutStudyPanel stats={matchStats} />
                 </div>
-              ) : statsView === 'zone-analysis' && matchStats ? (
+              ) : statsView === 'zone-analysis' && matchStats && hasZoneAnalysis ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <ZoneAnalysisPanel
                     stats={matchStats}

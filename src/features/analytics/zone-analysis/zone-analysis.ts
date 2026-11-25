@@ -249,7 +249,7 @@ export function zoneAnalysisExtremes(
   return { low: low.zone, high: high.zone };
 }
 
-/** True when the match has at least one attack for the team (or for any team). */
-export function hasZoneAnalysisData(stats: Pick<MatchStats, 'rallyStats'>): boolean {
-  return stats.rallyStats.some((rally) => rally.touches.some((touch) => touch.skill === 'attack'));
+/** True when at least one attack has a start zone: without zones the analysis has nothing to draw. */
+export function hasZoneAnalysisData(stats: Pick<MatchStats, 'rallyStats'>, tables: DataVolleyCodeTables): boolean {
+  return extractZoneAnalysisAttacks(stats.rallyStats, tables).some((attack) => attack.realZone !== null);
 }
