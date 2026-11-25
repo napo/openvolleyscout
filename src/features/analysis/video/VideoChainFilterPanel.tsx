@@ -9,6 +9,7 @@ import {
   VIDEO_CHAIN_SKILL_ORDER,
   orderVideoChain,
   pruneVideoChainPlayers,
+  shownVideoSkill,
   type VideoChainFilters,
   type VideoSkillAttributes,
   type VideoTeamScope,
@@ -79,7 +80,7 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
   const playerIdsFor = (scope: VideoTeamScope) => new Set(playerOptions(scope).map((option) => option.value));
   const patch = (next: Partial<VideoChainFilters>) => onChange(pruneVideoChainPlayers({ ...filters, ...next }, playerIdsFor));
   const chain = orderVideoChain(filters.chain);
-  const target = chain.at(-1);
+  const target = shownVideoSkill(filters);
 
   const patchAttributes = (key: SkillType | 'any', next: Partial<VideoSkillAttributes>) => {
     onChange({ ...filters, attributes: { ...filters.attributes, [key]: { ...filters.attributes[key], ...next } } });
@@ -190,9 +191,24 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
             allLabel={t('allSkills')}
             options={VIDEO_CHAIN_SKILL_ORDER.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill') }))}
             selected={chain}
-            onChange={(next) => patch({ chain: next.length === VIDEO_CHAIN_SKILL_ORDER.length ? [] : next })}
+            onChange={(next) => {
+              const nextChain = next.length === VIDEO_CHAIN_SKILL_ORDER.length ? [] : next;
+              // A shown skill taken out of the chain falls back to the last one.
+              patch({ chain: nextChain, shown: filters.shown && nextChain.includes(filters.shown) ? filters.shown : undefined });
+            }}
           />
-          {chain.length > 1 ? <span className="filter-chips__row-label">{t('videoChainSkillsHint')}</span> : null}
+          {chain.length > 1 ? (
+            <>
+              <ChipSelect
+                single
+                label={t('videoChainShowLabel')}
+                options={chain.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill') }))}
+                selected={target ? [target] : []}
+                onChange={(next) => patch({ shown: next[0] })}
+              />
+              <span className="filter-chips__row-label">{t('videoChainSkillsHint')}</span>
+            </>
+          ) : null}
         </FilterGroup>
         {(chain.length > 0 ? chain : ['any' as const]).map(skillCard)}
         {setNumbers.length > 1 ? (

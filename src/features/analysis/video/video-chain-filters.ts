@@ -72,6 +72,11 @@ export interface VideoChainFilters {
   rallyOutcome: 'all' | 'won' | 'lost';
   /** Skills of the chain (any order; applied in rally order). Empty: every skill. */
   chain: SkillType[];
+  /**
+   * The skill of the chain whose actions are shown; the others must come before or after it
+   * in the same rally, in rally order. Missing or not in the chain: the last skill of the chain.
+   */
+  shown?: SkillType;
   /** Attributes per skill; `any` applies when the chain is empty. */
   attributes: Partial<Record<SkillType | 'any', VideoSkillAttributes>>;
 }
@@ -241,6 +246,12 @@ export function orderVideoChain(chain: readonly SkillType[]): SkillType[] {
   return VIDEO_CHAIN_SKILL_ORDER.filter((skill) => chain.includes(skill));
 }
 
+/** The skill whose actions are shown: the one chosen, if it is in the chain, else the last of the chain. */
+export function shownVideoSkill(filters: Pick<VideoChainFilters, 'chain' | 'shown'>): SkillType | undefined {
+  const chain = orderVideoChain(filters.chain);
+  return filters.shown && chain.includes(filters.shown) ? filters.shown : chain.at(-1);
+}
+
 export function applyVideoChainFilters<E extends VideoEventEntry>(
   items: readonly VideoChainEntry<E>[],
   filters: VideoChainFilters,
@@ -252,8 +263,10 @@ export function applyVideoChainFilters<E extends VideoEventEntry>(
       .map((item) => item.entry);
   }
 
-  const targetSkill = chain[chain.length - 1];
-  const predecessors = chain.slice(0, -1);
+  const targetSkill = shownVideoSkill(filters)!;
+  const position = chain.indexOf(targetSkill);
+  const before = chain.slice(0, position);
+  const after = chain.slice(position + 1);
   const byRally = new Map<string, VideoChainEntry<E>[]>();
   for (const item of items) {
     const list = byRally.get(item.rallyKey);
@@ -262,24 +275,27 @@ export function applyVideoChainFilters<E extends VideoEventEntry>(
   }
   for (const list of byRally.values()) list.sort((left, right) => left.order - right.order);
 
+  // Whether `links` happen one after the other, in this order, among `candidates`.
+  const followsChain = (candidates: readonly VideoChainEntry<E>[], links: readonly SkillType[]): boolean => {
+    let next = 0;
+    for (const candidate of candidates) {
+      if (next === links.length) break;
+      const skill = links[next];
+      if (candidate.entry.skill === skill && matchesSkillAttributes(candidate, filters.attributes[skill])) next += 1;
+    }
+    return next === links.length;
+  };
+
   return items
     .filter((item) => {
       if (item.entry.skill !== targetSkill) return false;
       if (!matchesSkillAttributes(item, filters.attributes[targetSkill])) return false;
       if (!matchesContext(item, filters)) return false;
-      if (predecessors.length === 0) return true;
-      // Each previous skill needs a matching action earlier in the rally, in rally order.
+      if (before.length === 0 && after.length === 0) return true;
+      // The skills before the one shown happen earlier in the rally, those after it later, in rally order.
       const rally = byRally.get(item.rallyKey) ?? [];
-      let next = 0;
-      for (const candidate of rally) {
-        if (candidate.order >= item.order) break;
-        const skill = predecessors[next];
-        if (candidate.entry.skill === skill && matchesSkillAttributes(candidate, filters.attributes[skill])) {
-          next += 1;
-          if (next === predecessors.length) return true;
-        }
-      }
-      return false;
+      return followsChain(rally.filter((candidate) => candidate.order < item.order), before)
+        && followsChain(rally.filter((candidate) => candidate.order > item.order), after);
     })
     .map((item) => item.entry);
 }
@@ -314,7 +330,7 @@ export function pruneVideoChainPlayers(
   filters: VideoChainFilters,
   playerIdsFor: (scope: VideoTeamScope) => ReadonlySet<string>,
 ): VideoChainFilters {
-  const target = orderVideoChain(filters.chain).at(-1);
+  const target = shownVideoSkill(filters);
   let changed = false;
   const attributes: VideoChainFilters['attributes'] = {};
   for (const [key, value] of Object.entries(filters.attributes) as Array<[SkillType | 'any', VideoSkillAttributes | undefined]>) {
