@@ -192,3 +192,18 @@
     transition: none;
   }
 }
+
+.heatmap-eval-filter {
+  display: flex;
+  align-items: center;
+}
+
+.heatmap-attack-filters {
+  margin-bottom: 1rem;
+}
+
+.heatmap-attack-filters__header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}

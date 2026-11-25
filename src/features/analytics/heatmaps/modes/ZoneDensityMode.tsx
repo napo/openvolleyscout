@@ -1,16 +1,15 @@
-import { useEffect, useRef, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { nextChartRotation, rotateCanvasDrawing, type ChartRotation } from '@src/lib/utils/chart-rotation';
 import SimpleHeat from 'simpleheat';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
 import { getAttackSubtypeOrDefault, type AttackSubtype, type BallTouch } from '@src/domain/touch/types';
-import { getEvaluationColor, getEvaluationInk, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
 import type {
   AttackerDirectionPhase,
   SetterDistributionReceptionEval,
 } from '@src/domain/opponent-report/types';
 import { attackZoneNumber } from '../../sideout/sideout-distribution';
-import '@src/components/filter-chips.css';
+import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
 import { ALL_EVALUATIONS } from '../../dashboard/filters/dashboard-filters';
@@ -1284,23 +1283,6 @@ const HEATMAP_ATTACK_SUBTYPES: ReadonlyArray<{
 const HEATMAP_BLOCKERS = [0, 1, 2, 3] as const;
 const BACK_ROW_ZONE_MAP: Record<number, number> = { 7: 5, 8: 6, 9: 1 };
 
-function heatmapEvalChipStyle(skill: SkillType | 'all', evaluation: SkillEvaluation, active: boolean): CSSProperties {
-  const effectiveSkill: SkillType = skill === 'all' ? 'attack' : skill;
-  const color = getEvaluationColor(effectiveSkill, evaluation);
-  if (active) {
-    return {
-      background: color,
-      borderColor: color,
-      color: getEvaluationInk(effectiveSkill, evaluation),
-    };
-  }
-  return {
-    background: getEvaluationTint(effectiveSkill, evaluation, 0.24),
-    borderColor: color,
-    color: '#1e293b',
-  };
-}
-
 function hasAnyAttackFilter(f: HeatmapAttackFilters): boolean {
   return (
     f.phases.length > 0
@@ -1502,15 +1484,9 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
     + (attackFilters.combinationCodes.length > 0 ? 1 : 0)
   ), [attackFilters]);
 
-  const toggleAttackFilterItem = <T,>(field: keyof HeatmapAttackFilters, value: T, allValues?: readonly T[]) => {
-    setAttackFilters((prev) => {
-      const current = prev[field] as unknown as readonly T[];
-      const next = current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value];
-      const normalized = allValues && next.length === allValues.length ? [] : next;
-      return { ...prev, [field]: normalized };
-    });
+  const allLabel = t('setterViewReceptionAll');
+  const setAttackFilter = <K extends keyof HeatmapAttackFilters>(field: K, next: HeatmapAttackFilters[K]) => {
+    setAttackFilters((prev) => ({ ...prev, [field]: next }));
   };
 
   const availableStartZones = useMemo(() => {
@@ -1691,30 +1667,15 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
           </div>
         )}
 
-        {/* Evaluation filter (colored scouting chips) */}
-        <div className="ovs-filter-chips" role="group" aria-label={t('evaluation')}>
-          <span className="ovs-filter-group__title" style={{ marginRight: '0.2rem' }}>{t('evaluation')}:</span>
-          {ALL_EVALUATIONS.map((evaluation) => {
-            const active = filters?.evaluations?.includes(evaluation) ?? true;
-            return (
-              <button
-                key={evaluation}
-                type="button"
-                className={`ovs-filter-chip ovs-filter-chip--eval${active ? ' is-active' : ''}`}
-                style={heatmapEvalChipStyle(skill, evaluation, active)}
-                aria-pressed={active}
-                onClick={() => {
-                  const current = filters?.evaluations || ALL_EVALUATIONS;
-                  const updated = active
-                    ? current.filter((v) => v !== evaluation)
-                    : [...current, evaluation];
-                  updateFilter('evaluations', updated);
-                }}
-              >
-                {evaluation}
-              </button>
-            );
-          })}
+        {/* Evaluation filter: "All" plus the skill's scale, in its colours */}
+        <div className="heatmap-eval-filter" role="group" aria-label={t('evaluation')}>
+          <EvaluationChips
+            skill={skill === 'all' ? null : skill}
+            label={`${t('evaluation')}:`}
+            allLabel={t('setterViewReceptionAll')}
+            selected={filters?.evaluations && filters.evaluations.length < ALL_EVALUATIONS.length ? filters.evaluations : []}
+            onChange={(next) => updateFilter('evaluations', next.length > 0 ? next : [...ALL_EVALUATIONS])}
+          />
         </div>
 
         {(skill === 'attack' || skill === 'all') ? (
@@ -1798,246 +1759,83 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
         </button>
       </div>
 
-      {/* Tactical-style Attack Direction Filters */}
-      {(skill === 'attack' || (skill === 'all' && showAttackFilters)) ? (() => {
-        const recEvals = attackFilters.receptionEvaluations;
-        const isRecAll = recEvals.length === 0;
-        const isRecPos = recEvals.length === 2 && recEvals.includes('#') && recEvals.includes('+');
-        const isRecNeg = recEvals.length === 2 && recEvals.includes('!') && recEvals.includes('-');
-        return (
-          <section className="ovs-filter-panel" style={{ marginBottom: '1rem' }} aria-label={t('attackerViewsConfigure')}>
-            {activeAttackFilterCount > 0 ? (
-              <div className="ovs-filter-panel__header">
-                <span className="ovs-filter-group__title">{t('skillAttack')}</span>
-                <button
-                  type="button"
-                  className="btn-secondary btn-small"
-                  onClick={() => setAttackFilters(EMPTY_HEATMAP_ATTACK_FILTERS)}
-                >
-                  {t('setterViewsResetDefault')}
-                </button>
-              </div>
-            ) : null}
-            <div className="ovs-filter-grid">
-              <div className={`ovs-filter-group${attackFilters.phases.length > 0 ? ' is-filtered' : ''}`}>
-                <span className="ovs-filter-group__title">{t('attackerViewPhaseLabel')}</span>
-                <div className="ovs-filter-chips">
-                  <button
-                    type="button"
-                    className={`ovs-filter-chip${attackFilters.phases.length === 0 ? ' is-active' : ''}`}
-                    aria-pressed={attackFilters.phases.length === 0}
-                    onClick={() => setAttackFilters((prev) => ({ ...prev, phases: [] }))}
-                  >
-                    {t('setterViewReceptionAll')}
-                  </button>
-                  {HEATMAP_ATTACK_PHASES.map((phase) => {
-                    const active = attackFilters.phases.includes(phase.value);
-                    return (
-                      <button
-                        key={phase.value}
-                        type="button"
-                        className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                        aria-pressed={active}
-                        onClick={() => toggleAttackFilterItem('phases', phase.value)}
-                      >
-                        {t(phase.labelKey)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className={`ovs-filter-group${recEvals.length > 0 ? ' is-filtered' : ''}`}>
-                <span className="ovs-filter-group__title">{t('setterViewReceptionLabel')}</span>
-                <div className="ovs-filter-chips">
-                  <button
-                    type="button"
-                    className={`ovs-filter-chip${isRecAll ? ' is-active' : ''}`}
-                    aria-pressed={isRecAll}
-                    onClick={() => setAttackFilters((prev) => ({ ...prev, receptionEvaluations: [] }))}
-                  >
-                    {t('setterViewReceptionAll')}
-                  </button>
-                  <button
-                    type="button"
-                    className={`ovs-filter-chip${isRecPos ? ' is-active' : ''}`}
-                    aria-pressed={isRecPos}
-                    onClick={() => setAttackFilters((prev) => ({ ...prev, receptionEvaluations: ['#', '+'] }))}
-                  >
-                    {t('setterViewReceptionPositive')}
-                  </button>
-                  <button
-                    type="button"
-                    className={`ovs-filter-chip${isRecNeg ? ' is-active' : ''}`}
-                    aria-pressed={isRecNeg}
-                    onClick={() => setAttackFilters((prev) => ({ ...prev, receptionEvaluations: ['!', '-'] }))}
-                  >
-                    {t('setterViewReceptionNegative')}
-                  </button>
-                  <span className="ovs-filter-divider" aria-hidden="true" />
-                  {HEATMAP_RECEPTION_EVALS.map((code) => {
-                    const active = recEvals.includes(code);
-                    return (
-                      <button
-                        key={code}
-                        type="button"
-                        className={`ovs-filter-chip ovs-filter-chip--eval${active ? ' is-active' : ''}`}
-                        style={heatmapEvalChipStyle('receive', code, active)}
-                        aria-pressed={active}
-                        onClick={() => toggleAttackFilterItem('receptionEvaluations', code, HEATMAP_RECEPTION_EVALS)}
-                      >
-                        {code}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className={`ovs-filter-group${attackFilters.rotations.length > 0 ? ' is-filtered' : ''}`}>
-                <span className="ovs-filter-group__title">{t('opponentReportColRotation')}</span>
-                <div className="ovs-filter-chips">
-                  <button
-                    type="button"
-                    className={`ovs-filter-chip${attackFilters.rotations.length === 0 ? ' is-active' : ''}`}
-                    aria-pressed={attackFilters.rotations.length === 0}
-                    onClick={() => setAttackFilters((prev) => ({ ...prev, rotations: [] }))}
-                  >
-                    {t('setterViewReceptionAll')}
-                  </button>
-                  {HEATMAP_ROTATIONS.map((rot) => {
-                    const active = attackFilters.rotations.includes(rot);
-                    return (
-                      <button
-                        key={rot}
-                        type="button"
-                        className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                        aria-pressed={active}
-                        onClick={() => toggleAttackFilterItem('rotations', rot, HEATMAP_ROTATIONS)}
-                      >
-                        {`P${rot}`}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className={`ovs-filter-group${attackFilters.attackZones.length > 0 ? ' is-filtered' : ''}`}>
-                <span className="ovs-filter-group__title">{t('opponentReportAttackZone')}</span>
-                <div className="ovs-filter-chips">
-                  <button
-                    type="button"
-                    className={`ovs-filter-chip${attackFilters.attackZones.length === 0 ? ' is-active' : ''}`}
-                    aria-pressed={attackFilters.attackZones.length === 0}
-                    onClick={() => setAttackFilters((prev) => ({ ...prev, attackZones: [] }))}
-                  >
-                    {t('setterViewReceptionAll')}
-                  </button>
-                  {HEATMAP_ATTACK_ZONES.map((zone) => {
-                    const active = attackFilters.attackZones.includes(zone);
-                    return (
-                      <button
-                        key={zone}
-                        type="button"
-                        className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                        aria-pressed={active}
-                        onClick={() => toggleAttackFilterItem('attackZones', zone, HEATMAP_ATTACK_ZONES)}
-                      >
-                        {`Z${zone}`}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className={`ovs-filter-group${attackFilters.attackSubtypes.length > 0 ? ' is-filtered' : ''}`}>
-                <span className="ovs-filter-group__title">{t('opponentReportAttackType')}</span>
-                <div className="ovs-filter-chips">
-                  <button
-                    type="button"
-                    className={`ovs-filter-chip${attackFilters.attackSubtypes.length === 0 ? ' is-active' : ''}`}
-                    aria-pressed={attackFilters.attackSubtypes.length === 0}
-                    onClick={() => setAttackFilters((prev) => ({ ...prev, attackSubtypes: [] }))}
-                  >
-                    {t('setterViewReceptionAll')}
-                  </button>
-                  {HEATMAP_ATTACK_SUBTYPES.map((st) => {
-                    const active = attackFilters.attackSubtypes.includes(st.value);
-                    return (
-                      <button
-                        key={st.value}
-                        type="button"
-                        className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                        aria-pressed={active}
-                        onClick={() => toggleAttackFilterItem('attackSubtypes', st.value, HEATMAP_ATTACK_SUBTYPES.map((x) => x.value))}
-                      >
-                        {`${t(st.labelKey)} (${st.value})`}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className={`ovs-filter-group${attackFilters.blockers.length > 0 ? ' is-filtered' : ''}`}>
-                <span className="ovs-filter-group__title">{t('opponentReportAttackBlockers')}</span>
-                <div className="ovs-filter-chips">
-                  <button
-                    type="button"
-                    className={`ovs-filter-chip${attackFilters.blockers.length === 0 ? ' is-active' : ''}`}
-                    aria-pressed={attackFilters.blockers.length === 0}
-                    onClick={() => setAttackFilters((prev) => ({ ...prev, blockers: [] }))}
-                  >
-                    {t('setterViewReceptionAll')}
-                  </button>
-                  {HEATMAP_BLOCKERS.map((count) => {
-                    const active = attackFilters.blockers.includes(count);
-                    return (
-                      <button
-                        key={count}
-                        type="button"
-                        className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                        aria-pressed={active}
-                        onClick={() => toggleAttackFilterItem('blockers', count, HEATMAP_BLOCKERS)}
-                      >
-                        {String(count)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {availableCombinationCodes.length > 0 ? (
-                <div className={`ovs-filter-group ovs-filter-group--wide${attackFilters.combinationCodes.length > 0 ? ' is-filtered' : ''}`}>
-                  <span className="ovs-filter-group__title">{t('attackerViewBaseLabel')}</span>
-                  <div className="ovs-filter-chips">
-                    <button
-                      type="button"
-                      className={`ovs-filter-chip${attackFilters.combinationCodes.length === 0 ? ' is-active' : ''}`}
-                      aria-pressed={attackFilters.combinationCodes.length === 0}
-                      onClick={() => setAttackFilters((prev) => ({ ...prev, combinationCodes: [] }))}
-                    >
-                      {t('setterViewReceptionAll')}
-                    </button>
-                    {availableCombinationCodes.map((code) => {
-                      const active = attackFilters.combinationCodes.includes(code);
-                      return (
-                        <button
-                          key={code}
-                          type="button"
-                          className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                          aria-pressed={active}
-                          onClick={() => toggleAttackFilterItem('combinationCodes', code, availableCombinationCodes)}
-                        >
-                          {code}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
+      {/* Attack filters, the same groups as the tactical report */}
+      {(skill === 'attack' || (skill === 'all' && showAttackFilters)) ? (
+        <section className="heatmap-attack-filters" aria-label={t('attackerViewsConfigure')}>
+          {activeAttackFilterCount > 0 ? (
+            <div className="heatmap-attack-filters__header">
+              <button type="button" className="btn-secondary btn-small" onClick={() => setAttackFilters(EMPTY_HEATMAP_ATTACK_FILTERS)}>
+                {t('setterViewsResetDefault')}
+              </button>
             </div>
-          </section>
-        );
-      })() : null}
+          ) : null}
+          <FilterGroups>
+            <FilterGroup title={t('videoAttackSituation')} active={attackFilters.phases.length > 0}>
+              <ChipSelect
+                allLabel={allLabel}
+                options={HEATMAP_ATTACK_PHASES.map((phase) => ({ value: phase.value, label: t(phase.labelKey) }))}
+                selected={attackFilters.phases}
+                onChange={(next) => setAttackFilter('phases', next)}
+              />
+            </FilterGroup>
+            <FilterGroup title={t('setterViewReceptionLabel')} active={attackFilters.receptionEvaluations.length > 0}>
+              <EvaluationChips
+                skill="receive"
+                allLabel={allLabel}
+                evaluations={HEATMAP_RECEPTION_EVALS}
+                presets={[
+                  { label: t('setterViewReceptionPositive'), value: ['#', '+'] },
+                  { label: t('setterViewReceptionNegative'), value: ['!', '-'] },
+                ]}
+                selected={attackFilters.receptionEvaluations}
+                onChange={(next) => setAttackFilter('receptionEvaluations', next as SetterDistributionReceptionEval[])}
+              />
+            </FilterGroup>
+            <FilterGroup title={t('opponentReportColRotation')} active={attackFilters.rotations.length > 0}>
+              <ChipSelect
+                allLabel={allLabel}
+                options={HEATMAP_ROTATIONS.map((rot) => ({ value: rot, label: `P${rot}` }))}
+                selected={attackFilters.rotations}
+                onChange={(next) => setAttackFilter('rotations', next)}
+              />
+            </FilterGroup>
+            <FilterGroup title={t('opponentReportAttackZone')} active={attackFilters.attackZones.length > 0}>
+              <ChipSelect
+                allLabel={allLabel}
+                options={HEATMAP_ATTACK_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
+                selected={attackFilters.attackZones}
+                onChange={(next) => setAttackFilter('attackZones', next)}
+              />
+            </FilterGroup>
+            <FilterGroup title={t('opponentReportAttackType')} active={attackFilters.attackSubtypes.length > 0}>
+              <ChipSelect
+                allLabel={allLabel}
+                options={HEATMAP_ATTACK_SUBTYPES.map((st) => ({ value: st.value, label: `${t(st.labelKey)} (${st.value})` }))}
+                selected={attackFilters.attackSubtypes}
+                onChange={(next) => setAttackFilter('attackSubtypes', next)}
+              />
+            </FilterGroup>
+            <FilterGroup title={t('opponentReportAttackBlockers')} active={attackFilters.blockers.length > 0}>
+              <ChipSelect
+                allLabel={allLabel}
+                options={HEATMAP_BLOCKERS.map((count) => ({ value: count, label: String(count) }))}
+                selected={attackFilters.blockers}
+                onChange={(next) => setAttackFilter('blockers', next)}
+              />
+            </FilterGroup>
+            {availableCombinationCodes.length > 0 ? (
+              <FilterGroup title={t('attackerViewBaseLabel')} active={attackFilters.combinationCodes.length > 0} wide>
+                <ChipSelect
+                  allLabel={allLabel}
+                  options={availableCombinationCodes.map((code) => ({ value: code, label: code }))}
+                  selected={attackFilters.combinationCodes}
+                  onChange={(next) => setAttackFilter('combinationCodes', next)}
+                />
+              </FilterGroup>
+            ) : null}
+          </FilterGroups>
+        </section>
+      ) : null}
 
       {/* Canvas view - mutually exclusive: arrows = two-panel, no arrows = single court */}
       {!hasGridData ? (
