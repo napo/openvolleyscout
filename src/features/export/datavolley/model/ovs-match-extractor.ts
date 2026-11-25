@@ -606,7 +606,8 @@ function createTouchCode(input: {
     ? String(touch.numBlockers)
     : '~';
 
-  const subtype = getAttackSubtypeOrDefault(touch) ?? '~';
+  // A cover goes out as a dig of type C ("spike cover"), so DataVolley and OVS read it back as a cover.
+  const subtype = touch.skill === 'cover' ? 'C' : getAttackSubtypeOrDefault(touch) ?? '~';
   return `${marker}${jersey}${skillCode}${skillType}${evaluation}${actionCode}${setType}${startZone}${endZone}${endSubzone}${subtype}${players}~${customCode}`;
 }
 
