@@ -2,11 +2,17 @@
 import { describe, expect, it } from 'vitest';
 import { buildVideoEventIndex, getRallyServeStartZone } from './video-event-index';
 import {
-  applyVideoEventFilters,
-  createDefaultVideoEventFilters,
-  isDefaultVideoEventFilters,
   VIDEO_FILTER_SERVE_START_ZONES,
 } from './video-filters';
+import {
+  annotateVideoEntries,
+  applyVideoChainFilters,
+  createDefaultVideoChainFilters,
+  isDefaultVideoChainFilters,
+  toVideoChainFilters,
+  type VideoChainFilters,
+  type VideoSkillAttributes,
+} from './video-chain-filters';
 
 let counter = 0;
 function touch(rallyNumber: number, sequenceNumber: number, teamSide: 'home' | 'away', skill: string, extra: Record<string, unknown> = {}) {
@@ -62,32 +68,34 @@ describe('serve start zone of a rally', () => {
   });
 });
 
-describe('serve start zone filter', () => {
-  const filter = (zones: string[]) => applyVideoEventFilters(index.entries, { ...createDefaultVideoEventFilters(), serveStartZones: zones });
+// The serve filters are attributes of the serve link of the chain.
+const chainFilter = (entries: typeof index.entries, patch: Partial<VideoChainFilters>) =>
+  applyVideoChainFilters(annotateVideoEntries(entries), { ...createDefaultVideoChainFilters(), ...patch });
+const serves = (entries: typeof index.entries, serve: VideoSkillAttributes) => chainFilter(entries, { chain: ['serve'], attributes: { serve } });
 
-  it('keeps every touch of the rallies served from the chosen zones', () => {
+describe('serve start zone filter', () => {
+  const filter = (zones: string[]) => serves(index.entries, { serveStartZones: zones });
+
+  it('keeps the serves of the rallies served from the chosen zones', () => {
     expect(rallies(filter(['9']))).toEqual([1]);
     expect(rallies(filter(['9', '7']))).toEqual([1, 2]);
-    expect(filter(['9'])).toHaveLength(3);
+    expect(filter(['9']).every((entry) => entry.skill === 'serve')).toBe(true);
   });
 
   it('drops rallies without a known serve start zone while a zone is chosen', () => {
     expect(rallies(filter(['1', '9', '6', '7', '5']))).toEqual([1, 2, 4]);
   });
 
-  it('combines with the skill filter: only the serves from a zone', () => {
-    const serves = applyVideoEventFilters(index.entries, { ...createDefaultVideoEventFilters(), skills: ['serve'], serveStartZones: ['7'] });
-    expect(serves.map((entry) => `${entry.rallyNumber}:${entry.skill}`)).toEqual(['2:serve']);
+  it('is a context for the next skills of the chain', () => {
+    const afterZone7 = chainFilter(index.entries, { chain: ['serve', 'receive'], attributes: { serve: { serveStartZones: ['7'] } } });
+    expect(afterZone7.map((entry) => `${entry.rallyNumber}:${entry.skill}`).every((label) => label.startsWith('2:'))).toBe(true);
   });
 
   it('is off by default and with filters saved before the field existed', () => {
-    const defaults = createDefaultVideoEventFilters();
-    expect(isDefaultVideoEventFilters(defaults)).toBe(true);
-    expect(isDefaultVideoEventFilters({ ...defaults, serveStartZones: ['9'] })).toBe(false);
-    const legacy = { ...defaults } as Partial<typeof defaults>;
-    delete legacy.serveStartZones;
-    expect(applyVideoEventFilters(index.entries, legacy as typeof defaults)).toHaveLength(index.entries.length);
-    expect(isDefaultVideoEventFilters(legacy as typeof defaults)).toBe(true);
+    const defaults = createDefaultVideoChainFilters();
+    expect(isDefaultVideoChainFilters(defaults)).toBe(true);
+    expect(isDefaultVideoChainFilters({ ...defaults, chain: ['serve'], attributes: { serve: { serveStartZones: ['9'] } } })).toBe(false);
+    expect(isDefaultVideoChainFilters(toVideoChainFilters({ team: 'all', skills: [] }))).toBe(true);
   });
 });
 
@@ -104,8 +112,8 @@ const contextEvents = [
   point('away'),
 ] as never;
 const contextIndex = buildVideoEventIndex(contextEvents);
-const contextRallies = (changes: Partial<ReturnType<typeof createDefaultVideoEventFilters>>) => [
-  ...new Set(applyVideoEventFilters(contextIndex.entries, { ...createDefaultVideoEventFilters(), ...changes }).map((entry) => entry.rallyNumber)),
+const contextRallies = (patch: Partial<VideoChainFilters>) => [
+  ...new Set(chainFilter(contextIndex.entries, patch).map((entry) => entry.rallyNumber)),
 ];
 
 describe('serve type, direction and receiver of a rally', () => {
@@ -118,29 +126,24 @@ describe('serve type, direction and receiver of a rally', () => {
   });
 
   it('filters by serve type', () => {
-    expect(contextRallies({ serveTypes: ['jump_spin'] })).toEqual([11]);
-    expect(contextRallies({ serveTypes: ['float'] })).toEqual([12]);
-    expect(contextRallies({ serveTypes: ['float', 'jump_spin'] })).toEqual([11, 12]);
+    expect(contextRallies({ chain: ['serve'], attributes: { serve: { serveTypes: ['jump_spin'] } } })).toEqual([11]);
+    expect(contextRallies({ chain: ['serve'], attributes: { serve: { serveTypes: ['float'] } } })).toEqual([12]);
+    expect(contextRallies({ chain: ['serve'], attributes: { serve: { serveTypes: ['float', 'jump_spin'] } } })).toEqual([11, 12]);
   });
 
   it('filters by direction (the zone the serve went to)', () => {
-    expect(contextRallies({ receptionZones: ['5'] })).toEqual([11]);
-    expect(contextRallies({ receptionZones: ['1', '5'] })).toEqual([11, 12]);
+    expect(contextRallies({ chain: ['serve'], attributes: { serve: { targetZones: ['5'] } } })).toEqual([11]);
+    expect(contextRallies({ chain: ['receive'], attributes: { receive: { targetZones: ['1', '5'] } } })).toEqual([11, 12]);
   });
 
   it('filters by who received', () => {
-    expect(contextRallies({ receiverIds: ['r2'] })).toEqual([12]);
-    expect(contextRallies({ receiverIds: ['r1', 'r2'] })).toEqual([11, 12]);
+    expect(contextRallies({ chain: ['receive'], attributes: { receive: { playerIds: ['r2'] } } })).toEqual([12]);
+    expect(contextRallies({ chain: ['receive'], attributes: { receive: { playerIds: ['r1', 'r2'] } } })).toEqual([11, 12]);
   });
 
-  it('combines with the serve start zone, and is off by default and for older saved filters', () => {
-    expect(contextRallies({ serveStartZones: ['9'], serveTypes: ['jump_spin'], receiverIds: ['r1'] })).toEqual([11]);
-    expect(contextRallies({ serveStartZones: ['9'], serveTypes: ['float'] })).toEqual([]);
-    const defaults = createDefaultVideoEventFilters();
-    expect(isDefaultVideoEventFilters({ ...defaults, serveTypes: ['float'] })).toBe(false);
-    const legacy = { ...defaults } as Partial<typeof defaults>;
-    delete legacy.serveTypes; delete legacy.receptionZones; delete legacy.receiverIds;
-    expect(isDefaultVideoEventFilters(legacy as typeof defaults)).toBe(true);
-    expect(applyVideoEventFilters(contextIndex.entries, legacy as typeof defaults)).toHaveLength(contextIndex.entries.length);
+  it('chains the serve and the reception: attacks after a jump spin from 9 received by r1', () => {
+    const chained = { chain: ['serve', 'receive', 'attack'], attributes: { serve: { serveStartZones: ['9'], serveTypes: ['jump_spin'] }, receive: { playerIds: ['r1'] } } } as Partial<VideoChainFilters>;
+    expect(contextRallies(chained)).toEqual([11]);
+    expect(contextRallies({ chain: ['serve'], attributes: { serve: { serveStartZones: ['9'], serveTypes: ['float'] } } })).toEqual([]);
   });
 });

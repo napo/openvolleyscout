@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
 import { buildVideoEventIndex } from './video-event-index';
-import { applyVideoEventFilters, createDefaultVideoEventFilters } from './video-filters';
+import { annotateVideoEntries, applyVideoChainFilters, createDefaultVideoChainFilters } from './video-chain-filters';
 
 const roles: Record<string, string> = { S1: 'setter', S2: 'setter', O1: 'opposite', O2: 'opposite' };
 const roleOf = (id: string) => roles[id];
@@ -32,9 +32,9 @@ describe('setter position in the video index after a setter-opposite double chan
     expect(awayAttackSetterPositions(buildVideoEventIndex(events, { roleOf }))).toEqual([1, 3]);
   });
 
-  it('feeds the setter position filter', () => {
+  it('feeds the rotation filter', () => {
     const index = buildVideoEventIndex(events, { roleOf });
-    const inP3 = applyVideoEventFilters(index.entries, { ...createDefaultVideoEventFilters(), setterPositions: [3] });
+    const inP3 = applyVideoChainFilters(annotateVideoEntries(index.entries), { ...createDefaultVideoChainFilters(), rotations: [3] });
     expect(inP3.map((entry) => entry.rallyNumber)).toEqual([2]);
   });
 

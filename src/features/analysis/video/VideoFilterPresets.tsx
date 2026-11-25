@@ -1,24 +1,26 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
-import type { VideoEventFilters } from './video-filters';
+import type { VideoChainFilters } from './video-chain-filters';
 import {
   applyVideoFilterPreset,
   loadVideoFilterPresets,
   storeVideoFilterPresets,
   upsertVideoFilterPreset,
   type VideoFilterPreset,
+  type VideoFilterPresetView,
 } from './video-filter-presets';
 
 interface VideoFilterPresetsProps {
-  filters: VideoEventFilters;
-  defaults: VideoEventFilters;
+  filters: VideoChainFilters;
   knownPlayerIds: ReadonlySet<string>;
-  onApply: (filters: VideoEventFilters) => void;
+  onApply: (filters: VideoChainFilters) => void;
+  /** One match or several: decides which team choices a preset can bring back. */
+  view?: VideoFilterPresetView;
 }
 
 /** Save the current filters under a name and bring them back with one choice. */
-export function VideoFilterPresets({ filters, defaults, knownPlayerIds, onApply }: VideoFilterPresetsProps) {
+export function VideoFilterPresets({ filters, knownPlayerIds, onApply, view = 'match' }: VideoFilterPresetsProps) {
   const { t } = useTranslation();
   const [presets, setPresets] = useState<VideoFilterPreset[]>(loadVideoFilterPresets);
   const [selectedId, setSelectedId] = useState('');
@@ -40,7 +42,7 @@ export function VideoFilterPresets({ filters, defaults, knownPlayerIds, onApply 
             setSelectedId(event.target.value);
             const preset = presets.find((item) => item.id === event.target.value);
             if (preset) {
-              onApply(applyVideoFilterPreset(preset, defaults, knownPlayerIds));
+              onApply(applyVideoFilterPreset(preset, knownPlayerIds, view));
               setName(preset.name);
             }
           }}

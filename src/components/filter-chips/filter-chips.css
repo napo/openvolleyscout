@@ -1,0 +1,96 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/*
+ * Filter groups and chips shared by the tactical report, the video filters and
+ * the dashboards. Same look as the tactical report's view editors.
+ */
+.filter-chips__groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 215px), 1fr));
+  gap: 0.55rem;
+}
+
+.filter-chips__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.48rem 0.6rem;
+  min-width: 0;
+}
+
+.filter-chips__group.is-filtered {
+  border-color: #99d5d6;
+  background: #f0fafa;
+}
+
+.filter-chips__group--wide {
+  grid-column: 1 / -1;
+}
+
+.filter-chips__group-title {
+  font-size: 0.7rem;
+  color: #475569;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.filter-chips__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+  align-items: center;
+}
+
+.filter-chips__row-label {
+  font-size: 0.72rem;
+  color: #475569;
+  font-weight: 600;
+  margin-inline-end: 0.15rem;
+}
+
+.filter-chips__divider {
+  width: 1px;
+  height: 1.1rem;
+  background: #cbd5e1;
+  margin: 0 0.1rem;
+}
+
+.filter-chips__chip {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+  border-radius: 999px;
+  padding: 0.22rem 0.58rem;
+  font-size: 0.77rem;
+  font-weight: 500;
+  cursor: pointer;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 80ms ease;
+}
+
+.filter-chips__chip:hover {
+  border-color: #64748b;
+  background: #f1f5f9;
+}
+
+.filter-chips__chip.is-active {
+  background: #0f3a4a;
+  color: #ffffff;
+  border-color: #0f3a4a;
+  font-weight: 600;
+}
+
+.filter-chips__chip--eval {
+  min-width: 1.95rem;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.filter-chips__chip--eval.is-active {
+  box-shadow: 0 0 0 2px #0f3a4a;
+}

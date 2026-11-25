@@ -47,20 +47,10 @@ import {
 } from './video-event-index';
 import { buildRapidSyncQueue, getRallyScopeEndClock } from './rapid-sync';
 import {
-  applyVideoEventFilters,
-  createDefaultVideoEventFilters,
   sortVideoEventEntries,
   VIDEO_EVENT_SORT_KEYS,
-  VIDEO_FILTER_EVALUATIONS,
-  VIDEO_FILTER_RECEPTION_ZONES,
-  VIDEO_FILTER_SERVE_START_ZONES,
-  VIDEO_FILTER_SERVE_TYPES,
-  VIDEO_FILTER_SETTER_POSITIONS,
-  VIDEO_FILTER_SKILLS,
-  type VideoEventFilters,
   type VideoEventSortKey,
 } from './video-filters';
-import { MultiSelectFilter } from './MultiSelectFilter';
 import { VideoFilterPresets } from './VideoFilterPresets';
 import { FineTuningBar } from './FineTuningBar';
 import { nudgeActionSyncPoint } from './video-fine-tuning';
@@ -88,6 +78,15 @@ import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, togglePl
 import './video-analysis.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { confirmAction } from '@src/components/confirm-dialog';
+import {
+  annotateVideoEntries,
+  applyVideoChainFilters,
+  createDefaultVideoChainFilters,
+  pruneVideoChainPlayers,
+  type VideoChainFilters,
+  type VideoTeamScope,
+} from './video-chain-filters';
+import { VideoChainFilterPanel } from './VideoChainFilterPanel';
 
 // ── Local types ──────────────────────────────────────────────────────────────
 
@@ -95,9 +94,13 @@ type MultiVideoEventEntry = VideoEventEntry & {
   projectId: string;
   opponentName: string;
   matchLabel: string;
+  /** Rally identity across matches, for the chain filters. */
+  matchKey: string;
+  /** Side of the team studied in this match. */
+  focusSide: TeamSide;
 };
 
-type MultiVideoFilters = VideoEventFilters & {
+type MultiVideoFilters = VideoChainFilters & {
   opponentProjectId: 'all' | string;
 };
 
@@ -115,13 +118,6 @@ interface ProjectRecord {
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
-
-const VIDEO_SERVE_TYPE_LABEL_KEYS = {
-  jump_spin: 'setterViewServeJumpSpin',
-  jump_float: 'setterViewServeJumpFloat',
-  float: 'setterViewServeFloat',
-  other: 'setterViewServeOther',
-} as const;
 
 const SKILL_LABEL_KEYS: Partial<Record<SkillType, TranslationKey>> = {
   serve: 'skillServe',
@@ -231,8 +227,10 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   const [calibrationVideoError, setCalibrationVideoError] = useState(false);
 
   // ── Filters & playback ──────────────────────────────────────────────────────
+  // The team studied by default, as before; its opponents are one choice away.
   const [filters, setFilters] = useState<MultiVideoFilters>(() => ({
-    ...createDefaultVideoEventFilters(),
+    ...createDefaultVideoChainFilters(),
+    team: 'focus',
     opponentProjectId: 'all',
   }));
   const [showStarredOnly, setShowStarredOnly] = useState(false);
@@ -292,17 +290,17 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   const activeSource = activeVideoAnalysis.source;
   const activeSourceKey = getVideoSourceKey(activeSource);
 
-  // ── Derived: merged entries (focus team only) ──────────────────────────────
+  // ── Derived: merged entries ────────────────────────────────────────────────
 
-  // Only include touches by the focus team - opponent touches are excluded
+  // Both teams of every match: the team filter picks the team studied (default) or its
+  // opponents, and the chain can look at either side of the rally.
   const allEntries = useMemo<MultiVideoEventEntry[]>(
     () => projectRecords.flatMap(({ project, opponentName, matchLabel, focusSide, index }) =>
-      index.entries
-        .filter((e) => e.teamSide === focusSide)
-        .map((e) => ({ ...e, projectId: project.metadata.id, opponentName, matchLabel }))
+      index.entries.map((e) => ({ ...e, projectId: project.metadata.id, opponentName, matchLabel, matchKey: project.metadata.id, focusSide }))
     ),
     [projectRecords],
   );
+  const chainEntries = useMemo(() => annotateVideoEntries(allEntries), [allEntries]);
 
   const availableSetNumbers = useMemo<number[]>(() => {
     if (filters.opponentProjectId !== 'all') {
@@ -316,9 +314,9 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   const playersById = useMemo(() => {
     const map = new Map<string, { jerseyNumber: number | string; name: string }>();
-    projectRecords.forEach(({ project, focusSide }) => {
-      const focusTeam = getMatchTeamSnapshot(project, focusSide);
-      focusTeam.players.forEach((player) => {
+    // Both teams: the list can show the opponents' actions too.
+    projectRecords.forEach(({ project }) => {
+      [...getMatchTeamSnapshot(project, 'home').players, ...getMatchTeamSnapshot(project, 'away').players].forEach((player) => {
         map.set(player.id, {
           jerseyNumber: player.jerseyNumber,
           name: [player.firstName, player.lastName].filter(Boolean).join(' ') || `#${player.jerseyNumber}`,
@@ -337,18 +335,16 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   );
 
   const filteredEntries = useMemo<MultiVideoEventEntry[]>(() => {
-    let entries = allEntries;
+    let entries = chainEntries;
     if (filters.opponentProjectId !== 'all') {
-      entries = entries.filter((e) => e.projectId === filters.opponentProjectId);
+      entries = entries.filter((item) => item.entry.projectId === filters.opponentProjectId);
     }
-    // team filter is not shown in the UI (entries are already focus-team-only);
-    // set filter is only meaningful when a specific opponent match is chosen.
-    const effectiveFilters: VideoEventFilters = {
+    // The set filter is only meaningful when a specific match is chosen.
+    const effectiveFilters: VideoChainFilters = {
       ...filters,
-      team: 'all',
       setNumbers: filters.opponentProjectId !== 'all' ? filters.setNumbers : [],
     };
-    const filtered = applyVideoEventFilters(entries, effectiveFilters) as MultiVideoEventEntry[];
+    const filtered = applyVideoChainFilters(entries, effectiveFilters);
     const sorted = sortVideoEventEntries(filtered, sortKey, getPlayerLabel) as MultiVideoEventEntry[];
     return sorted.filter((entry) => {
       const va = getProjectVideoAnalysis(entry.projectId);
@@ -356,7 +352,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
       if (showNotesOnly && !(va.notes ?? []).some((n) => n.touchId === entry.touchId)) return false;
       return true;
     });
-  }, [allEntries, filters, sortKey, getPlayerLabel, showStarredOnly, showNotesOnly, getProjectVideoAnalysis]);
+  }, [chainEntries, filters, sortKey, getPlayerLabel, showStarredOnly, showNotesOnly, getProjectVideoAnalysis]);
 
   const filteredEntriesRef = useRef(filteredEntries);
   useEffect(() => { filteredEntriesRef.current = filteredEntries; }, [filteredEntries]);
@@ -914,7 +910,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     const singlePrimary = targetAnchorCount > 0 || targetClockDomain === 'video';
     const firstServe = activeRecord?.index.entries.find((e) => e.skill === 'serve');
     const firstServeMulti = firstServe && activeProjectId
-      ? { ...firstServe, projectId: activeProjectId, opponentName: activeRecord?.opponentName ?? '', matchLabel: activeRecord?.matchLabel ?? '' }
+      ? { ...firstServe, projectId: activeProjectId, opponentName: activeRecord?.opponentName ?? '', matchLabel: activeRecord?.matchLabel ?? '', matchKey: activeProjectId, focusSide: activeRecord?.focusSide ?? 'home' }
       : null;
 
     return (
@@ -1040,12 +1036,28 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     playerRef.current?.seekTo(Math.max(0, current + deltaSeconds), false);
   };
 
+  // Players of the team studied, of its opponents, or of both, from the matches shown.
+  const multiPlayerOptions = (scope: VideoTeamScope, projectId: 'all' | string = filters.opponentProjectId) => {
+    const ids = new Set<string>();
+    allEntries.forEach((entry) => {
+      if (!entry.playerId) return;
+      const isFocus = entry.teamSide === entry.focusSide;
+      if (scope === 'focus' && !isFocus) return;
+      if (scope === 'opponent' && isFocus) return;
+      if (projectId !== 'all' && entry.projectId !== projectId) return;
+      ids.add(entry.playerId);
+    });
+    return [...ids]
+      .map((id) => ({ value: id, label: getPlayerLabel(id) || id }))
+      .sort((left, right) => left.label.localeCompare(right.label, undefined, { numeric: true }));
+  };
+
   const renderFilters = () => (
     <section className="video-analysis__filters">
       <VideoFilterPresets
         filters={filters}
-        defaults={createDefaultVideoEventFilters()}
         knownPlayerIds={knownPlayerIds}
+        view="matches"
         onApply={(preset) => setFilters((current) => ({ ...preset, opponentProjectId: current.opponentProjectId }))}
       />
       {/* Opponent filter (new for multi-project) */}
@@ -1056,7 +1068,11 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           onChange={(e) => {
             const opponentProjectId = e.target.value as 'all' | string;
             // When switching opponent, reset set filter and auto-activate that project's video
-            setFilters((prev) => ({ ...prev, opponentProjectId, setNumbers: [] }));
+            // Players of the other matches are no longer offered: drop them from the choices.
+            setFilters((prev) => ({
+              ...pruneVideoChainPlayers({ ...prev, setNumbers: [] }, (scope) => new Set(multiPlayerOptions(scope, opponentProjectId).map((option) => option.value))),
+              opponentProjectId,
+            }));
             if (opponentProjectId !== 'all') setActiveProjectId(opponentProjectId);
           }}
         >
@@ -1069,123 +1085,16 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           ))}
         </select>
       </label>
-      <MultiSelectFilter
-        label={t('filterSet')}
-        allLabel={t('allSets')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.setNumbers}
-        onChange={(setNumbers) => setFilters((prev) => ({ ...prev, setNumbers }))}
-        disabled={filters.opponentProjectId === 'all'}
-        options={availableSetNumbers.map((n) => {
-          const opRec = filters.opponentProjectId !== 'all'
-            ? projectRecords.find((r) => r.project.metadata.id === filters.opponentProjectId)
-            : null;
-          const date = formatDisplayDate(opRec?.project.metadata.playedAt) || undefined;
-          return { value: n, label: `${t('sets')} ${n}${date ? ` - ${date}` : ''}` };
-        })}
+      <VideoChainFilterPanel
+        filters={filters}
+        onChange={(next) => setFilters((current) => ({ ...next, opponentProjectId: current.opponentProjectId }))}
+        teamOptions={[
+          { value: 'focus', label: focusTeamName || t('videoTeamFocus') },
+          { value: 'opponent', label: t('videoTeamOpponents') },
+        ]}
+        playerOptions={multiPlayerOptions}
+        setNumbers={filters.opponentProjectId !== 'all' ? availableSetNumbers : []}
       />
-      <MultiSelectFilter
-        label={t('filterSkill')}
-        allLabel={t('allSkills')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.skills}
-        onChange={(skills) => setFilters((prev) => ({ ...prev, skills }))}
-        options={VIDEO_FILTER_SKILLS.map((skill) => ({
-          value: skill,
-          label: SKILL_LABEL_KEYS[skill] ? t(SKILL_LABEL_KEYS[skill] as TranslationKey) : skill,
-        }))}
-      />
-      <MultiSelectFilter
-        label={t('player')}
-        allLabel={t('allPlayers')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.playerIds}
-        onChange={(playerIds) => setFilters((prev) => ({ ...prev, playerIds }))}
-        options={[...playersById.entries()].map(([id, p]) => ({ value: id, label: `${p.jerseyNumber} ${p.name}` }))}
-      />
-      <label>
-        <span>{t('videoFilterPhase')}</span>
-        <select
-          value={filters.phase}
-          onChange={(e) => setFilters((prev) => ({ ...prev, phase: e.target.value as VideoEventFilters['phase'] }))}
-        >
-          <option value="all">{t('videoPhaseAll')}</option>
-          <option value="breakpoint">{t('videoPhaseBreakpoint')}</option>
-          <option value="sideout">{t('videoPhaseSideout')}</option>
-        </select>
-      </label>
-      <MultiSelectFilter
-        label={t('videoFilterSetterPosition')}
-        allLabel={t('videoPhaseAll')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.setterPositions}
-        onChange={(setterPositions) => setFilters((prev) => ({ ...prev, setterPositions }))}
-        options={VIDEO_FILTER_SETTER_POSITIONS.map((pos) => ({ value: pos, label: `P${pos}` }))}
-      />
-      <MultiSelectFilter
-        label={t('videoFilterServeStartZone')}
-        allLabel={t('videoPhaseAll')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.serveStartZones ?? []}
-        onChange={(serveStartZones) => setFilters((prev) => ({ ...prev, serveStartZones }))}
-        options={VIDEO_FILTER_SERVE_START_ZONES.map((zone) => ({ value: zone, label: `${t('zone')} ${zone}` }))}
-      />
-      <MultiSelectFilter
-        label={t('sideOutFilterServeType')}
-        allLabel={t('videoPhaseAll')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.serveTypes ?? []}
-        onChange={(serveTypes) => setFilters((prev) => ({ ...prev, serveTypes }))}
-        options={VIDEO_FILTER_SERVE_TYPES.map((serveType) => ({ value: serveType, label: t(VIDEO_SERVE_TYPE_LABEL_KEYS[serveType]) }))}
-      />
-      <MultiSelectFilter
-        label={t('sideOutFilterReceptionZone')}
-        allLabel={t('videoPhaseAll')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.receptionZones ?? []}
-        onChange={(receptionZones) => setFilters((prev) => ({ ...prev, receptionZones }))}
-        options={VIDEO_FILTER_RECEPTION_ZONES.map((zone) => ({ value: zone, label: `${t('zone')} ${zone}` }))}
-      />
-      <MultiSelectFilter
-        label={t('sideOutFilterReceiver')}
-        allLabel={t('allPlayers')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.receiverIds ?? []}
-        onChange={(receiverIds) => setFilters((prev) => ({ ...prev, receiverIds }))}
-        options={[...playersById.entries()].map(([id, p]) => ({ value: id, label: `${p.jerseyNumber} ${p.name}` }))}
-      />
-      <label>
-        <span>{t('videoFilterOutcome')}</span>
-        <select
-          value={filters.rallyOutcome}
-          onChange={(e) => setFilters((prev) => ({ ...prev, rallyOutcome: e.target.value as VideoEventFilters['rallyOutcome'] }))}
-        >
-          <option value="all">{t('videoPhaseAll')}</option>
-          <option value="won">{t('videoOutcomeWon')}</option>
-          <option value="lost">{t('videoOutcomeLost')}</option>
-        </select>
-      </label>
-      <fieldset className="video-analysis__evaluations">
-        <legend>{t('filterEvaluations')}</legend>
-        {VIDEO_FILTER_EVALUATIONS.map((ev) => (
-          <label key={ev} className="video-analysis__evaluation-toggle">
-            <input
-              type="checkbox"
-              checked={filters.evaluations.includes(ev)}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setFilters((prev) => ({
-                  ...prev,
-                  evaluations: checked
-                    ? [...prev.evaluations, ev]
-                    : prev.evaluations.filter((v) => v !== ev),
-                }));
-              }}
-            />
-            <span>{ev}</span>
-          </label>
-        ))}
-      </fieldset>
       <label className="video-analysis__auto-advance">
         <input
           type="checkbox"

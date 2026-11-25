@@ -4,12 +4,21 @@
  * in P1"). Kept in this browser only: a per-viewer convenience, shared by
  * every match and by the multi-match view.
  */
-import type { VideoEventFilters } from './video-filters';
+import { toVideoChainFilters, type VideoChainFilters, type VideoTeamScope } from './video-chain-filters';
+
+/** Where a preset is applied: one match (home/away) or several (the team studied/its opponents). */
+export type VideoFilterPresetView = 'match' | 'matches';
+
+const VIEW_TEAMS: Record<VideoFilterPresetView, readonly VideoTeamScope[]> = {
+  match: ['all', 'home', 'away'],
+  matches: ['all', 'focus', 'opponent'],
+};
 
 export interface VideoFilterPreset {
   id: string;
   name: string;
-  filters: VideoEventFilters;
+  /** Chain filters; presets saved before them hold the old filters, converted when applied. */
+  filters: VideoChainFilters;
 }
 
 const STORAGE_KEY = 'openvolleyscout.videoFilterPresets';
@@ -42,7 +51,7 @@ export function storeVideoFilterPresets(presets: readonly VideoFilterPreset[]): 
 export function upsertVideoFilterPreset(
   presets: readonly VideoFilterPreset[],
   name: string,
-  filters: VideoEventFilters,
+  filters: VideoChainFilters,
   now: number = Date.now(),
 ): VideoFilterPreset[] {
   const trimmed = name.trim();
@@ -55,14 +64,25 @@ export function upsertVideoFilterPreset(
 }
 
 /**
- * The filters of a preset on the current match: players missing from this
- * match are dropped, every other field falls back to the defaults when absent.
+ * The filters of a preset on the current view (old presets converted): players
+ * missing from it are dropped, every other field falls back to the defaults.
+ * Presets are shared by both views, so a team the view cannot show becomes
+ * "all" on one match and "the team studied" over several matches; old presets
+ * over several matches always meant the team studied, and keep that meaning.
  */
 export function applyVideoFilterPreset(
   preset: VideoFilterPreset,
-  defaults: VideoEventFilters,
   knownPlayerIds: ReadonlySet<string>,
-): VideoEventFilters {
-  const merged = { ...defaults, ...preset.filters };
-  return { ...merged, playerIds: merged.playerIds.filter((id) => knownPlayerIds.has(id)) };
+  view: VideoFilterPresetView = 'match',
+): VideoChainFilters {
+  const converted = toVideoChainFilters(preset.filters);
+  const isLegacy = !Array.isArray((preset.filters as Partial<VideoChainFilters> | null)?.chain);
+  const fallbackTeam: VideoTeamScope = view === 'match' ? 'all' : 'focus';
+  const keepsTeam = VIEW_TEAMS[view].includes(converted.team) && !(isLegacy && view === 'matches');
+  const filters = { ...converted, team: keepsTeam ? converted.team : fallbackTeam };
+  const attributes = Object.fromEntries(Object.entries(filters.attributes).map(([skill, attributes]) => [
+    skill,
+    attributes ? { ...attributes, playerIds: (attributes.playerIds ?? []).filter((id) => knownPlayerIds.has(id)) } : attributes,
+  ]));
+  return { ...filters, attributes };
 }

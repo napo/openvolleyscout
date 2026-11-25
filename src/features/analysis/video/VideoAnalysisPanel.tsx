@@ -23,7 +23,7 @@ import { useAppStore } from '@src/app/store/app-store';
 import { matchRepository } from '@src/infrastructure/repositories';
 import type { MatchProject } from '@src/domain/match/types';
 import { getMatchTeamSnapshot } from '@src/domain/match';
-import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
+import type { SkillType, TeamSide } from '@src/domain/common/enums';
 import {
   createDefaultMatchVideoAnalysis,
   getFilePath,
@@ -45,21 +45,10 @@ import { downloadDataVolleyFile, exportMatchToDataVolley } from '@src/features/e
 import { parseSingleCode } from '@src/features/scouting/expert/code-parser';
 import { buildVideoEventIndex, computeEntryVideoSeconds, createApproximateTimeCheck, rallyScopedSyncApplies, resolveIndexSyncPoints, type VideoEventEntry } from './video-event-index';
 import {
-  applyVideoEventFilters,
-  createDefaultVideoEventFilters,
-  isDefaultVideoEventFilters,
   sortVideoEventEntries,
   VIDEO_EVENT_SORT_KEYS,
-  VIDEO_FILTER_EVALUATIONS,
-  VIDEO_FILTER_RECEPTION_ZONES,
-  VIDEO_FILTER_SERVE_START_ZONES,
-  VIDEO_FILTER_SERVE_TYPES,
-  VIDEO_FILTER_SETTER_POSITIONS,
-  VIDEO_FILTER_SKILLS,
-  type VideoEventFilters,
   type VideoEventSortKey,
 } from './video-filters';
-import { MultiSelectFilter } from './MultiSelectFilter';
 import { cycleSyncPointScope, formatVideoSeconds, isAnchorSyncPoint, shiftVideoSync } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
@@ -93,13 +82,15 @@ import { useVideoPlaybackShortcut } from '@src/features/scouting/live/video/use-
 import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
 import { confirmAction } from '@src/components/confirm-dialog';
-
-const VIDEO_SERVE_TYPE_LABEL_KEYS = {
-  jump_spin: 'setterViewServeJumpSpin',
-  jump_float: 'setterViewServeJumpFloat',
-  float: 'setterViewServeFloat',
-  other: 'setterViewServeOther',
-} as const;
+import {
+  annotateVideoEntries,
+  applyVideoChainFilters,
+  createDefaultVideoChainFilters,
+  isDefaultVideoChainFilters,
+  type VideoChainFilters,
+  type VideoTeamScope,
+} from './video-chain-filters';
+import { VideoChainFilterPanel } from './VideoChainFilterPanel';
 
 const SKILL_LABEL_KEYS: Partial<Record<SkillType, TranslationKey>> = {
   serve: 'skillServe',
@@ -155,7 +146,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const renewCloudStreamRef = useRef<() => void>(() => undefined);
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibrationTarget, setCalibrationTarget] = useState<VideoEventEntry | null>(null);
-  const [filters, setFilters] = useState<VideoEventFilters>(createDefaultVideoEventFilters);
+  const [filters, setFilters] = useState<VideoChainFilters>(createDefaultVideoChainFilters);
   const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [sortKey, setSortKey] = useState<VideoEventSortKey>('time');
   const [selectedTouchId, setSelectedTouchId] = useState<string | null>(null);
@@ -266,8 +257,10 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     [project.events, videoAnalysis.rallyTimingMode],
   );
   const rallyTimingMode = eventIndex.rallyTimingMode;
+  // Phase, attack description and set target, derived once per index for the chain filters.
+  const chainEntries = useMemo(() => annotateVideoEntries(eventIndex.entries), [eventIndex.entries]);
   const filteredEntries = useMemo(() => {
-    let base = sortVideoEventEntries(applyVideoEventFilters(eventIndex.entries, filters), sortKey, getPlayerLabel);
+    let base = sortVideoEventEntries(applyVideoChainFilters(chainEntries, filters), sortKey, getPlayerLabel);
     if (showStarredOnly) {
       base = base.filter((entry) => videoAnalysis.starredTouchIds.includes(entry.touchId));
     }
@@ -275,7 +268,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
       base = base.filter((entry) => notesByTouchId.has(entry.touchId));
     }
     return base;
-  }, [eventIndex.entries, filters, sortKey, getPlayerLabel, showStarredOnly, showNotesOnly, videoAnalysis.starredTouchIds, notesByTouchId]);
+  }, [chainEntries, filters, sortKey, getPlayerLabel, showStarredOnly, showNotesOnly, videoAnalysis.starredTouchIds, notesByTouchId]);
   // Starred actions are exported independently of whatever filters are active.
   const starredEntries = useMemo(
     () => eventIndex.entries.filter((entry) => videoAnalysis.starredTouchIds.includes(entry.touchId)),
@@ -1333,144 +1326,33 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     </section>
   );
 
+  const playerChipOptions = (scope: VideoTeamScope) => {
+    const sides = scope === 'home' || scope === 'away' ? [scope] : (['home', 'away'] as const);
+    return sides.flatMap((side) => (side === 'home' ? homeTeam : awayTeam).players
+      .filter((player) => knownPlayerIds.has(player.id))
+      .map((player) => ({
+        value: player.id,
+        label: `${sides.length > 1 ? `${(side === 'home' ? homeTeam : awayTeam).name.slice(0, 3)} ` : ''}#${player.jerseyNumber} ${player.lastName || player.firstName || ''}`.trim(),
+      })));
+  };
+
   const renderFilters = () => (
     <section className="video-analysis__filters">
       <VideoFilterPresets
         filters={filters}
-        defaults={createDefaultVideoEventFilters()}
         knownPlayerIds={knownPlayerIds}
         onApply={setFilters}
       />
-      <label>
-        <span>{t('filterTeam')}</span>
-        <select
-          value={filters.team}
-          onChange={(event) => setFilters({ ...filters, team: event.target.value as VideoEventFilters['team'], playerIds: [] })}
-        >
-          <option value="all">{t('allTeams')}</option>
-          <option value="home">{homeTeam.name || t('homeTeam')}</option>
-          <option value="away">{awayTeam.name || t('awayTeam')}</option>
-        </select>
-      </label>
-      <MultiSelectFilter
-        label={t('filterSet')}
-        allLabel={t('allSets')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.setNumbers}
-        onChange={(setNumbers) => setFilters({ ...filters, setNumbers })}
-        options={eventIndex.setNumbers.map((setNumber) => ({ value: setNumber, label: `${t('sets')} ${setNumber}` }))}
+      <VideoChainFilterPanel
+        filters={filters}
+        onChange={setFilters}
+        teamOptions={[
+          { value: 'home', label: homeTeam.name || t('homeTeam') },
+          { value: 'away', label: awayTeam.name || t('awayTeam') },
+        ]}
+        playerOptions={playerChipOptions}
+        setNumbers={eventIndex.setNumbers}
       />
-      <MultiSelectFilter
-        label={t('filterSkill')}
-        allLabel={t('allSkills')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.skills}
-        onChange={(skills) => setFilters({ ...filters, skills })}
-        options={VIDEO_FILTER_SKILLS.map((skill) => ({
-          value: skill,
-          label: SKILL_LABEL_KEYS[skill] ? t(SKILL_LABEL_KEYS[skill] as TranslationKey) : skill,
-        }))}
-      />
-      <MultiSelectFilter
-        label={t('player')}
-        allLabel={t('allPlayers')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.playerIds}
-        onChange={(playerIds) => setFilters({ ...filters, playerIds })}
-        options={[
-          ...(filters.team === 'away' ? [] : homeTeam.players),
-          ...(filters.team === 'home' ? [] : awayTeam.players),
-        ].map((player) => ({
-          value: player.id,
-          label: `${player.jerseyNumber} ${player.lastName || player.firstName || ''}`,
-        }))}
-      />
-      <label>
-        <span>{t('videoFilterPhase')}</span>
-        <select
-          value={filters.phase}
-          onChange={(event) => setFilters({ ...filters, phase: event.target.value as VideoEventFilters['phase'] })}
-        >
-          <option value="all">{t('videoPhaseAll')}</option>
-          <option value="breakpoint">{t('videoPhaseBreakpoint')}</option>
-          <option value="sideout">{t('videoPhaseSideout')}</option>
-        </select>
-      </label>
-      <MultiSelectFilter
-        label={t('videoFilterSetterPosition')}
-        allLabel={t('videoPhaseAll')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.setterPositions}
-        onChange={(setterPositions) => setFilters({ ...filters, setterPositions })}
-        options={VIDEO_FILTER_SETTER_POSITIONS.map((position) => ({ value: position, label: `P${position}` }))}
-      />
-      <MultiSelectFilter
-        label={t('videoFilterServeStartZone')}
-        allLabel={t('videoPhaseAll')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.serveStartZones ?? []}
-        onChange={(serveStartZones) => setFilters({ ...filters, serveStartZones })}
-        options={VIDEO_FILTER_SERVE_START_ZONES.map((zone) => ({ value: zone, label: `${t('zone')} ${zone}` }))}
-      />
-      <MultiSelectFilter
-        label={t('sideOutFilterServeType')}
-        allLabel={t('videoPhaseAll')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.serveTypes ?? []}
-        onChange={(serveTypes) => setFilters({ ...filters, serveTypes })}
-        options={VIDEO_FILTER_SERVE_TYPES.map((serveType) => ({ value: serveType, label: t(VIDEO_SERVE_TYPE_LABEL_KEYS[serveType]) }))}
-      />
-      <MultiSelectFilter
-        label={t('sideOutFilterReceptionZone')}
-        allLabel={t('videoPhaseAll')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.receptionZones ?? []}
-        onChange={(receptionZones) => setFilters({ ...filters, receptionZones })}
-        options={VIDEO_FILTER_RECEPTION_ZONES.map((zone) => ({ value: zone, label: `${t('zone')} ${zone}` }))}
-      />
-      <MultiSelectFilter
-        label={t('sideOutFilterReceiver')}
-        allLabel={t('allPlayers')}
-        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
-        selected={filters.receiverIds ?? []}
-        onChange={(receiverIds) => setFilters({ ...filters, receiverIds })}
-        options={[
-          ...(filters.team === 'away' ? [] : homeTeam.players),
-          ...(filters.team === 'home' ? [] : awayTeam.players),
-        ].map((player) => ({
-          value: player.id,
-          label: `${player.jerseyNumber} ${player.lastName || player.firstName || ''}`,
-        }))}
-      />
-      <label>
-        <span>{t('videoFilterOutcome')}</span>
-        <select
-          value={filters.rallyOutcome}
-          onChange={(event) => setFilters({ ...filters, rallyOutcome: event.target.value as VideoEventFilters['rallyOutcome'] })}
-        >
-          <option value="all">{t('videoPhaseAll')}</option>
-          <option value="won">{t('videoOutcomeWon')}</option>
-          <option value="lost">{t('videoOutcomeLost')}</option>
-        </select>
-      </label>
-      <fieldset className="video-analysis__evaluations">
-        <legend>{t('filterEvaluations')}</legend>
-        {VIDEO_FILTER_EVALUATIONS.map((evaluation) => (
-          <label key={evaluation} className="video-analysis__evaluation-toggle">
-            <input
-              type="checkbox"
-              checked={filters.evaluations.includes(evaluation)}
-              onChange={(event) => {
-                const next = event.target.checked
-                  ? [...filters.evaluations, evaluation]
-                  : filters.evaluations.filter((value) => value !== evaluation);
-                setFilters({ ...filters, evaluations: next as SkillEvaluation[] });
-              }}
-            />
-            <span>{evaluation}</span>
-          </label>
-        ))}
-      </fieldset>
       <label className="video-analysis__auto-advance">
         <input
           type="checkbox"
@@ -1789,7 +1671,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
                   </button>
                 )}
                 {!isPlayable ? <p className="video-analysis__play-hint">{t('videoPlayNeedsVideo')}</p> : null}
-                {!isDefaultVideoEventFilters(filters) ? (
+                {!isDefaultVideoChainFilters(filters) ? (
                   <button
                     type="button"
                     className="btn-primary"

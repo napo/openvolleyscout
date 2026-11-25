@@ -8,7 +8,7 @@ import { describe, it } from 'node:test';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
-import type { SkillEvaluation, SkillType, TeamSide, CourtPosition } from '@src/domain/common/enums';
+import type { SkillType, TeamSide, CourtPosition } from '@src/domain/common/enums';
 import type { VideoSyncPoint } from '@src/domain/video/types';
 import {
   computeVideoSeconds,
@@ -26,7 +26,8 @@ import {
   createTouchVideoSecondsResolver,
   resolveIndexSyncPoints,
 } from './video-event-index';
-import { applyVideoEventFilters, createDefaultVideoEventFilters, sortVideoEventEntries } from './video-filters';
+import { sortVideoEventEntries } from './video-filters';
+import { annotateVideoEntries, applyVideoChainFilters, createDefaultVideoChainFilters, type VideoChainFilters } from './video-chain-filters';
 import { buildClipIntervals, totalClipDurationSeconds } from './clip-export';
 
 function createTouch(overrides: Partial<BallTouch> & { id: string; teamSide: TeamSide; skill: SkillType }): BallTouch {
@@ -279,51 +280,19 @@ describe('video-event-index', () => {
     assert.strictEqual(index.entries[0].eventClockSeconds, 18 * 3600);
   });
 
-  it('filters entries by skill, phase, setter position and outcome', () => {
+  it('filters entries by skill chain, phase, rotation, outcome, evaluation and player', () => {
     const index = buildVideoEventIndex(buildEvents());
+    const items = annotateVideoEntries(index.entries);
+    const filter = (patch: Partial<VideoChainFilters>) => applyVideoChainFilters(items, { ...createDefaultVideoChainFilters(), ...patch });
 
-    const serves = applyVideoEventFilters(index.entries, {
-      ...createDefaultVideoEventFilters(),
-      skills: ['serve'],
-    });
-    assert.deepStrictEqual(serves.map((entry) => entry.touchId), ['serve-1', 'serve-2']);
-
-    const servesAndAttacks = applyVideoEventFilters(index.entries, {
-      ...createDefaultVideoEventFilters(),
-      skills: ['serve', 'attack'],
-    });
-    assert.deepStrictEqual(servesAndAttacks.map((entry) => entry.touchId), ['serve-1', 'attack-1', 'serve-2']);
-
-    const breakpointActions = applyVideoEventFilters(index.entries, {
-      ...createDefaultVideoEventFilters(),
-      phase: 'breakpoint',
-    });
-    assert.deepStrictEqual(breakpointActions.map((entry) => entry.touchId), ['serve-1', 'serve-2']);
-
-    const awaySetterInP1 = applyVideoEventFilters(index.entries, {
-      ...createDefaultVideoEventFilters(),
-      team: 'away',
-      setterPositions: [1],
-    });
-    assert.deepStrictEqual(awaySetterInP1.map((entry) => entry.touchId), ['serve-2']);
-
-    const wonByTouchTeam = applyVideoEventFilters(index.entries, {
-      ...createDefaultVideoEventFilters(),
-      rallyOutcome: 'won',
-    });
-    assert.deepStrictEqual(wonByTouchTeam.map((entry) => entry.touchId), ['receive-1', 'attack-1']);
-
-    const errorsOnly = applyVideoEventFilters(index.entries, {
-      ...createDefaultVideoEventFilters(),
-      evaluations: ['='] as SkillEvaluation[],
-    });
-    assert.deepStrictEqual(errorsOnly.map((entry) => entry.touchId), ['serve-2']);
-
-    const byTwoPlayers = applyVideoEventFilters(index.entries, {
-      ...createDefaultVideoEventFilters(),
-      playerIds: ['h1', 'a4'],
-    });
-    assert.deepStrictEqual(byTwoPlayers.map((entry) => entry.touchId), ['serve-1', 'attack-1']);
+    assert.deepStrictEqual(filter({ chain: ['serve'] }).map((entry) => entry.touchId), ['serve-1', 'serve-2']);
+    // A chain shows its last skill after the previous ones: the attacks that followed a serve.
+    assert.deepStrictEqual(filter({ chain: ['serve', 'attack'] }).map((entry) => entry.touchId), ['attack-1']);
+    assert.deepStrictEqual(filter({ phases: ['break_point'] }).map((entry) => entry.touchId), ['serve-1', 'serve-2']);
+    assert.deepStrictEqual(filter({ team: 'away', rotations: [1] }).map((entry) => entry.touchId), ['serve-2']);
+    assert.deepStrictEqual(filter({ rallyOutcome: 'won' }).map((entry) => entry.touchId), ['receive-1', 'attack-1']);
+    assert.deepStrictEqual(filter({ attributes: { any: { evaluations: ['='] } } }).map((entry) => entry.touchId), ['serve-2']);
+    assert.deepStrictEqual(filter({ attributes: { any: { playerIds: ['h1', 'a4'] } } }).map((entry) => entry.touchId), ['serve-1', 'attack-1']);
   });
 
   it('sorts entries by skill and player while keeping ties in original (chronological) order', () => {
