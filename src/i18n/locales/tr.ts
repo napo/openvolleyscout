@@ -1167,6 +1167,7 @@ export const tr = {
   filterAthleteClearSelection: 'Seçimi temizle',
   filterAthleteNoResults: 'Sporcu bulunamadı',
   filterEvaluations: 'Değerlendirmeler',
+  dashboardFilterPlayersTitle: 'Oyuncular',
   allPhases: 'Tüm fazlar',
   situationAnalytics: 'Oyun durumu analitikleri',
   situationSideOut: 'Side-out',

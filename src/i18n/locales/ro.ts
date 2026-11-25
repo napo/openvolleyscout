@@ -1169,6 +1169,7 @@ export const ro = {
   filterAthleteClearSelection: 'Șterge selecția',
   filterAthleteNoResults: 'Niciun sportiv găsit',
   filterEvaluations: 'Evaluări',
+  dashboardFilterPlayersTitle: 'Jucători',
   allPhases: 'Toate fazele',
   situationAnalytics: 'Analiza situațiilor de joc',
   situationSideOut: 'Schimb de minge',

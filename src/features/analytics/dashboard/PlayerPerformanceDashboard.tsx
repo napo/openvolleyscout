@@ -1,17 +1,11 @@
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
-import type { MatchStats, PlayerStats, TrackedSkill } from '@src/features/scouting/model/match-stats';
-import { TRACKED_SKILLS } from '@src/features/scouting/model/match-stats';
+import type { MatchStats, PlayerStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from './filters/dashboard-filters';
-import {
-  getActiveFilterCount } from './filters/dashboard-filters';
-import type { TouchPhase } from './filters/dashboard-filters';
 import { PlayerMultiAutocomplete } from './filters/PlayerMultiAutocomplete';
-import { EvaluationFilter } from './filters/EvaluationFilter';
 import {
   getAvailablePlayers,
-  getAvailableSets,
   resolveSelectedPlayers,
   getFilteredTouches,
   pickRallyContextFilters,
@@ -27,15 +21,8 @@ import { PlayerAnalyticsWidget } from './widgets/PlayerAnalyticsWidget';
 import { PlayerSituationMetricsWidget } from './widgets/PlayerSituationMetricsWidget';
 import { PlayerRadarWidget } from './widgets/PlayerRadarWidget';
 import { HeatmapWidget } from '../heatmaps';
-import { RallyContextFilterControls } from './filters/RallyContextFilterControls';
+import { DashboardFilterPanel } from './filters/DashboardFilterPanel';
 import './performance-dashboard.css';
-
-const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
-  break_point: 'rallyPhaseBreakPoint',
-  point: 'rallyPhasePoint',
-  transition_break_point: 'rallyPhaseTransitionBreakPoint',
-  transition_point: 'rallyPhaseTransitionPoint',
-};
 
 interface FilterBarProps {
   filters: DashboardFilters;
@@ -48,104 +35,27 @@ interface FilterBarProps {
 }
 
 function FilterBar({ filters, stats, selectedPlayerIds, onSelectedPlayersChange, lockedTeam, readOnlyPlayers }: FilterBarProps) {
-  const { t } = useTranslation();
-  const { updateFilter, resetFilters } = useFilterActions();
-  const sets = getAvailableSets(stats);
   const players = getAvailablePlayers(stats);
-  const activeCount = getActiveFilterCount({ ...filters, team: 'all' });
-
-  const homeTeamName = stats.teamStats.home.teamName;
-  const awayTeamName = stats.teamStats.away.teamName;
-
-  const handleReset = () => resetFilters();
-
   return (
-    <div className="perf-dashboard__filters" aria-label={t('dashboardFilters')}>
-      {readOnlyPlayers ? null : <PlayerMultiAutocomplete
-        players={lockedTeam ? players.filter((p) => p.teamSide === lockedTeam) : players}
-        selectedPlayerIds={selectedPlayerIds}
-        onChange={onSelectedPlayersChange}
-        homeTeamName={homeTeamName}
-        awayTeamName={awayTeamName}
-      />}
-
-      <div className="perf-dashboard__filter-group">
-        <label className="perf-dashboard__filter-label" htmlFor="dash-filter-skill">
-          {t('filterSkill')}
-        </label>
-        <select
-          id="dash-filter-skill"
-          className="perf-dashboard__filter-select"
-          value={filters.skill}
-          onChange={(e) => updateFilter('skill', e.target.value as TrackedSkill | 'all')}
-        >
-          <option value="all">{t('allSkills')}</option>
-          {TRACKED_SKILLS.map((skill) => (
-            <option key={skill} value={skill}>
-              {t(`skill${skill.charAt(0).toUpperCase()}${skill.slice(1)}` as Parameters<typeof t>[0])}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {sets.length > 1 && (
-        <div className="perf-dashboard__filter-group">
-          <label className="perf-dashboard__filter-label" htmlFor="dash-filter-set">
-            {t('filterSet')}
-          </label>
-          <select
-            id="dash-filter-set"
-            className="perf-dashboard__filter-select"
-            value={String(filters.set)}
-            onChange={(e) => updateFilter('set', e.target.value === 'all' ? 'all' : Number(e.target.value))}
-          >
-            <option value="all">{t('allSets')}</option>
-            {sets.map((n) => (
-              <option key={n} value={n}>{t('setLabel', { setNumber: n })}</option>
-            ))}
-          </select>
-        </div>
+    <DashboardFilterPanel
+      filters={filters}
+      stats={stats}
+      lockedTeam={lockedTeam}
+      showSkill
+      showEvaluations
+      playerPicker={readOnlyPlayers ? null : (
+        <PlayerMultiAutocomplete
+          players={lockedTeam ? players.filter((p) => p.teamSide === lockedTeam) : players}
+          selectedPlayerIds={selectedPlayerIds}
+          onChange={onSelectedPlayersChange}
+          homeTeamName={stats.teamStats.home.teamName}
+          awayTeamName={stats.teamStats.away.teamName}
+        />
       )}
-
-      <div className="perf-dashboard__filter-group">
-        <label className="perf-dashboard__filter-label" htmlFor="dash-filter-phase">
-          {t('filterRallyPhase')}
-        </label>
-        <select
-          id="dash-filter-phase"
-          className="perf-dashboard__filter-select"
-          value={filters.rallyPhase}
-          onChange={(e) => updateFilter('rallyPhase', e.target.value as DashboardFilters['rallyPhase'])}
-        >
-          <option value="all">{t('allPhases')}</option>
-          {Object.entries(PHASE_I18N_KEYS).map(([phase, key]) => (
-            <option key={phase} value={phase}>
-              {t(key as Parameters<typeof t>[0])}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <EvaluationFilter
-        selectedEvaluations={filters.evaluations}
-        onChange={(evaluations) => updateFilter('evaluations', evaluations)}
-      />
-
-      <RallyContextFilterControls filters={filters} stats={stats} />
-
-      {activeCount > 0 && (
-        <button
-          type="button"
-          className="perf-dashboard__filter-reset"
-          onClick={handleReset}
-          aria-label={t('resetFilters')}
-        >
-          {t('resetFilters')} ({activeCount})
-        </button>
-      )}
-    </div>
+    />
   );
 }
+
 
 interface PlayerPerformanceDashboardProps {
   stats: MatchStats;

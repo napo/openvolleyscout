@@ -1207,6 +1207,7 @@ export const en = {
   filterAthleteClearSelection: 'Clear selection',
   filterAthleteNoResults: 'No athlete found',
   filterEvaluations: 'Evaluations',
+  dashboardFilterPlayersTitle: 'Players',
   allPhases: 'All phases',
   situationAnalytics: 'Game situation analytics',
   situationSideOut: 'Side-out',

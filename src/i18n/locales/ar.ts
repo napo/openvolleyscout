@@ -1169,6 +1169,7 @@ export const ar = {
   filterAthleteClearSelection: 'مسح الاختيار',
   filterAthleteNoResults: 'لم يتم العثور على لاعب',
   filterEvaluations: 'التقييمات',
+  dashboardFilterPlayersTitle: 'اللاعبون',
   allPhases: 'جميع المراحل',
   situationAnalytics: 'تحليلات مواقف اللعب',
   situationSideOut: 'تبديل الإرسال',

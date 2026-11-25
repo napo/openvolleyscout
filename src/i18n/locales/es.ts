@@ -1170,6 +1170,7 @@ export const es = {
   filterAthleteClearSelection: 'Borrar selección',
   filterAthleteNoResults: 'No se ha encontrado ninguna jugadora',
   filterEvaluations: 'Valoraciones',
+  dashboardFilterPlayersTitle: 'Jugadores',
   allPhases: 'Todas las fases',
   situationAnalytics: 'Análisis de situaciones de juego',
   situationSideOut: 'Cambio de balón',

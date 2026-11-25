@@ -1208,6 +1208,7 @@ export const it = {
   filterAthleteClearSelection: 'Cancella selezione',
   filterAthleteNoResults: 'Nessun atleta trovato',
   filterEvaluations: 'Valutazioni',
+  dashboardFilterPlayersTitle: 'Protagonisti',
   allPhases: 'Tutte le fasi',
   situationAnalytics: 'Analisi situazioni di gioco',
   situationSideOut: 'Cambio-palla',

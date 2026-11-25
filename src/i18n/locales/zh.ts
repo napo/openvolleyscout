@@ -1167,6 +1167,7 @@ export const zh = {
   filterAthleteClearSelection: '清除选择',
   filterAthleteNoResults: '未找到运动员',
   filterEvaluations: '评估',
+  dashboardFilterPlayersTitle: '球员',
   allPhases: '所有阶段',
   situationAnalytics: '比赛形势分析',
   situationSideOut: '侧面朝外',

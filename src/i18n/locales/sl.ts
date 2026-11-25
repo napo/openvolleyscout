@@ -1167,6 +1167,7 @@ export const sl = {
   filterAthleteClearSelection: 'Počisti izbiro',
   filterAthleteNoResults: 'Noben atlet ni najden',
   filterEvaluations: 'Ocene',
+  dashboardFilterPlayersTitle: 'Igralci',
   allPhases: 'Vse faze',
   situationAnalytics: 'Analitika situacije v igri',
   situationSideOut: 'Navzven',

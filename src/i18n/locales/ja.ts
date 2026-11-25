@@ -1169,6 +1169,7 @@ export const ja = {
   filterAthleteClearSelection: "選択を解除",
   filterAthleteNoResults: "該当する選手がいません",
   filterEvaluations: "評価",
+  dashboardFilterPlayersTitle: '選手',
   allPhases: "全局面",
   situationAnalytics: "局面別の分析",
   situationSideOut: "サイドアウト",

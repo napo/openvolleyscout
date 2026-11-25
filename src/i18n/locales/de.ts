@@ -1167,6 +1167,7 @@ export const de = {
   filterAthleteClearSelection: 'Auswahl aufheben',
   filterAthleteNoResults: 'Kein Athlet gefunden',
   filterEvaluations: 'Bewertungen',
+  dashboardFilterPlayersTitle: 'Spieler',
   allPhases: 'Alle Phasen',
   situationAnalytics: 'Analyse der Spielsituation',
   situationSideOut: 'Von der Seite nach außen',

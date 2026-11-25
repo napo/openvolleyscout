@@ -187,7 +187,7 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
         </FilterGroup>
         <FilterGroup title={t('videoChainSkillsTitle')} active={chain.length > 0} wide>
           <ChipSelect
-            allLabel={all}
+            allLabel={t('allSkills')}
             options={VIDEO_CHAIN_SKILL_ORDER.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill') }))}
             selected={chain}
             onChange={(next) => patch({ chain: next.length === VIDEO_CHAIN_SKILL_ORDER.length ? [] : next })}
