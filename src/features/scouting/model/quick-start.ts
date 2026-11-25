@@ -36,6 +36,25 @@ export interface QuickStartRequest {
   liberoAutoMiddleReplacement?: boolean;
 }
 
+/**
+ * Positions the app treats as middle blockers once the setter is known: the
+ * roles follow the team's role order from the setter. The libero enters for
+ * these players, so the quick start page shows them.
+ */
+export function getQuickStartMiddlePositions(
+  setterPosition: CourtPosition | undefined,
+  roleSequence: readonly PlayerRole[] = REQUIRED_TACTICAL_ROLES,
+): CourtPosition[] {
+  if (!setterPosition || roleSequence.length < COURT_POSITIONS.length) {
+    return [];
+  }
+  const setterIndex = COURT_POSITIONS.indexOf(setterPosition);
+  return COURT_POSITIONS.filter((_, index) => {
+    const role = roleSequence[(index - setterIndex + COURT_POSITIONS.length) % COURT_POSITIONS.length];
+    return role === PlayerRole.MIDDLE_BLOCKER_1 || role === PlayerRole.MIDDLE_BLOCKER_2;
+  });
+}
+
 /** Starting lineups of set 1 from the quick start page. */
 export function buildQuickStartLineups(
   homeTeam: Team,

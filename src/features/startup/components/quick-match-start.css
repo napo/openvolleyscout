@@ -385,3 +385,13 @@
   font-size: 0.8rem;
   color: var(--color-text-muted, #64748b);
 }
+
+.quick-start__role-badge {
+    margin-left: 0.3rem;
+    padding: 0 0.3rem;
+    border-radius: 6px;
+    background: #fbbf24;
+    color: #1f2937;
+    font-style: normal;
+    font-weight: 700;
+}

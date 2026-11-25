@@ -4,6 +4,7 @@ import type { Team } from '@src/domain/roster/types';
 import {
   createEmptySetStartSetupState,
   getUnconfirmedAutoLiberoMiddles,
+  getNonDiagonalMiddlePositions,
   rotateTeamSetSetupClockwise,
   rotateTeamSetSetupCounterClockwise,
   validateSetStartSetup,
@@ -103,5 +104,28 @@ describe('libero middles not confirmed by the roster', () => {
     const other = setup();
     other.state.liberoAutoMiddleReplacement = false;
     expect(getUnconfirmedAutoLiberoMiddles(other.state, other.home)).toEqual([]);
+  });
+});
+
+describe('middles not diagonal', () => {
+  function lineup(middles: [number, number]) {
+    const state = createEmptySetStartSetupState().home;
+    const others = [PlayerRole.SETTER, PlayerRole.OUTSIDE_HITTER_1, PlayerRole.OPPOSITE, PlayerRole.OUTSIDE_HITTER_2];
+    ([1, 2, 3, 4, 5, 6] as const).forEach((position) => {
+      state.slots[position] = `h-${position}`;
+      state.tacticalRoles[position] = position === middles[0]
+        ? PlayerRole.MIDDLE_BLOCKER_1
+        : position === middles[1] ? PlayerRole.MIDDLE_BLOCKER_2 : others.shift()!;
+    });
+    return state;
+  }
+
+  it('flags middles next to each other (a mirrored lineup)', () => {
+    expect(getNonDiagonalMiddlePositions(lineup([1, 2]))).toEqual([1, 2]);
+  });
+
+  it('accepts diagonal middles', () => {
+    expect(getNonDiagonalMiddlePositions(lineup([1, 4]))).toEqual([]);
+    expect(getNonDiagonalMiddlePositions(lineup([3, 6]))).toEqual([]);
   });
 });

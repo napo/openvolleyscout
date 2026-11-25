@@ -3435,6 +3435,68 @@
     left: calc(var(--half-court-inset) + var(--half-court-front-width));
 }
 
+/* Vertical court: same 90 degree turn as the live court. */
+.half-court--vertical .half-court__surface {
+    aspect-ratio: 1 / 1;
+    max-width: 34rem;
+    margin-inline: auto;
+}
+
+.half-court--vertical .half-court__net,
+.half-court--vertical .half-court__attack-line,
+.half-court--vertical .half-court__zone-block {
+    top: auto;
+    bottom: auto;
+    left: var(--half-court-inset);
+    width: auto;
+    right: var(--half-court-inset);
+}
+
+.half-court--vertical .half-court__net {
+    height: 7px;
+    border: none;
+    border-top: 2px dashed rgba(15, 23, 42, 0.52);
+    border-bottom: 2px dashed rgba(15, 23, 42, 0.52);
+}
+
+.half-court--vertical .half-court__attack-line {
+    height: 3px;
+}
+
+.half-court--vertical .half-court__zone-block--front {
+    height: var(--half-court-front-width);
+}
+
+.half-court--vertical .half-court__zone-block--back {
+    height: var(--half-court-back-width);
+}
+
+.half-court--vertical.half-court--left .half-court__net,
+.half-court--vertical.half-court--left .half-court__zone-block--front {
+    top: var(--half-court-inset);
+}
+
+.half-court--vertical.half-court--left .half-court__zone-block--back {
+    bottom: var(--half-court-inset);
+}
+
+.half-court--vertical.half-court--left .half-court__attack-line {
+    top: calc(var(--half-court-inset) + var(--half-court-front-width));
+}
+
+.half-court--vertical.half-court--right .half-court__net,
+.half-court--vertical.half-court--right .half-court__zone-block--front {
+    bottom: var(--half-court-inset);
+}
+
+.half-court--vertical.half-court--right .half-court__zone-block--back {
+    top: var(--half-court-inset);
+}
+
+.half-court--vertical.half-court--right .half-court__attack-line {
+    bottom: calc(var(--half-court-inset) + var(--half-court-front-width));
+}
+
 .half-court__marker {
     position: absolute;
     transform: translate(-50%, -50%);

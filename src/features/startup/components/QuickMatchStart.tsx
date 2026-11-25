@@ -5,7 +5,7 @@ import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import type { MatchRosterSelectionPlayer } from '@src/domain/match/types';
 import type { QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
-import { parseLineupJersey, type QuickStartLevel, type QuickStartRequest } from '@src/features/scouting/model/quick-start';
+import { getQuickStartMiddlePositions, parseLineupJersey, type QuickStartLevel, type QuickStartRequest } from '@src/features/scouting/model/quick-start';
 import { MatchTeamSelection, type MatchTeamSelectionProps } from './MatchTeamSelection';
 import { SetupVideoField, type SetupVideoFile } from './SetupVideoField';
 import './quick-match-start.css';
@@ -112,6 +112,19 @@ export function QuickMatchStart({
   const missingName = !homeName.trim();
   const opponentLabel = awayName.trim() || t('opponentDefaultName');
   const homeLabel = homeName.trim() || t('quickStartYourTeam');
+  // The middles follow from the setter: show them, the libero enters for them.
+  const middlePositions = getQuickStartMiddlePositions(
+    setterPosition && parsed[setterPosition] !== undefined ? setterPosition : undefined,
+  );
+  const middleJerseys = middlePositions
+    .map((position) => parsed[position])
+    .filter((value): value is number => value !== undefined);
+  const rosterMiddleJerseys = selectedPlayers
+    .filter((player) => player.role === 'middle_blocker')
+    .map((player) => player.jerseyNumber);
+  const middlesDisagreeWithRoster = middleJerseys.length > 0
+    && rosterMiddleJerseys.length > 0
+    && middleJerseys.some((jersey) => !rosterMiddleJerseys.includes(jersey));
 
   const setPosition = (position: CourtPosition, value: string) => {
     setLineup((current) => ({ ...current, [position]: value.replace(/\D/g, '').slice(0, 2) }));
@@ -164,7 +177,12 @@ export function QuickMatchStart({
     const isDuplicate = jersey !== undefined && duplicates.has(jersey);
     return (
       <div key={position} className={`quick-start__slot${jersey !== undefined ? ' is-filled' : ''}${isDuplicate ? ' is-invalid' : ''}`}>
-        <span className="quick-start__slot-label">P{position}</span>
+        <span className="quick-start__slot-label">
+          P{position}
+          {jersey !== undefined && middlePositions.includes(position) ? (
+            <em className="quick-start__role-badge" title={t('quickStartMiddleBadgeTitle')}>{t('quickStartMiddleBadge')}</em>
+          ) : null}
+        </span>
         <input
           type="text"
           inputMode="numeric"
@@ -342,6 +360,14 @@ export function QuickMatchStart({
             />
             <span>{t('liberoReplacesMiddlesByDefault')}</span>
           </label>
+          {middleJerseys.length > 0 ? (
+            <p className={middlesDisagreeWithRoster ? 'quick-start__error' : 'quick-start__note'} role={middlesDisagreeWithRoster ? 'alert' : undefined}>
+              {t(middlesDisagreeWithRoster ? 'quickStartMiddlesDisagree' : 'quickStartMiddlesSummary', {
+                middles: middleJerseys.map((value) => `#${value}`).join(', '),
+                rosterMiddles: rosterMiddleJerseys.map((value) => `#${value}`).join(', '),
+              })}
+            </p>
+          ) : null}
           {duplicates.size > 0 ? <p className="quick-start__error" role="alert">{t('quickStartLineupDuplicate', { jerseys: [...duplicates].map((value) => `#${value}`).join(', ') })}</p> : null}
           <p className="quick-start__note">
             {filledCount === 6 ? t('quickStartLineupComplete') : t('quickStartLineupFromServes', { count: 6 - filledCount })}

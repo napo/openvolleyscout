@@ -16,6 +16,8 @@ interface HalfCourtLineupProps {
   players: HalfCourtLineupPlayer[];
   selectedPosition?: CourtPosition;
   onPositionSelect?: (position: CourtPosition) => void;
+  /** Same orientation as the live court: vertical puts the net at the top (left side) or bottom (right side). */
+  vertical?: boolean;
 }
 
 const LEFT_SIDE_COORDINATES: Record<CourtPosition, { x: number; y: number }> = {
@@ -36,15 +38,17 @@ const RIGHT_SIDE_COORDINATES: Record<CourtPosition, { x: number; y: number }> = 
   6: { x: 76, y: 50 },
 };
 
-function getCoordinates(side: CourtDisplaySide, position: CourtPosition) {
-  return side === 'left' ? LEFT_SIDE_COORDINATES[position] : RIGHT_SIDE_COORDINATES[position];
+export function getHalfCourtCoordinates(side: CourtDisplaySide, position: CourtPosition, vertical = false) {
+  const point = side === 'left' ? LEFT_SIDE_COORDINATES[position] : RIGHT_SIDE_COORDINATES[position];
+  // The live court turns 90 degrees counter-clockwise in vertical mode.
+  return vertical ? { x: point.y, y: 100 - point.x } : point;
 }
 
-export function HalfCourtLineup({ side, players, selectedPosition, onPositionSelect }: HalfCourtLineupProps) {
+export function HalfCourtLineup({ side, players, selectedPosition, onPositionSelect, vertical = false }: HalfCourtLineupProps) {
   const { t } = useTranslation();
 
   return (
-    <section className={`half-court half-court--${side}`} aria-label={t('setSetupMiniCourtLabel')}>
+    <section className={`half-court half-court--${side}${vertical ? ' half-court--vertical' : ''}`} aria-label={t('setSetupMiniCourtLabel')}>
       <div className="half-court__surface">
         <div className="half-court__glow" />
         <div className="half-court__court-area" />
@@ -55,7 +59,7 @@ export function HalfCourtLineup({ side, players, selectedPosition, onPositionSel
         <div className={`half-court__attack-line half-court__attack-line--${side}`} />
 
         {players.map((player) => {
-          const coordinates = getCoordinates(side, player.position);
+          const coordinates = getHalfCourtCoordinates(side, player.position, vertical);
 
           return (
             <button

@@ -407,6 +407,22 @@ export function getRoleOrderMismatchPositions(
 }
 
 /**
+ * The two middle blockers when they are not diagonal to each other (in a 5-1
+ * they always are: positions 1-4, 2-5 or 3-6). Usually the lineup was entered
+ * mirrored, with positions 2 and 4 swapped. Empty when fewer than two middles
+ * are on court.
+ */
+export function getNonDiagonalMiddlePositions(teamState: TeamSetSetupState): CourtPosition[] {
+  const middles = COURT_POSITIONS.filter((position) => (
+    Boolean(teamState.slots[position]) && getRoleFamily(teamState.tacticalRoles[position]) === 'middle'
+  ));
+  if (middles.length !== 2) {
+    return [];
+  }
+  return Math.abs(middles[0] - middles[1]) === 3 ? [] : middles;
+}
+
+/**
  * Players the libero will replace automatically (the middle-blocker slots)
  * whose roster role does not say "middle blocker". Their middle role was only
  * assumed from the lineup order, so the scout must confirm it: a wrong guess
