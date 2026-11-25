@@ -1,6 +1,6 @@
 import type { OpponentReport, OpponentReportComponentId } from '@src/domain/opponent-report/types';
 
-export const DEFAULT_COMPONENT_ORDER: readonly OpponentReportComponentId[] = ['keys', 'serveTargets', 'attackers', 'setter', 'serve', 'overview', 'reception', 'board', 'notes'];
+export const DEFAULT_COMPONENT_ORDER: readonly OpponentReportComponentId[] = ['keys', 'serveTargets', 'attackers', 'setter', 'zones', 'serve', 'overview', 'reception', 'board', 'notes'];
 
 export function reportComponentOrder(report: OpponentReport): OpponentReportComponentId[] {
   return [...new Set([...(report.componentOrder ?? []), ...DEFAULT_COMPONENT_ORDER])].filter(id => DEFAULT_COMPONENT_ORDER.includes(id));

@@ -27,6 +27,7 @@ import {
   type ViewT,
   type ViewTable } from './report-view';
 import { buildTacticalBoardSvg, extractEditableDrawingFromSvg } from './tactical-board';
+import { zonesPieceId } from './report-zones';
 
 export const PIECE_KEYS_MAIN = 'keys:main';
 export const PIECE_OVERVIEW_ROTATIONS = 'overview:rotations';
@@ -430,6 +431,22 @@ export function buildBoardPieceCatalog(
     }
   }
 
+  // ── 5b. Zone analysis ──────────────────────────────────────────────────────
+  for (const phase of view.zones?.phases ?? []) {
+    const id = zonesPieceId(phase.key);
+    const edit = edits[id];
+    catalog.set(id, {
+      id,
+      sheetId: 'zones',
+      kind: 'court-grid',
+      title: edit?.title ?? `${t('opponentReportSheet_zones')} - ${phase.title}`,
+      subtitle: edit?.subtitle ?? view.zones?.legend,
+      courts: phase.courts.map((court) => resolveCourt(id, `P${court.rotation}`, `P${court.rotation}`, court.svg, edit, netLabel, court.sample)),
+      note: edit?.note ?? '',
+      isModified: hasPieceEdit(edit),
+    });
+  }
+
   // ── 6. Serve ───────────────────────────────────────────────────────────────
   for (const server of view.serve.servers) {
     const id = servePieceId(server.player.key);
@@ -545,6 +562,8 @@ export function getPieceIdsForSheet(
           customView.attackers.map((attacker) => attackerPieceId(attacker.player.key, customView.id)),
         )
         : view.attackers.map((attacker) => attackerPieceId(attacker.player.key));
+    case 'zones':
+      return (view.zones?.phases ?? []).filter((phase) => phase.total > 0).map((phase) => zonesPieceId(phase.key));
     case 'serve':
       return view.serve.servers.map((server) => servePieceId(server.player.key));
     case 'board':
@@ -579,6 +598,13 @@ export function resolveActiveBoardPieceIds(
     const id = extraPieceId(drawing.id);
     if (!base.includes(id)) {
       base.push(id);
+    }
+  }
+  // The booklet's "Zone analysis" option adds its pages (phases with attacks).
+  if (report.booklet?.includeZones) {
+    for (const phase of view.zones?.phases ?? []) {
+      const id = zonesPieceId(phase.key);
+      if (phase.total > 0 && !base.includes(id)) base.push(id);
     }
   }
   // The booklet's "How they serve" option drives the serve cards too (when directions exist).

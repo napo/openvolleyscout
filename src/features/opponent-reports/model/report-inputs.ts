@@ -1,4 +1,5 @@
 import { getMatchRoster } from '@src/domain/match/helpers';
+import { getMatchCodeTables } from '@src/domain/match/code-tables';
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 import type { TeamMatch } from './opponent-matches';
 import type { ReportMatchInput } from './report-metrics';
@@ -15,6 +16,7 @@ export function buildReportMatchInputs(matches: readonly TeamMatch[]): ReportMat
       rotationStats: stats.rotationStats[side],
       roster: getMatchRoster(project, side),
       videoAnalysis: project.videoAnalysis,
+      codeTables: getMatchCodeTables(project),
     };
   });
 }

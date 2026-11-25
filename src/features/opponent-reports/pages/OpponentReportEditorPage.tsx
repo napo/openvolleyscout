@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buildReportZoneView } from '../model/report-zones';
 import { opponentReportTitle } from '../model/report-title';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { zipSync, strToU8 } from 'fflate';
@@ -198,7 +199,8 @@ export function OpponentReportEditorPage() {
             : [],
         [inputs, report?.attackerViews, attacking.attackers, t],
     );
-    const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, { serve: serveLinks, setter: setterLinks }, setterCustomGroups, attackerCustomViews) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, serveLinks, setterLinks, setterCustomGroups, attackerCustomViews]);
+    const zones = useMemo(() => buildReportZoneView(inputs, viewT), [inputs, viewT]);
+    const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, { serve: serveLinks, setter: setterLinks }, setterCustomGroups, attackerCustomViews, zones) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, serveLinks, setterLinks, setterCustomGroups, attackerCustomViews, zones]);
     useEffect(() => {
         if (!report || !view) return;
         const stale = inputs.some(input => {

@@ -103,7 +103,7 @@ describe('booklet planning and printing',()=>{
     const reordered=moveReportComponent(moveReportComponent(report,'attackers','keys'),'notes','attackers');
     expect(reportComponentOrder(reordered).slice(0,3)).toEqual(['notes','attackers','keys']);
     expect(moveReportComponent(reordered,'notes','notes')).toBe(reordered);
-    expect(reportComponentOrder({...report,componentOrder:['setter','setter']})).toHaveLength(9);
+    expect(reportComponentOrder({...report,componentOrder:['setter','setter']})).toHaveLength(10);
     for(const a4 of [false,true]){
       const plan=buildReportBooklet(reordered,view,t,'',{a4});
       expect(plan.pages[0]).toContain('Staff note moved to the beginning');

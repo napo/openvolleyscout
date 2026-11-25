@@ -2,6 +2,7 @@
  * Metrics of an opponent report, over the selected matches of ONE team.
  * Everything is counted from the opponent's point of view. Pure module.
  */
+import type { DataVolleyCodeTables } from '../../../domain/match/code-tables';
 import { receptionZone } from '@src/features/analytics/serve-attributes';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
@@ -31,6 +32,8 @@ export interface ReportMatchInput {
   roster: readonly MatchRosterPlayer[];
   /** Video source and sync settings, used only to create optional share links. */
   videoAnalysis?: MatchVideoAnalysis;
+  /** The match's DataVolley combination table (for the served attacker of the zone analysis). */
+  codeTables?: DataVolleyCodeTables;
 }
 
 export interface Ratio {

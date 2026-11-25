@@ -395,6 +395,16 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       setterGrid(group);
     }
   }
+  // Zone analysis: one page per phase, the six rotations as on the setter's page.
+  // On the board, or (without a board selection) when the sheet is switched on.
+  const zonePieces = resolvedBoardPieces.filter((p) => p.sheetId === 'zones');
+  if (zonePieces.length) {
+    component = 'zones';
+    for (const piece of zonePieces) {
+      rememberNotes(piece);
+      grids(piece.title, (piece.courts ?? []).map((court) => ({ title: court.label, court, body: court.sample })), 3, 2, BOTTOM, view.zones?.legend ?? '');
+    }
+  }
   // "How they serve": the six main servers with serve directions on one page; the others
   // as text or an optional sheet. Without any scouted direction the sheet is left out.
   const servePiece = (s: ReportView['serve']['servers'][number]) => catalog.get(servePieceId(s.player.key));
@@ -436,7 +446,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     deferred.push({ id: 'serve-text', title: t('opponentReportSheet_serve'), body: servers.map((p) => serveText.get(p.id) ?? p.title).join('\n') });
   }
   if (custom && settings.includeBoardExtras) {
-    const included = new Set([PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...main?.bands.map(b => setterPieceId(main.player.key, b.key)) ?? [],
+    const included = new Set([...zonePieces.map((p) => p.id), PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...main?.bands.map(b => setterPieceId(main.player.key, b.key)) ?? [],
       ...setters.slice(1).flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
       ...(drawable.size ? servers.map(p => p.id) : [])]);
     const extraPieces = resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id));

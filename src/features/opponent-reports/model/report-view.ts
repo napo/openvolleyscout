@@ -22,6 +22,7 @@ import type {
   SetterReportMetrics,
 } from './attacking-metrics';
 import type { AttackerVideoLink } from './attacker-video-links';
+import type { ReportZoneView } from './report-zones';
 import { buildReceptionFormations, type ReceptionFormation } from './reception-formation';
 import { compareReportPlayers, percent, playerLabel, type KeySuggestion } from './report-keys';
 import type { AttackOutcome, OpponentReportMetrics, Ratio, ReportPlayer, ServeTarget } from './report-metrics';
@@ -141,6 +142,8 @@ export interface ReportView {
     }>;
     notes: string;
   };
+  /** Zone analysis per rotation, after reception and in transition. */
+  zones?: ReportZoneView;
   minSample: number;
 }
 
@@ -1146,6 +1149,8 @@ export function buildReportView(
   extraVideoLinks: { serve?: ReadonlyMap<string, AttackerVideoLink>; setter?: ReadonlyMap<string, AttackerVideoLink> } = {},
   setterCustomGroups: readonly SetterCustomGroupMetrics[] = [],
   attackerCustomViews: readonly AttackerCustomViewMetrics[] = [],
+  /** Zone analysis sheet; absent when the sheet is not built. */
+  zones?: ReportZoneView,
 ): ReportView {
   const { minSample } = thresholds;
   const enough = (value: Ratio) => value.rate !== null && value.total >= minSample;
@@ -1346,6 +1351,7 @@ export function buildReportView(
       const serve = serveDistributionView(serving, report, thresholds, t);
       return { ...serve, servers: serve.servers.map((server) => ({ ...server, videoLink: extraVideoLinks.serve?.get(server.player.key) })) };
     })(),
+    ...(zones ? { zones } : {}),
     minSample,
   };
 }

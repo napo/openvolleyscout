@@ -18,6 +18,7 @@ export const OPPONENT_REPORT_SHEET_IDS = [
   'serveTargets',
   'attackers',
   'setter',
+  'zones',
   'serve',
   'board',
 ] as const;
@@ -182,6 +183,8 @@ export interface OpponentReportBooklet {
   /** "Block and defence" attack-direction sheet; included unless false. */
   includeAttackers?: boolean;
   includeSecondSetter: boolean;
+  /** "Zone analysis" pages (after reception, in transition); off unless true. */
+  includeZones?: boolean;
   /** Coach-selected attackers retained in text without direction drawings. */
   textOnlyAttackerKeys?: string[];
   includeBoardExtras: boolean;
