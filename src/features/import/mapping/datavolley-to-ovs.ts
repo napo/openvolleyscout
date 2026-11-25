@@ -530,13 +530,17 @@ function materializeComposedTouches(actions: readonly ParsedDataVolleyAction[]):
  * DataVolley 4 handbook, a dig is a cover when its type of hit is C ("spike cover"),
  * when it is rated "!" ("positive cover"), or when the attacking team digs right after
  * the opponent's block (attack "!" and block "!": the blocked ball is covered by the
- * team that attacked).
+ * team that attacked). A cover always belongs to the team that attacked: a "!" dig by
+ * the blocking team (after its own "M!") is a real dig.
  */
 function isCoverDig(drafts: readonly TouchDraft[], index: number): boolean {
   const draft = drafts[index];
   if (draft.skill !== 'dig') return false;
   if (draft.action?.skillSubtypeCode?.toUpperCase() === 'C') return true;
-  if (draft.evaluation === '!') return true;
+  if (draft.evaluation === '!') {
+    const lastAttack = drafts.slice(0, index).reverse().find((item) => item.skill === 'attack');
+    return lastAttack !== undefined && lastAttack.teamSide === draft.teamSide;
+  }
   const block = drafts[index - 1];
   const attack = drafts[index - 2];
   return block?.skill === 'block' && block.teamSide !== draft.teamSide

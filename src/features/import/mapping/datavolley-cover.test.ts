@@ -32,9 +32,14 @@ describe('covers from DataVolley (DataVolley 4 handbook)', () => {
         const attack = rally[index - 2];
         const afterBlock = block?.skill === 'block' && block.teamSide !== touch.teamSide
           && attack?.skill === 'attack' && attack.teamSide === touch.teamSide;
-        if (touch.skill === 'cover') expect(afterBlock || touch.evaluation === '!').toBe(true);
+        // A cover always belongs to the team that made the last attack (never to the blockers).
+        const lastAttack = rally.slice(0, index).reverse().find((item) => item.skill === 'attack');
+        const byAttackers = lastAttack !== undefined && lastAttack.teamSide === touch.teamSide;
+        const positiveCover = touch.evaluation === '!' && byAttackers;
+        if (touch.skill === 'cover') expect(afterBlock || positiveCover).toBe(true);
+        if (touch.skill === 'cover') expect(byAttackers).toBe(true);
         // No dig is left where the handbook sees a cover.
-        if (touch.skill === 'dig') expect(afterBlock || touch.evaluation === '!').toBe(false);
+        if (touch.skill === 'dig') expect(afterBlock || positiveCover).toBe(false);
       });
     }
   });
