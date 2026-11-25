@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.49.0 - 2026-11-25
+
+### Added
+- Zone analysis, as in DataVolley: a new tab in the Analysis page draws a team's attacks on the half court, one box per start zone. Each box shows four values you choose (total attacks, share of attacks, points won and lost by default, or kills, kill %, errors, blocked, efficiency) and the athletes who attacked from there. The zone with the lowest first value is framed in red, the highest in black. You can count attacks by the zone they really started from (Classic zones) or by the zone of the attacker the combination was meant for (Served attacker: a cross from 2 to 3 counts in zone 2, and setter attacks get their own box), and use 6 zones as in DataVolley or all 9 zones (7, 8 and 9 in the middle). Filters for team, game phase, set, rotation (with Rotation - / Rotation + buttons), role, attacker and attack result. Click a zone to list its attacks; when the match has a video, each attack opens in Video analysis. The tab appears only when the match has attack start zones.
+- Zone analysis in the tactical report: the opponent's attacks by zone of the served attacker, one court per setter rotation, after reception and in transition, across all the chosen matches. Each zone shows attacks, share of the rotation, errors, kill % and the main attackers. Switch it on with the new Zone analysis option in Booklet format; it then appears in the editor, the PDF, the booklet and the report link.
+- Role filter: where you pick athletes from a list (Player performance, Video analysis) a Role row (in Italian P, S, O, C, L; in English S, OH, OPP, MB, L) picks all the athletes of a role at once, and each name shows its role. The role comes from the team list, else from the role the base system gave the athlete in the lineups, else from the Libero mark. In Teams each athlete now has a Role column to fill in; matches created afterwards use it.
+- Tactical report, Block and defence: a new choice "hide directions under" (5%, 10%, 15% or 20%) leaves out the rarely used directions of the attack cones. Each card says how many directions it leaves out. By default all directions are shown.
+
+### Changed
+- The athlete list is wider and shows whole rosters without scrolling when the screen is tall enough, with number, full name, role and rallies on one line.
+- Attack cones in the tactical report: every direction now has its label, also the small ones that had none before, and the labels sit outside the court (beside the side lines and under the end line), joined to their cone by a thin line, so they no longer overlap when there are many directions. The court drawing is a little wider to make room. Court drawings you edited by hand keep their old look.
+- Portable version for Windows: the zip now includes avvia.bat, to start the app on computers without Microsoft WebView2 where it cannot be installed (instructions in the README inside the zip).
+
 ## 0.48.0 - 2026-11-25
 
 ### Added
