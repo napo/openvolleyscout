@@ -395,3 +395,7 @@
 .sideout-seq__aeval--kill  { color: #27ae60; }
 .sideout-seq__aeval--error { color: #e74c3c; }
 .sideout-seq__aeval--other { color: var(--color-text-secondary); opacity: 0.6; }
+
+.sideout-study__filters {
+  margin-bottom: 1rem;
+}

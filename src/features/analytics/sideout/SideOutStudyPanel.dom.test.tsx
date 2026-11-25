@@ -33,28 +33,29 @@ const stats = {
   rallyStats: [rally(1, '9', '5', 'r1'), rally(2, '1', '1', 'r2')],
 } as unknown as MatchStats;
 
-const legendOf = (text: string) => screen.getByText(text, { selector: 'legend' }).closest('fieldset') as HTMLElement;
+const groupOf = (text: string) => screen.getByText(text, { selector: '.filter-chips__group-title' }).closest('.filter-chips__group') as HTMLElement;
+const labels = (group: HTMLElement) => within(group).getAllByRole('button').map((btn) => btn.textContent);
 
 describe('SideOutStudyPanel serve filters', () => {
   afterEach(() => { cleanup(); });
 
   it('shows the serve start zone, serve type, direction and receiver filters', () => {
     render(<I18nProvider><SideOutStudyPanel stats={stats} lockedTeam="away" /></I18nProvider>);
-    const startZones = within(legendOf('Serve start zone')).getAllByRole('button');
-    expect(startZones.map((btn) => btn.textContent)).toEqual(['1', '9', '6', '7', '5']);
-    expect(within(legendOf('Serve type')).getAllByRole('button')).toHaveLength(4);
-    expect(within(legendOf('Direction (arrival zone)')).getAllByRole('button')).toHaveLength(9);
-    const receiver = screen.getByLabelText('Receiver') as HTMLSelectElement;
-    expect([...receiver.options].map((option) => option.textContent)).toEqual(['All players', '3 Rita', '9 Rosa']);
+    expect(labels(groupOf('Serve start zone'))).toEqual(['All', '1', '9', '6', '7', '5']);
+    expect(labels(groupOf('Serve type'))).toHaveLength(5);
+    expect(labels(groupOf('Direction (arrival zone)'))).toHaveLength(10);
+    expect(labels(groupOf('Receiver'))).toEqual(['All', '3 Rita', '9 Rosa']);
   });
 
-  it('unticking a serve start zone narrows the distribution', async () => {
+  it('choosing a serve start zone narrows the distribution, All brings it back', async () => {
     const user = userEvent.setup();
     render(<I18nProvider><SideOutStudyPanel stats={stats} lockedTeam="away" /></I18nProvider>);
     const before = document.body.textContent;
-    const zone9 = within(legendOf('Serve start zone')).getAllByRole('button')[1];
+    const zone9 = within(groupOf('Serve start zone')).getByRole('button', { name: '9' });
     await user.click(zone9);
-    expect(zone9.getAttribute('aria-pressed')).toBe('false');
+    expect(zone9.getAttribute('aria-pressed')).toBe('true');
     expect(document.body.textContent).not.toBe(before);
+    await user.click(within(groupOf('Serve start zone')).getByRole('button', { name: 'All' }));
+    expect(document.body.textContent).toBe(before);
   });
 });
