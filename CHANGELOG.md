@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.48.0 - 2026-11-25
+
+### Added
+- Portable version for Windows: next to the installer, each release now has a zip file. Unzip it anywhere (even on a USB stick) and start OpenVolleyScout.exe, with nothing to install. Useful on computers where you cannot install programs or cannot reach the web version. This version does not update itself: download the new zip when a new version comes out.
+- Athlete lists can be sorted by shirt number, surname, first name or rallies, wherever you pick an athlete from a list (Video analysis filters, Player performance, data study). Next to each name, in small type, you see the rallies in which the athlete touched the ball, for example "(12 r)". The app remembers your choice.
+
 ## 0.47.0 - 2026-11-25
 
 ### Added

@@ -392,6 +392,48 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Portable Windows zip (Release Tag)
+        if: github.ref_type == 'tag' && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # No installer: unzip and start OpenVolleyScout.exe. The video tools
+          # (ffmpeg, go2rtc) must sit next to the program, where the app looks
+          # for them. Needs WebView2, already present on Windows 10 and 11.
+          # No auto-update in this form.
+          $VERSION = "${{ github.ref_name }}".TrimStart('v')
+          $RELEASE_DIR = "src-tauri/target/release"
+          $OUT = "OpenVolleyScout-${VERSION}_x64-portable"
+          New-Item -ItemType Directory -Force -Path $OUT | Out-Null
+
+          $exe = @("$RELEASE_DIR/openvolleyscout.exe", "$RELEASE_DIR/app.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $exe) { throw "Main program not found in $RELEASE_DIR" }
+          Copy-Item $exe "$OUT/OpenVolleyScout.exe"
+
+          foreach ($tool in @("ovs-ffmpeg", "ovs-go2rtc")) {
+            $built = "$RELEASE_DIR/$tool.exe"
+            $source = "src-tauri/binaries/$tool-x86_64-pc-windows-msvc.exe"
+            if (Test-Path $built) { Copy-Item $built "$OUT/$tool.exe" }
+            elseif (Test-Path $source) { Copy-Item $source "$OUT/$tool.exe" }
+            else { Write-Warning "$tool not found: video export or camera streams will not work in the portable build" }
+          }
+
+          @"
+          OpenVolleyScout $VERSION - portable version for Windows
+
+          1. Unzip this folder wherever you like (for example on the Desktop or a USB stick).
+          2. Start OpenVolleyScout.exe. Nothing gets installed.
+
+          Keep the three .exe files together. This version does not update itself:
+          download the new zip from the release page when a new version comes out.
+          Requires Microsoft Edge WebView2, already included in Windows 10 and 11.
+          Licence: GNU AGPL v3 or later (AGPL-3.0-or-later).
+          "@ | Set-Content -Encoding utf8 "$OUT/README.txt"
+
+          Compress-Archive -Path "$OUT/*" -DestinationPath "$OUT.zip" -Force
+          gh release upload "${{ github.ref_name }}" "$OUT.zip" --clobber --repo napo/openvolleyscout
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Tauri app (Main Branch)
         if: github.ref_type != 'tag'
         uses: tauri-apps/tauri-action@v0
