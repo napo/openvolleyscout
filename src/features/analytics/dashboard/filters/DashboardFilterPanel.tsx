@@ -3,6 +3,7 @@ import { useSyncExternalStore, type ReactNode } from 'react';
 import type { SkillEvaluation } from '@src/domain/common/enums';
 import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import { useTranslation, type TranslationKey } from '@src/i18n';
+import { SkillIcon } from '@src/components/skill-icons/SkillIcon';
 import { TRACKED_SKILLS, type MatchStats, type TrackedSkill } from '@src/features/scouting/model/match-stats';
 import { getScoreSituationSettings, subscribeScoreSituationSettings } from '../../score-situation/score-situation-settings';
 import { useFilterActions } from '../../stores/filter-selectors';
@@ -148,7 +149,7 @@ export function DashboardFilterPanel({
             <ChipSelect
               single
               allLabel={t('allSkills')}
-              options={TRACKED_SKILLS.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill]) }))}
+              options={TRACKED_SKILLS.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill]), icon: <SkillIcon skill={skill} /> }))}
               selected={filters.skill === 'all' ? [] : [filters.skill]}
               onChange={(next) => updateFilter('skill', next[0] ?? 'all')}
             />

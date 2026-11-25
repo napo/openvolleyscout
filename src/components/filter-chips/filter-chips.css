@@ -94,3 +94,13 @@
 .filter-chips__chip--eval.is-active {
   box-shadow: 0 0 0 2px #0f3a4a;
 }
+
+.filter-chips__icon {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: -0.15rem 0.3rem -0.1rem -0.15rem;
+}
+
+.filter-chips__icon .skill-icon {
+  display: block;
+}

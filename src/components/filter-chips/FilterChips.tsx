@@ -40,6 +40,8 @@ export interface ChipOption<T> {
   label: string;
   /** Shown on hover, for short labels such as DataVolley letters. */
   title?: string;
+  /** A small pictogram before the label (for example a skill icon). */
+  icon?: ReactNode;
 }
 
 /**
@@ -89,9 +91,10 @@ export function ChipSelect<T extends string | number>({ options, selected, onCha
             type="button"
             className={`filter-chips__chip${active ? ' is-active' : ''}`}
             aria-pressed={active}
-            title={option.title}
+            title={option.title ?? (option.icon ? option.label : undefined)}
             onClick={() => toggle(option.value)}
           >
+            {option.icon ? <span className="filter-chips__icon" aria-hidden="true">{option.icon}</span> : null}
             {option.label}
           </button>
         );
