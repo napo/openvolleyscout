@@ -203,8 +203,8 @@ describe('tactical-board model', () => {
     });
 
     let extracted = extractEditableDrawingFromSvg(attackerSvg, 'att-1', 'Attacker #12');
-    expect(extracted.viewBoxWidth).toBe(270);
-    expect(extracted.viewBoxHeight).toBe(340);
+    expect(extracted.viewBoxWidth).toBe(330);
+    expect(extracted.viewBoxHeight).toBe(356);
     expect(extracted.backgroundSvg).toContain('<rect');
     const cone = extracted.shapes.find((s) => s.kind === 'cone');
     const arrow = extracted.shapes.find((s) => s.kind === 'arrow');

@@ -57,8 +57,8 @@ describe('attacker half-court direction drawing', () => {
       scoring: '{{points}} points · {{share}}% of points',
     });
 
-    expect(svg).toContain('<line x1="20" y1="76" x2="250" y2="76"');
-    expect(svg).toContain('<rect x="20" y="76" width="230" height="212"');
+    expect(svg).toContain('<line x1="50" y1="76" x2="280" y2="76"');
+    expect(svg).toContain('<rect x="50" y="76" width="230" height="212"');
     // Attacker at the top facing down: its left (targets at small y) is drawn on the right.
     // Seven cones split the court perimeter; deep line shots end in cone 5 (end line, right).
     expect(svg).toContain('data-direction="5"');
@@ -98,9 +98,9 @@ describe('attacker half-court direction drawing', () => {
     const backOriginY = Number(backMatch?.[2]);
 
     // The attacker faces down from the top of the card, so zone 4 (its left) is on the RIGHT
-    // (x ≈ 208.6) - the side a coach watching the attack would see - and zone 6 is centred.
+    // (x ≈ 238.6) - the side a coach watching the attack would see - and zone 6 is centred.
     expect(frontOriginX).toBeGreaterThan(180);
-    expect(backOriginX).toBeCloseTo(135, 1);
+    expect(backOriginX).toBeCloseTo(165, 1);
     // Front-row vertex is near the net (51 < y < 76); back-row vertex is deeper behind the 3m line (y < 51)
     expect(frontOriginY).toBeGreaterThan(51);
     expect(frontOriginY).toBeLessThan(76);
@@ -129,12 +129,50 @@ describe('attacker half-court direction drawing', () => {
     const sharp = { ...attack('sharp', 'home', 74, '#'), end: { x: 59, y: 74 } };
     const svg = buildAttackerCourtSvg([sharp], 'Sharp', { fans: 'Share', arrow: 'Points', scoring: '{{points}} points · {{share}}%' });
     expect(svg).toContain('data-direction="1"');
-    // The cone's base lies on the left sideline (x = 20), above the end line.
-    expect(svg).toMatch(/data-direction="1"[^>]*points="[^ ]+ 20\.0,76\.0 20\.0,169\.4"/);
+    // The cone's base lies on the left sideline (x = 50), above the end line.
+    expect(svg).toMatch(/data-direction="1"[^>]*points="[^ ]+ 50\.0,76\.0 50\.0,169\.4"/);
     const origin = svg.match(/data-attack-origin="4" cx="([^"]+)" cy="([^"]+)"/);
     const arrow = svg.match(/data-scoring-direction="1" data-attack-zone="4" x1="([^"]+)" y1="([^"]+)"/);
     expect(arrow?.[1]).toBe(origin?.[1]);
     expect(arrow?.[2]).toBe(origin?.[2]);
+  });
+
+  it('labels every direction outside the court, without overlaps, even with many zones', () => {
+    const events: HeatmapEvent[] = [];
+    let k = 0;
+    // Three attack zones, each hitting across the whole court (many cones per zone).
+    for (const originY of [25.68, 50, 74.32]) {
+      for (const targetY of [10, 22, 34, 46, 58, 70, 82, 94]) {
+        events.push(attack(`m${k++}`, 'home', targetY, k % 3 === 0 ? '#' : '+', originY));
+      }
+    }
+    const svg = buildAttackerCourtSvg(events, 'Many', { fans: 'Share', arrow: 'Points', scoring: '{{points}} points · {{share}}%' });
+    const cones = (svg.match(/data-direction="/g) ?? []).length;
+    const labels = [...svg.matchAll(/<text x="([^"]+)" y="([^"]+)" text-anchor="(end|start|middle)" font-size="9.5"[^>]*>([^<]+)</g)];
+    expect(labels).toHaveLength(cones);
+    expect((svg.match(/data-direction-leader/g) ?? []).length).toBe(cones);
+    const boxes = labels.map(([, x, y, anchor, text]) => {
+      const w = text.length * 9.5 * 0.62;
+      const left = anchor === 'end' ? Number(x) - w : anchor === 'start' ? Number(x) : Number(x) - w / 2;
+      return { left, right: left + w, top: Number(y) - 8, bottom: Number(y) + 1 };
+    });
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a2 = boxes[i], b2 = boxes[j];
+        expect(a2.left < b2.right && b2.left < a2.right && a2.top < b2.bottom && b2.top < a2.bottom, `${labels[i][4]} / ${labels[j][4]}`).toBe(false);
+      }
+    }
+  });
+
+  it('leaves out directions under the chosen share and says how many', () => {
+    const events = [10, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50].map((targetY, i) => attack(`f${i}`, 'home', targetY, '+'));
+    const svg = buildAttackerCourtSvg(events, 'Filtered', { fans: 'Share', arrow: 'Points', scoring: '{{points}}' }, {
+      minShare: 0.1,
+      hiddenNote: (count, share) => `${count} under ${share}%`,
+    });
+    expect(svg).toContain('data-hidden-directions="1"');
+    expect(svg).toContain('1 under 10%');
+    expect((svg.match(/data-direction="/g) ?? []).length).toBe(1);
   });
 
   it('orients away-side attacks into the same receiving-half drawing', () => {

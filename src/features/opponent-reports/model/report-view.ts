@@ -288,10 +288,13 @@ export function buildAttackerCourtSvg(
   events: AttackingReportMetrics['attackers'][number]['directionsForDrawing'],
   title: string,
   legend: { fans: string; arrow: string; scoring: string },
+  /** Directions with a smaller share of the attacks are left out, and the card says how many. */
+  filter: { minShare?: number; hiddenNote?: (count: number, share: number) => string } = {},
 ): string {
-  const width = 270;
-  const height = 340;
-  const margin = 20;
+  // Side margins hold the direction labels (a column beside each sideline, a row under the end line).
+  const width = 330;
+  const height = 356;
+  const margin = 50;
   const courtWidth = width - margin * 2;
   const attackTop = 16;
   const netY = 76;
@@ -375,9 +378,15 @@ export function buildAttackerCourtSvg(
     });
   });
   const preferred = [...cones].sort((l, r) => r.count - l.count)[0];
+  const minShare = filter.minShare ?? 0;
+  const shownCones = minShare > 0 ? cones.filter((cone) => cone.preference >= minShare) : cones;
+  const hiddenCount = cones.length - shownCones.length;
+  const hiddenNote = hiddenCount > 0 && filter.hiddenNote
+    ? `<text data-hidden-directions="${hiddenCount}" x="${right}" y="11" text-anchor="end" font-size="8" font-style="italic" fill="#475569">${escapeXml(filter.hiddenNote(hiddenCount, Math.round(minShare * 100)))}</text>`
+    : '';
   const scoring = [...cones].filter((cone) => cone.kills.length > 0).sort((l, r) => r.kills.length - l.kills.length)[0];
   const showZone = zones.length > 1;
-  const fans = cones.map((cone) => {
+  const fans = shownCones.map((cone) => {
     const start = (cone.cone / ATTACK_CONES) * perimeter;
     const end = ((cone.cone + 1) / ATTACK_CONES) * perimeter;
     const corners = [courtHeight, courtHeight + courtWidth].filter((corner) => corner > start && corner < end);
@@ -399,23 +408,51 @@ export function buildAttackerCourtSvg(
   const summaryText = scoring
     ? legend.scoring.replace('{{points}}', String(scoring.kills.length)).replace('{{share}}', String(Math.round(scoring.killShare * 100)))
     : '';
-  // Cones under 5% stay drawn but unlabelled, so mixed-zone cards stay readable.
-  const coneLabels = cones.filter((cone) => cone.preference >= 0.05).map((cone) => {
-    const middle = perimeterPoint(((cone.cone + 0.5) / ATTACK_CONES) * perimeter);
-    // Inside the court, a little in from the cone's base.
-    const x = Math.max(left + 14, Math.min(right - 14, middle.x + (cone.originX - middle.x) * 0.1));
-    const y = Math.max(courtTop + 10, Math.min(courtBottom - 4, middle.y + (cone.originY - middle.y) * 0.1));
+  // Every cone keeps its label, outside the court: a column beside each sideline and a row
+  // under the end line, spread so that none overlaps, each joined to its cone by a thin line.
+  const LABEL_FONT = 9.5;
+  const labelWidth = (value: string) => value.length * LABEL_FONT * 0.62 + 4;
+  const sideLabels = shownCones.map((cone) => {
+    const position = ((cone.cone + 0.5) / ATTACK_CONES) * perimeter;
+    const anchor = perimeterPoint(position);
+    const side: 'left' | 'bottom' | 'right' = position < courtHeight ? 'left' : position <= courtHeight + courtWidth ? 'bottom' : 'right';
     const zoneLabel = showZone ? `Z${cone.attackZone} ` : '';
-    return { x, y, fontSize: 10, text: `${zoneLabel}${Math.round(cone.preference * 100)}%`, summary: false };
+    return { anchor, side, text: `${zoneLabel}${Math.round(cone.preference * 100)}%`, at: side === 'bottom' ? anchor.x : anchor.y, preference: cone.preference };
   });
-  // The point summary first, then the cone labels: none overlaps another.
-  const placedLabels = placeSvgLabels([
-    ...(scoringTarget ? [{ x: Math.max(left + 50, Math.min(right - 50, scoringTarget.x)), y: scoringTarget.y - 5, fontSize: 10, text: summaryText, summary: true }] : []),
-    ...coneLabels,
-  ], { left, right, top: courtTop, bottom: courtBottom });
-  const placedSummary = placedLabels.find((label) => label.summary);
-  const fanLabels = placedLabels.filter((label) => !label.summary).map((label) =>
-    `<text x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}" text-anchor="middle" font-size="10" font-weight="bold" fill="#1f2937" stroke="#ffffff" stroke-width="2" paint-order="stroke">${escapeXml(label.text)}</text>`);
+  /** Spreads positions along one line: in order, at least `gap(a, b)` apart, inside [min, max]. */
+  const spread = <T extends { at: number }>(items: T[], gap: (a: T, b: T) => number, min: number, max: number): Array<T & { pos: number }> => {
+    const sorted = [...items].sort((l, r2) => l.at - r2.at).map((item) => ({ ...item, pos: item.at }));
+    for (let i = 0; i < sorted.length; i += 1) {
+      const floor = i === 0 ? min : sorted[i - 1].pos + gap(sorted[i - 1], sorted[i]);
+      sorted[i].pos = Math.max(sorted[i].pos, floor);
+    }
+    for (let i = sorted.length - 1; i >= 0; i -= 1) {
+      const ceiling = i === sorted.length - 1 ? max : sorted[i + 1].pos - gap(sorted[i], sorted[i + 1]);
+      sorted[i].pos = Math.min(sorted[i].pos, ceiling);
+    }
+    return sorted;
+  };
+  const rowGap = LABEL_FONT + 2;
+  const bottomY = courtBottom + 13;
+  const placedSide = [
+    ...spread(sideLabels.filter((l) => l.side === 'left'), () => rowGap, courtTop + LABEL_FONT, courtBottom + 2).map((l) => ({ ...l, x: left - 6, y: l.pos, anchorText: 'end' })),
+    ...spread(sideLabels.filter((l) => l.side === 'right'), () => rowGap, courtTop + LABEL_FONT, courtBottom + 2).map((l) => ({ ...l, x: right + 6, y: l.pos, anchorText: 'start' })),
+    ...spread(sideLabels.filter((l) => l.side === 'bottom'), (a2, b2) => (labelWidth(a2.text) + labelWidth(b2.text)) / 2 + 2, left - 30, right + 30).map((l) => ({ ...l, x: l.pos, y: bottomY, anchorText: 'middle' })),
+  ];
+  const fanLabels = placedSide.map((label) => {
+    const textY = label.side === 'bottom' ? label.y : label.y + LABEL_FONT * 0.35;
+    const lineEnd = label.side === 'bottom'
+      ? { x: label.x, y: label.y - LABEL_FONT * 0.85 }
+      : { x: label.side === 'left' ? label.x + 1 : label.x - 1, y: label.y };
+    return [
+      `<line data-direction-leader="true" x1="${label.anchor.x.toFixed(1)}" y1="${label.anchor.y.toFixed(1)}" x2="${lineEnd.x.toFixed(1)}" y2="${lineEnd.y.toFixed(1)}" stroke="#64748b" stroke-width="0.6"/>`,
+      `<text x="${label.x.toFixed(1)}" y="${textY.toFixed(1)}" text-anchor="${label.anchorText}" font-size="${LABEL_FONT}" font-weight="bold" fill="#1f2937">${escapeXml(label.text)}</text>`,
+    ].join('');
+  });
+  // The point summary stays inside the court, away from the arrow's other labels.
+  const placedSummary = scoringTarget
+    ? placeSvgLabels([{ x: Math.max(left + 50, Math.min(right - 50, scoringTarget.x)), y: scoringTarget.y - 5, fontSize: 10, text: summaryText }], { left, right, top: courtTop, bottom: courtBottom })[0]
+    : undefined;
   const arrow = scoring
     ? (() => {
       const strokeWidth = 1.6 + scoring.killShare * 1.8;
@@ -443,11 +480,12 @@ export function buildAttackerCourtSvg(
     ...origins,
     ...fanLabels,
     arrow,
-    '<g data-legend-footer="true" data-legend-top="294" data-legend-height="46">',
-    `<rect x="${margin}" y="299" width="10" height="10" fill="#dc2626" fill-opacity="0.8"/>`,
-    `<text x="${margin + 15}" y="308" font-size="8.5" fill="#1f2937">${escapeXml(legend.fans)}</text>`,
-    `<line x1="${margin}" y1="322" x2="${margin + 12}" y2="322" stroke="#111827" stroke-width="2.5"/>`,
-    `<path d="M${margin + 11} 318 L${margin + 18} 322 L${margin + 11} 326 z" fill="#111827"/>`,
+    hiddenNote,
+    '<g data-legend-footer="true" data-legend-top="310" data-legend-height="46">',
+    `<rect x="${margin}" y="315" width="10" height="10" fill="#dc2626" fill-opacity="0.8"/>`,
+    `<text x="${margin + 15}" y="324" font-size="8.5" fill="#1f2937">${escapeXml(legend.fans)}</text>`,
+    `<line x1="${margin}" y1="338" x2="${margin + 12}" y2="338" stroke="#111827" stroke-width="2.5"/>`,
+    `<path d="M${margin + 11} 334 L${margin + 18} 338 L${margin + 11} 342 z" fill="#111827"/>`,
     ...(() => {
       const words = legend.arrow.split(/\s+/).filter(Boolean);
       const lines: string[] = [];
@@ -463,7 +501,7 @@ export function buildAttackerCourtSvg(
       }
       if (current) lines.push(current);
       return lines.slice(0, 2).map((line, idx) =>
-        `<text x="${margin + 19}" y="${324 + idx * 10}" font-size="8.2" fill="#1f2937">${escapeXml(line)}</text>`,
+        `<text x="${margin + 19}" y="${340 + idx * 10}" font-size="8.2" fill="#1f2937">${escapeXml(line)}</text>`,
       );
     })(),
     '</g>',
@@ -608,6 +646,7 @@ function attackDistributionView(
           arrow: t('opponentReportAttackArrowLegend'),
           scoring: t('opponentReportAttackPointSummary', { points: '{{points}}', share: '{{share}}' }),
         },
+        directionFilter(report, t),
       ),
       courtSample: t('opponentReportMetricSample', {
         matches: attacker.directionsForDrawingMatches,
@@ -620,6 +659,14 @@ function attackDistributionView(
       videoLink: videoLinks.get(attacker.player.key),
     };
   });
+}
+
+/** The coach's "hide directions under X%" choice for the attack cones. */
+function directionFilter(report: OpponentReport, t: ViewT) {
+  return {
+    minShare: (report.attackDirectionMinPercent ?? 0) / 100,
+    hiddenNote: (count: number, share: number) => t('opponentReportDirectionsHidden', { count, share }),
+  };
 }
 
 function customAttackerViewsView(
@@ -665,6 +712,7 @@ function customAttackerViewsView(
             arrow: t('opponentReportAttackArrowLegend'),
             scoring: t('opponentReportAttackPointSummary', { points: '{{points}}', share: '{{share}}' }),
           },
+          directionFilter(report, t),
         ),
         courtSample: t('opponentReportMetricSample', {
           matches: attacker.directionsForDrawingMatches,

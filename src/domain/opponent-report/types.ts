@@ -271,6 +271,8 @@ export interface OpponentReport {
   pieceCopies?: Record<string, string>;
   /** Custom setter distribution views configured by the coach; absent = default positive/negative bands. */
   setterViews?: SetterDistributionViewConfig[];
+  /** Attack cones: directions under this share (%) are not drawn; absent or 0 = all directions. */
+  attackDirectionMinPercent?: number;
   /** Custom attacker direction views configured by the coach; absent = single default view (all attacks). */
   attackerViews?: AttackerDirectionViewConfig[];
   /** Absent on legacy reports, which retain their original selection. */

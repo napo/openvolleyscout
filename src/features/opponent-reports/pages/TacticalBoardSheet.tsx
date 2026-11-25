@@ -440,6 +440,19 @@ export function TacticalBoardSheet({
             />
           ) : null}
           {selected === 'attackers' ? (
+            <label className="opponent-report__direction-filter">
+              {t('opponentReportDirectionsMinLabel')}
+              <select
+                value={report.attackDirectionMinPercent ?? 0}
+                onChange={(event) => update((current) => ({ ...current, attackDirectionMinPercent: Number(event.target.value) || undefined }))}
+              >
+                {[0, 5, 10, 15, 20].map((value) => (
+                  <option key={value} value={value}>{value === 0 ? t('opponentReportDirectionsAll') : `${value}%`}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {selected === 'attackers' ? (
             <AttackerViewsEditor
               views={report.attackerViews}
               combinationCodes={attackCombinationCodes}
