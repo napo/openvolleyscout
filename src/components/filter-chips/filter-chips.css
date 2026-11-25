@@ -104,3 +104,12 @@
 .filter-chips__icon .skill-icon {
   display: block;
 }
+
+.filter-chips__chip--icon {
+  padding: 0.2rem 0.45rem;
+  line-height: 0;
+}
+
+.filter-chips__chip--icon .filter-chips__icon {
+  margin: 0;
+}

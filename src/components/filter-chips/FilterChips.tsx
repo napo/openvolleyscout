@@ -42,6 +42,8 @@ export interface ChipOption<T> {
   title?: string;
   /** A small pictogram before the label (for example a skill icon). */
   icon?: ReactNode;
+  /** Shows only the icon; the label is read on hover and by screen readers. */
+  iconOnly?: boolean;
 }
 
 /**
@@ -89,13 +91,14 @@ export function ChipSelect<T extends string | number>({ options, selected, onCha
           <button
             key={String(option.value)}
             type="button"
-            className={`filter-chips__chip${active ? ' is-active' : ''}`}
+            className={`filter-chips__chip${option.iconOnly && option.icon ? ' filter-chips__chip--icon' : ''}${active ? ' is-active' : ''}`}
             aria-pressed={active}
+            aria-label={option.iconOnly && option.icon ? option.label : undefined}
             title={option.title ?? (option.icon ? option.label : undefined)}
             onClick={() => toggle(option.value)}
           >
             {option.icon ? <span className="filter-chips__icon" aria-hidden="true">{option.icon}</span> : null}
-            {option.label}
+            {option.iconOnly && option.icon ? null : option.label}
           </button>
         );
       })}

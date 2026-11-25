@@ -17,6 +17,7 @@ export type DashboardScoreRangeFilter = 'all' | 'tied' | 'leading' | 'trailing' 
 export type DashboardServerFilter = 'all' | string;  // playerId of server
 export type DashboardReceiverFilter = 'all' | string;  // playerId of receiver
 export type DashboardAttackerFilter = 'all' | string;  // playerId of attacker
+export type DashboardBaseFilter = 'all' | string;  // base / combination code (K1...Kn, X5...)
 
 export const ALL_EVALUATIONS: readonly SkillEvaluation[] = ['=', '/', '!', '-', '+', '#'];
 
@@ -37,6 +38,8 @@ export interface DashboardFilters {
   server: DashboardServerFilter;
   receiver: DashboardReceiverFilter;
   attacker: DashboardAttackerFilter;
+  /** Rallies in which the team played this base / combination (set or attack). */
+  base: DashboardBaseFilter;
 }
 
 export const PLAYER_ROLES: readonly PlayerRole[] = [
@@ -63,6 +66,7 @@ export function createDefaultFilters(): DashboardFilters {
     server: 'all',
     receiver: 'all',
     attacker: 'all',
+    base: 'all',
   };
 }
 
@@ -86,6 +90,7 @@ export function isDefaultFilters(filters: DashboardFilters): boolean {
     && filters.server === 'all'
     && filters.receiver === 'all'
     && filters.attacker === 'all'
+    && (filters.base ?? 'all') === 'all'
   );
 }
 
@@ -153,6 +158,7 @@ export function getActiveFilterCount(filters: DashboardFilters): number {
     filters.server !== 'all',
     filters.receiver !== 'all',
     filters.attacker !== 'all',
+    (filters.base ?? 'all') !== 'all',
   ].filter(Boolean).length;
 }
 

@@ -1334,7 +1334,8 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
       .filter((player) => knownPlayerIds.has(player.id))
       .map((player) => ({
         value: player.id,
-        label: `${sides.length > 1 ? `${(side === 'home' ? homeTeam : awayTeam).name.slice(0, 3)} ` : ''}#${player.jerseyNumber} ${player.lastName || player.firstName || ''}`.trim(),
+        label: `#${player.jerseyNumber} ${player.lastName || player.firstName || ''}`.trim(),
+        group: (side === 'home' ? homeTeam : awayTeam).name,
       })));
   };
 

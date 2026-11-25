@@ -4,6 +4,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../filters/dashboard-filters';
 import { getScoreSituationSettings, isLateInSet } from '../../score-situation/score-situation-settings';
+import { rallyBaseCodes } from './base-code';
 
 /**
  * The rally-context filters of the analysis dashboards: rotation, score
@@ -14,9 +15,10 @@ import { getScoreSituationSettings, isLateInSet } from '../../score-situation/sc
  * whose numbers are shown (for touches, the team of the touch). "Rotation 1"
  * is P1 of that team, "leading" means that team was ahead before the rally.
  * Server, receiver and attacker keep the rallies in which that player served,
- * received or attacked.
+ * received or attacked. Base keeps the rallies in which the team set or attacked
+ * on that base / combination (setter call K1...Kn or attack code).
  */
-export type RallyContextFilters = Pick<DashboardFilters, 'rotation' | 'scoreRange' | 'server' | 'receiver' | 'attacker'>;
+export type RallyContextFilters = Pick<DashboardFilters, 'rotation' | 'scoreRange' | 'server' | 'receiver' | 'attacker' | 'base'>;
 
 export type ScoreSituation = Exclude<RallyContextFilters['scoreRange'], 'all'>;
 
@@ -43,7 +45,8 @@ export function hasRallyContextFilter(filters: Partial<RallyContextFilters>): bo
     || (filters.scoreRange ?? 'all') !== 'all'
     || (filters.server ?? 'all') !== 'all'
     || (filters.receiver ?? 'all') !== 'all'
-    || (filters.attacker ?? 'all') !== 'all';
+    || (filters.attacker ?? 'all') !== 'all'
+    || (filters.base ?? 'all') !== 'all';
 }
 
 function playerDid(rally: RallyStats, skill: BallTouch['skill'], playerId: string): boolean {
@@ -70,6 +73,7 @@ export function rallyMatchesContext(
   if ((filters.server ?? 'all') !== 'all' && !playerDid(rally, 'serve', filters.server!)) return false;
   if ((filters.receiver ?? 'all') !== 'all' && !playerDid(rally, 'receive', filters.receiver!)) return false;
   if ((filters.attacker ?? 'all') !== 'all' && !playerDid(rally, 'attack', filters.attacker!)) return false;
+  if ((filters.base ?? 'all') !== 'all' && !rallyBaseCodes(rally.touches, teamSide).has(filters.base!)) return false;
   return true;
 }
 

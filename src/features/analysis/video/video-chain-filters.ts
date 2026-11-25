@@ -19,6 +19,7 @@ import {
 } from '../../analytics/rally-phase/rally-phase-classifier';
 import { attackZoneNumber } from '../../analytics/sideout/sideout-distribution';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
+import { resolveBaseCode, sortBaseCodes } from '../../analytics/dashboard/selectors/base-code';
 import type { VideoEventEntry } from './video-event-index';
 import { isLateInSet } from '../../analytics/score-situation/score-situation-settings';
 
@@ -196,31 +197,9 @@ export function annotateVideoEntries<E extends Annotatable>(entries: readonly E[
   return entries.map((entry) => result.get(entry)!);
 }
 
-const cleanCode = (code: string | undefined) => (code?.trim() ? code.trim().toUpperCase() : null);
-
-/**
- * Base / combination of a set or an attack, read as in the heatmap and the tactical report:
- * the touch's own code, otherwise (attack) the setter's call on the set just before it.
- */
-export function resolveBaseCode(touches: readonly BallTouch[], index: number, teamSide: TeamSide): string | null {
-  const touch = touches[index];
-  if (touch.skill === 'set') return cleanCode(touch.setterCallCode) ?? cleanCode(touch.combinationCode);
-  const own = cleanCode(touch.combinationCode);
-  if (own) return own;
-  for (let i = index - 1; i >= 0; i -= 1) {
-    const prev = touches[i];
-    if (prev.teamSide !== teamSide) break;
-    if (prev.skill === 'set') return cleanCode(prev.setterCallCode) ?? cleanCode(prev.combinationCode);
-    if (prev.skill !== 'cover') break;
-  }
-  return cleanCode(touch.setterCallCode);
-}
-
 /** Base / combination codes present in the entries, sorted (K1, K2 ... then the others). */
 export function availableBaseCodes(entries: readonly VideoChainEntry[]): string[] {
-  const codes = new Set<string>();
-  entries.forEach((item) => { if (item.baseCode) codes.add(item.baseCode); });
-  return [...codes].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+  return sortBaseCodes(entries.flatMap((item) => (item.baseCode ? [item.baseCode] : [])));
 }
 
 function includesOrEmpty<T>(selected: readonly T[] | undefined, value: T | null | undefined): boolean {

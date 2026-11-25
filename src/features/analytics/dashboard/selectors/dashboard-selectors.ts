@@ -68,6 +68,7 @@ export function pickRallyContextFilters(filters: DashboardFilters): RallyContext
     server: filters.server,
     receiver: filters.receiver,
     attacker: filters.attacker,
+    base: filters.base ?? 'all',
   };
 }
 

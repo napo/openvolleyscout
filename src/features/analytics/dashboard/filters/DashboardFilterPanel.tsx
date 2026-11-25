@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useSyncExternalStore, type ReactNode } from 'react';
+import { useSyncExternalStore, type ReactNode, useMemo } from 'react';
 import type { SkillEvaluation } from '@src/domain/common/enums';
 import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { SkillIcon } from '@src/components/skill-icons/SkillIcon';
+import { rallyBaseCodes, sortBaseCodes } from '../selectors/base-code';
 import { TRACKED_SKILLS, type MatchStats, type TrackedSkill } from '@src/features/scouting/model/match-stats';
 import { getScoreSituationSettings, subscribeScoreSituationSettings } from '../../score-situation/score-situation-settings';
 import { useFilterActions } from '../../stores/filter-selectors';
@@ -80,6 +81,10 @@ export function DashboardFilterPanel({
   const scoreRules = useSyncExternalStore(subscribeScoreSituationSettings, getScoreSituationSettings, getScoreSituationSettings);
   const sets = getAvailableSets(stats);
   const players = getAvailablePlayers(stats);
+  const baseCodes = useMemo(
+    () => sortBaseCodes(stats.rallyStats.flatMap((rally) => (['home', 'away'] as const).flatMap((side) => [...rallyBaseCodes(rally.touches, side)]))),
+    [stats.rallyStats],
+  );
   const activeCount = getActiveFilterCount(lockedTeam ? { ...filters, team: 'all' } : filters);
   const all = t('setterViewReceptionAll');
 
@@ -149,7 +154,7 @@ export function DashboardFilterPanel({
             <ChipSelect
               single
               allLabel={t('allSkills')}
-              options={TRACKED_SKILLS.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill]), icon: <SkillIcon skill={skill} /> }))}
+              options={TRACKED_SKILLS.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill]), icon: <SkillIcon skill={skill} size={22} />, iconOnly: true }))}
               selected={filters.skill === 'all' ? [] : [filters.skill]}
               onChange={(next) => updateFilter('skill', next[0] ?? 'all')}
             />
@@ -215,6 +220,18 @@ export function DashboardFilterPanel({
             </span>
           ) : null}
         </FilterGroup>
+
+        {baseCodes.length > 0 ? (
+          <FilterGroup title={t('attackerViewBaseLabel')} active={(filters.base ?? 'all') !== 'all'}>
+            <ChipSelect
+              single
+              allLabel={all}
+              options={baseCodes.map((value) => ({ value, label: value }))}
+              selected={(filters.base ?? 'all') === 'all' ? [] : [filters.base]}
+              onChange={(next) => updateFilter('base', next[0] ?? 'all')}
+            />
+          </FilterGroup>
+        ) : null}
 
         {teams.length > 0 || showRole || showSource ? (
           <FilterGroup

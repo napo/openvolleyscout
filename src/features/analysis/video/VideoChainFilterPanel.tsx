@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { AttackerDirectionPhase, SetterDistributionServeType } from '@src/domain/opponent-report/types';
-import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups, type ChipOption } from '@src/components/filter-chips/FilterChips';
+import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import { TOUCH_PHASES, type TouchPhase } from '@src/features/analytics/rally-phase/rally-phase-classifier';
 import type { ScoreSituation } from '@src/features/analytics/dashboard/selectors/rally-context-filters';
 import { useTranslation, type TranslationKey } from '@src/i18n';
@@ -17,9 +17,10 @@ import {
   type VideoSkillAttributes,
   type VideoTeamScope,
 } from './video-chain-filters';
+import { VideoPlayerPicker, type VideoPlayerPickOption } from './VideoPlayerPicker';
 import { VIDEO_FILTER_RECEPTION_ZONES, VIDEO_FILTER_SERVE_START_ZONES, VIDEO_FILTER_SERVE_TYPES } from './video-filters';
 
-const skillIcon = (skill: string) => (isSkillIconName(skill) ? <SkillIcon skill={skill} /> : undefined);
+const skillIcon = (skill: string) => (isSkillIconName(skill) ? <SkillIcon skill={skill} size={22} /> : undefined);
 
 const SKILL_LABELS: Partial<Record<SkillType, TranslationKey>> = {
   serve: 'skillServe',
@@ -70,7 +71,7 @@ export interface VideoChainFilterPanelProps {
   /** Team choices: the two teams of one match, or the team studied and its opponents over several. */
   teamOptions: ReadonlyArray<{ value: Exclude<VideoTeamScope, 'all'>; label: string }>;
   /** Players to offer, for the actions shown (team scope) or for a previous link of the chain. */
-  playerOptions: (scope: VideoTeamScope) => ChipOption<string>[];
+  playerOptions: (scope: VideoTeamScope) => VideoPlayerPickOption[];
   setNumbers: readonly number[];
   /** Base / combination codes found in the matches (setter calls K1...Kn, attack combinations). */
   baseCodes?: readonly string[];
@@ -170,9 +171,8 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
           />
         ) : null}
         {players.length > 0 ? (
-          <ChipSelect
+          <VideoPlayerPicker
             label={t('player')}
-            allLabel={all}
             options={players}
             selected={attributes.playerIds ?? []}
             onChange={(playerIds) => patchAttributes(key, { playerIds })}
@@ -221,7 +221,7 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
         <FilterGroup title={t('videoChainSkillsTitle')} active={chain.length > 0} wide>
           <ChipSelect
             allLabel={t('allSkills')}
-            options={VIDEO_CHAIN_SKILL_ORDER.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill'), icon: skillIcon(skill) }))}
+            options={VIDEO_CHAIN_SKILL_ORDER.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill'), icon: skillIcon(skill), iconOnly: true }))}
             selected={chain}
             onChange={(next) => {
               const nextChain = next.length === VIDEO_CHAIN_SKILL_ORDER.length ? [] : next;
@@ -234,7 +234,7 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
               <ChipSelect
                 single
                 label={t('videoChainShowLabel')}
-                options={chain.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill'), icon: skillIcon(skill) }))}
+                options={chain.map((skill) => ({ value: skill, label: t(SKILL_LABELS[skill] ?? 'videoChainAnySkill'), icon: skillIcon(skill), iconOnly: true }))}
                 selected={target ? [target] : []}
                 onChange={(next) => patch({ shown: next[0] })}
               />

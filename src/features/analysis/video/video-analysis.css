@@ -1069,3 +1069,18 @@ div.video-analysis__error ul {
   color: #0f766e;
   font-weight: 600;
 }
+
+/* The chain filters use the whole width of the filter area, not one narrow grid cell. */
+.video-analysis__filters > .video-chain-filters {
+  grid-column: 1 / -1;
+}
+
+.video-chain-filters .filter-chips__groups {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+}
+
+.video-player-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
