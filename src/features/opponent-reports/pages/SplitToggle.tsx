@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useTranslation } from '@src/i18n';
+import { ChipSelect } from '@src/components/filter-chips/FilterChips';
 
 interface SplitToggleProps {
   separate: boolean;
@@ -10,13 +11,16 @@ interface SplitToggleProps {
 export function SplitToggle({ separate, onChange }: SplitToggleProps) {
   const { t } = useTranslation();
   return (
-    <div className="setter-views-editor__chips setter-views-editor__split" role="group" aria-label={t('reportViewSplitLabel')}>
-      <button type="button" className={`setter-views-editor__chip${!separate ? ' is-active' : ''}`} aria-pressed={!separate} onClick={() => onChange(false)}>
-        {t('reportViewDrawTogether')}
-      </button>
-      <button type="button" className={`setter-views-editor__chip${separate ? ' is-active' : ''}`} aria-pressed={separate} onClick={() => onChange(true)}>
-        {t('reportViewDrawSeparately')}
-      </button>
+    <div role="group" aria-label={t('reportViewSplitLabel')}>
+      <ChipSelect
+        single
+        options={[
+          { value: 'together', label: t('reportViewDrawTogether') },
+          { value: 'separately', label: t('reportViewDrawSeparately') },
+        ]}
+        selected={[separate ? 'separately' : 'together']}
+        onChange={(next) => onChange(next[0] === 'separately')}
+      />
     </div>
   );
 }
