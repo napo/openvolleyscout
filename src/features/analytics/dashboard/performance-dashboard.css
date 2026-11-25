@@ -1343,3 +1343,16 @@
 .dashboard-filter-panel > .perf-dashboard__filter-reset {
     align-self: flex-end;
 }
+
+.player-autocomplete__sort {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.player-rally-count {
+  font-size: 0.72em;
+  color: #64748b;
+  margin-left: 0.2rem;
+  white-space: nowrap;
+}

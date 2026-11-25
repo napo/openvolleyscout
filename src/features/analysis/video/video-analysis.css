@@ -1084,3 +1084,20 @@ div.video-analysis__error ul {
   flex-direction: column;
   gap: 0.25rem;
 }
+
+/* The athlete list keeps check box and name on one line (the generic filter label rule stacks them). */
+.video-analysis__filters .player-autocomplete__item {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.video-analysis__filters .player-autocomplete__item-player {
+  text-align: left;
+  white-space: nowrap;
+}
+
+.video-analysis__filters .player-autocomplete__browse {
+  min-width: max-content;
+}

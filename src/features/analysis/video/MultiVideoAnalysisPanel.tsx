@@ -303,6 +303,19 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   );
   const chainEntries = useMemo(() => annotateVideoEntries(allEntries), [allEntries]);
   const baseCodes = useMemo(() => availableBaseCodes(chainEntries), [chainEntries]);
+  // Rallies in which each athlete touched the ball, over the matches shown.
+  const ralliesByPlayer = useMemo(() => {
+    const byRally = new Map<string, Set<string>>();
+    chainEntries.forEach((item) => {
+      if (!item.entry.playerId) return;
+      const players = byRally.get(item.rallyKey) ?? new Set<string>();
+      players.add(item.entry.playerId);
+      byRally.set(item.rallyKey, players);
+    });
+    const counts = new Map<string, number>();
+    byRally.forEach((players) => players.forEach((id) => counts.set(id, (counts.get(id) ?? 0) + 1)));
+    return counts;
+  }, [chainEntries]);
 
   const availableSetNumbers = useMemo<number[]>(() => {
     if (filters.opponentProjectId !== 'all') {
@@ -315,13 +328,15 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   }, [filters.opponentProjectId, projectRecords]);
 
   const playersById = useMemo(() => {
-    const map = new Map<string, { jerseyNumber: number | string; name: string }>();
+    const map = new Map<string, { jerseyNumber: number | string; name: string; firstName?: string; lastName?: string }>();
     // Both teams: the list can show the opponents' actions too.
     projectRecords.forEach(({ project }) => {
       [...getMatchTeamSnapshot(project, 'home').players, ...getMatchTeamSnapshot(project, 'away').players].forEach((player) => {
         map.set(player.id, {
           jerseyNumber: player.jerseyNumber,
           name: [player.firstName, player.lastName].filter(Boolean).join(' ') || `#${player.jerseyNumber}`,
+          firstName: player.firstName,
+          lastName: player.lastName,
         });
       });
     });
@@ -1049,9 +1064,17 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
       if (projectId !== 'all' && entry.projectId !== projectId) return;
       ids.add(entry.playerId);
     });
-    return [...ids]
-      .map((id) => ({ value: id, label: getPlayerLabel(id) || id }))
-      .sort((left, right) => left.label.localeCompare(right.label, undefined, { numeric: true }));
+    return [...ids].map((id) => {
+      const player = playersById.get(id);
+      return {
+        value: id,
+        label: getPlayerLabel(id) || id,
+        jerseyNumber: player?.jerseyNumber,
+        firstName: player?.firstName,
+        lastName: player?.lastName,
+        rallies: ralliesByPlayer.get(id) ?? 0,
+      };
+    });
   };
 
   const renderFilters = () => (

@@ -63,6 +63,8 @@ export interface PlayerStats extends SkillStatMap {
   playerId: string;
   jerseyNumber: number | string;
   playerName: string;
+  firstName?: string;
+  lastName?: string;
   teamSide: TeamSide;
   role?: Player['role'];
   isLibero?: boolean;
@@ -1026,6 +1028,8 @@ export function createEmptyPlayerStats(player: Player, teamSide: TeamSide): Play
     playerId: player.id,
     jerseyNumber: player.jerseyNumber,
     playerName: getPlayerDisplayNameFromPlayer(player),
+    firstName: player.firstName,
+    lastName: player.lastName,
     teamSide,
     role: player.role,
     isLibero: player.isLibero,

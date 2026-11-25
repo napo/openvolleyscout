@@ -1,4 +1,5 @@
 import type { TeamSide } from '@src/domain/common/enums';
+import { countRalliesByPlayer } from '@src/components/player-sort/player-sort';
 import type { BallTouch } from '@src/domain/touch/types';
 import type {
   MatchStats,
@@ -155,9 +156,14 @@ export type PlayerOption = {
   playerName: string;
   teamSide: TeamSide;
   jerseyNumber: number | string;
+  firstName?: string;
+  lastName?: string;
+  /** Rallies in which the athlete touched the ball. */
+  rallies?: number;
 };
 
 export function getAvailablePlayers(stats: MatchStats): PlayerOption[] {
+  const rallies = countRalliesByPlayer(stats.rallyStats);
   return stats.playerStats
     .filter((p) => !p.playerId.startsWith('__'))
     .map((p) => ({
@@ -165,6 +171,10 @@ export function getAvailablePlayers(stats: MatchStats): PlayerOption[] {
       playerName: p.playerName,
       teamSide: p.teamSide,
       jerseyNumber: p.jerseyNumber,
+      firstName: p.firstName,
+      // Without separate names, the last word of the display name stands for the surname.
+      lastName: p.lastName ?? p.playerName.trim().split(/\s+/).pop(),
+      rallies: rallies.get(p.playerId) ?? 0,
     }));
 }
 

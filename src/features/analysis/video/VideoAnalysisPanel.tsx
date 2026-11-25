@@ -261,6 +261,19 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   // Phase, attack description and set target, derived once per index for the chain filters.
   const chainEntries = useMemo(() => annotateVideoEntries(eventIndex.entries), [eventIndex.entries]);
   const baseCodes = useMemo(() => availableBaseCodes(chainEntries), [chainEntries]);
+  // Rallies in which each athlete touched the ball, for the athlete list.
+  const ralliesByPlayer = useMemo(() => {
+    const byRally = new Map<string, Set<string>>();
+    chainEntries.forEach((item) => {
+      if (!item.entry.playerId) return;
+      const players = byRally.get(item.rallyKey) ?? new Set<string>();
+      players.add(item.entry.playerId);
+      byRally.set(item.rallyKey, players);
+    });
+    const counts = new Map<string, number>();
+    byRally.forEach((players) => players.forEach((id) => counts.set(id, (counts.get(id) ?? 0) + 1)));
+    return counts;
+  }, [chainEntries]);
   const filteredEntries = useMemo(() => {
     let base = sortVideoEventEntries(applyVideoChainFilters(chainEntries, filters), sortKey, getPlayerLabel);
     if (showStarredOnly) {
@@ -1336,6 +1349,10 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
         value: player.id,
         label: `#${player.jerseyNumber} ${player.lastName || player.firstName || ''}`.trim(),
         group: (side === 'home' ? homeTeam : awayTeam).name,
+        jerseyNumber: player.jerseyNumber,
+        firstName: player.firstName,
+        lastName: player.lastName,
+        rallies: ralliesByPlayer.get(player.id) ?? 0,
       })));
   };
 

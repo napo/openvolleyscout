@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { togglePlayerId, type PlayerOption } from '../selectors/dashboard-selectors';
+import { readPlayerSort, savePlayerSort, sortPlayers, type PlayerSortKey } from '@src/components/player-sort/player-sort';
+import { PlayerSortChips, RallyCount } from '@src/components/player-sort/PlayerSortChips';
 import '../performance-dashboard.css';
 
 interface PlayerMultiAutocompleteProps {
@@ -26,6 +28,8 @@ export function PlayerMultiAutocomplete({
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [sortKey, setSortKey] = useState<PlayerSortKey>(readPlayerSort);
+  const changeSort = (next: PlayerSortKey) => { setSortKey(next); savePlayerSort(next); };
   const containerRef = useRef<HTMLDivElement>(null);
 
   const teamNameOf = (player: PlayerOption) => (player.teamSide === 'home' ? homeTeamName : awayTeamName);
@@ -38,7 +42,8 @@ export function PlayerMultiAutocomplete({
   const matches = (player: PlayerOption) => (
     (player.playerName?.toLowerCase().includes(query) ?? false) || String(player.jerseyNumber).includes(query)
   );
-  const visiblePlayers = isBrowsing ? players : players.filter(matches);
+  const sortedPlayers = sortPlayers(players, sortKey);
+  const visiblePlayers = isBrowsing ? sortedPlayers : sortedPlayers.filter(matches);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -56,7 +61,7 @@ export function PlayerMultiAutocomplete({
       <li key={player.playerId}>
         <label className={`player-autocomplete__item ${checked ? 'is-selected' : ''}`}>
           <input type="checkbox" checked={checked} onChange={() => toggle(player.playerId)} />
-          <span className="player-autocomplete__item-player">#{player.jerseyNumber} {player.playerName}</span>
+          <span className="player-autocomplete__item-player">#{player.jerseyNumber} {player.playerName} <RallyCount rallies={player.rallies} /></span>
           {showTeam ? <span className="player-autocomplete__item-team">{teamNameOf(player)}</span> : null}
         </label>
       </li>
@@ -64,7 +69,7 @@ export function PlayerMultiAutocomplete({
   };
 
   const columns = ([['home', homeTeamName], ['away', awayTeamName]] as const)
-    .map(([teamSide, label]) => ({ teamSide, label, teamPlayers: players.filter((player) => player.teamSide === teamSide) }))
+    .map(([teamSide, label]) => ({ teamSide, label, teamPlayers: sortedPlayers.filter((player) => player.teamSide === teamSide) }))
     .filter((column) => column.teamPlayers.length > 0);
 
   return (
@@ -109,6 +114,8 @@ export function PlayerMultiAutocomplete({
             ))}
           </ul>
         )}
+
+        {isOpen ? <div className="player-autocomplete__sort"><PlayerSortChips value={sortKey} onChange={changeSort} /></div> : null}
 
         {isOpen && isBrowsing && (
           <div className="player-autocomplete__browse">

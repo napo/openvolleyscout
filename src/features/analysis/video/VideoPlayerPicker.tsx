@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
+import { readPlayerSort, savePlayerSort, sortPlayers, type PlayerSortKey, type SortablePlayer } from '@src/components/player-sort/player-sort';
+import { PlayerSortChips, RallyCount } from '@src/components/player-sort/PlayerSortChips';
 import '@src/features/analytics/dashboard/performance-dashboard.css';
 
-export interface VideoPlayerPickOption {
+export interface VideoPlayerPickOption extends SortablePlayer {
   value: string;
   label: string;
   /** Team name, to list the athletes in one column per team. */
@@ -24,6 +26,8 @@ export function VideoPlayerPicker({ label, options, selected, onChange }: {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [sortKey, setSortKey] = useState<PlayerSortKey>(readPlayerSort);
+  const changeSort = (next: PlayerSortKey) => { setSortKey(next); savePlayerSort(next); };
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,7 +39,8 @@ export function VideoPlayerPicker({ label, options, selected, onChange }: {
   }, []);
 
   const query = search.trim().toLowerCase();
-  const visible = query ? options.filter((option) => option.label.toLowerCase().includes(query)) : options;
+  const sorted = sortPlayers(options, sortKey);
+  const visible = query ? sorted.filter((option) => option.label.toLowerCase().includes(query)) : sorted;
   const picked = selected.map((id) => options.find((option) => option.value === id)).filter((option): option is VideoPlayerPickOption => Boolean(option));
   const toggle = (id: string) => onChange(selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
 
@@ -84,6 +89,7 @@ export function VideoPlayerPicker({ label, options, selected, onChange }: {
           </ul>
         ) : null}
 
+        {isOpen ? <div className="player-autocomplete__sort"><PlayerSortChips value={sortKey} onChange={changeSort} /></div> : null}
         {isOpen ? (
           <div className="player-autocomplete__browse">
             {groups.length > 0 ? groups.map((group) => (
@@ -96,7 +102,7 @@ export function VideoPlayerPicker({ label, options, selected, onChange }: {
                       <li key={option.value}>
                         <label className={`player-autocomplete__item ${checked ? 'is-selected' : ''}`}>
                           <input type="checkbox" checked={checked} onChange={() => toggle(option.value)} />
-                          <span className="player-autocomplete__item-player">{option.label}</span>
+                          <span className="player-autocomplete__item-player">{option.label} <RallyCount rallies={option.rallies} /></span>
                         </label>
                       </li>
                     );
