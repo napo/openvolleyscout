@@ -24,7 +24,7 @@ describe('attacker view filters', () => {
     expect(label.value).toBe('All attacks');
     await user.click(screen.getByRole('button', { name: 'Z6' }));
     expect(label.value).toBe('Z6');
-    const zones = screen.getByRole('button', { name: 'Z6' }).closest('.setter-views-editor__group') as HTMLElement;
+    const zones = screen.getByRole('button', { name: 'Z6' }).closest('.filter-chips__group') as HTMLElement;
     await user.click(within(zones).getByRole('button', { name: 'All' }));
     expect(label.value).toBe('All attacks');
     await user.click(screen.getByRole('button', { name: 'Z4' }));

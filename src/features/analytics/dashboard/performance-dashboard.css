@@ -1315,3 +1315,31 @@
 }
 
 .efficiency-note__formulas code { font-size: inherit; white-space: nowrap; }
+
+/* Filter groups shared with the Video analysis and the tactical report. */
+.dashboard-filter-panel {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.dashboard-filter-panel .filter-chips__groups {
+    width: 100%;
+}
+
+.dashboard-filter-panel__select {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.dashboard-filter-panel__select .perf-dashboard__filter-select {
+    flex: 1;
+    min-width: 0;
+    max-width: 14rem;
+}
+
+.dashboard-filter-panel > .perf-dashboard__filter-reset {
+    align-self: flex-end;
+}

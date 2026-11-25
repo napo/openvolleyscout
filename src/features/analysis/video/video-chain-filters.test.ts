@@ -86,3 +86,72 @@ describe('video chain filters on the demo match', () => {
     expect(chained).toHaveLength(2 * filter({ chain: ['serve', 'attack'], attributes: { serve: { serveTypes: ['jump_float'] } } }).length);
   });
 });
+
+describe('filters saved before the chain filters', () => {
+  it('converts phase, setter position, one skill, evaluations and serve filters', async () => {
+    const { toVideoChainFilters } = await import('./video-chain-filters');
+    const converted = toVideoChainFilters({
+      team: 'home', setNumbers: [2], skills: ['attack'], evaluations: ['#', '+'], playerIds: ['p1'],
+      phase: 'sideout', setterPositions: [1], rallyOutcome: 'won',
+      serveStartZones: [], serveTypes: ['jump_float'], receptionZones: [], receiverIds: [],
+    });
+    expect(converted).toMatchObject({
+      team: 'home', setNumbers: [2], rotations: [1], rallyOutcome: 'won',
+      phases: ['point', 'transition_point'], chain: ['attack', 'serve'],
+      attributes: { attack: { evaluations: ['#', '+'], playerIds: ['p1'] }, serve: { serveTypes: ['jump_float'] } },
+    });
+    expect(toVideoChainFilters({ skills: ['serve', 'attack'], evaluations: ['#', '+', '!', '-', '/', '='] }).chain).toEqual([]);
+    expect(toVideoChainFilters(converted)).toEqual(converted);
+  });
+});
+
+describe('chosen players and the visible cards', () => {
+  it('drops players the team filter can no longer show, keeps those of an earlier link', async () => {
+    const { pruneVideoChainPlayers, isDefaultVideoChainFilters } = await import('./video-chain-filters');
+    const home = new Set(['h1', 'h2']);
+    const away = new Set(['a1']);
+    const all = new Set([...home, ...away]);
+    const idsFor = (scope: VideoChainFilters['team']) => (scope === 'home' ? home : scope === 'away' ? away : all);
+    const filters: VideoChainFilters = {
+      ...createDefaultVideoChainFilters(),
+      team: 'away',
+      chain: ['serve', 'attack'],
+      attributes: { serve: { playerIds: ['h1'] }, attack: { playerIds: ['h2', 'a1'] } },
+    };
+    const pruned = pruneVideoChainPlayers(filters, idsFor);
+    // The attacks shown are the away team's; the serve before them may be either team.
+    expect(pruned.attributes.attack?.playerIds).toEqual(['a1']);
+    expect(pruned.attributes.serve?.playerIds).toEqual(['h1']);
+    expect(pruneVideoChainPlayers(pruned, idsFor)).toBe(pruned);
+
+    // Attributes of a skill taken out of the chain filter nothing, so they do not count as a filter.
+    const leftover: VideoChainFilters = { ...createDefaultVideoChainFilters(), attributes: { serve: { serveTypes: ['float'] } } };
+    expect(isDefaultVideoChainFilters(leftover)).toBe(true);
+    expect(isDefaultVideoChainFilters({ ...leftover, chain: ['serve'] })).toBe(false);
+  });
+});
+
+describe('choosing the skill shown in the chain', () => {
+  it('shows the receptions followed later in the rally by a blocked attack', () => {
+    const blockedAttack = { attack: { evaluations: ['/' as const] } };
+    const receptions = filter({ chain: ['receive', 'attack'], shown: 'receive', attributes: blockedAttack });
+    const rallyOf = (entry: (typeof entries)[number]) => `${entry.setNumber}-${entry.rallyNumber}`;
+    const blockedRallies = new Set(entries.filter((entry) => entry.skill === 'attack' && entry.evaluation === '/').map(rallyOf));
+    // Every rally with a reception before a blocked attack, and only those.
+    const expected = entries.filter((entry, index) => entry.skill === 'receive' && blockedRallies.has(rallyOf(entry))
+      && entries.some((other, otherIndex) => otherIndex > index && rallyOf(other) === rallyOf(entry) && other.skill === 'attack' && other.evaluation === '/'));
+    expect(receptions.length).toBeGreaterThan(0);
+    expect(receptions.every((entry) => entry.skill === 'receive')).toBe(true);
+    expect(receptions.map((entry) => entry.touchId).sort()).toEqual(expected.map((entry) => entry.touchId).sort());
+  });
+
+  it('defaults to the last skill, and a skill outside the chain falls back to it', () => {
+    const last = filter({ chain: ['serve', 'attack'] });
+    expect(filter({ chain: ['serve', 'attack'], shown: 'attack' })).toEqual(last);
+    expect(filter({ chain: ['serve', 'attack'], shown: 'block' })).toEqual(last);
+    // The middle skill needs the one before and the one after.
+    const sets = filter({ chain: ['receive', 'set', 'attack'], shown: 'set', attributes: { attack: { evaluations: ['#'] } } });
+    expect(sets.every((entry) => entry.skill === 'set')).toBe(true);
+    expect(sets.length).toBeLessThan(filter({ chain: ['receive', 'set'] }).length);
+  });
+});

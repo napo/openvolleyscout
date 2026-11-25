@@ -1,9 +1,8 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
-import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
-import { getEvaluationColor, getEvaluationInk, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
+import type { TeamSide } from '@src/domain/common/enums';
+import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type { SetterDistributionServeType } from '@src/domain/opponent-report/types';
-import '@src/components/filter-chips.css';
 import { SERVE_START_ZONES, SERVE_TARGET_ZONES, SERVE_TYPE_GROUPS } from '@src/features/analytics/serve-attributes';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import {
@@ -16,7 +15,6 @@ import {
   extractSideOutSequences,
   filterSideOutSequences,
   hasSideOutCallCodes,
-  type SideOutAttackBallType,
   type SideOutCallGroup,
   type SideOutDistributionBucket,
   type SideOutDistributionResult,
@@ -57,22 +55,6 @@ type ViewMode = 'zone' | 'calls' | 'sequential';
 
 function formatPct(pct: number | null): string {
   return pct === null ? '-' : `${(pct * 100).toFixed(1)}%`;
-}
-
-function evalChipStyle(skill: SkillType, evaluation: SkillEvaluation, active: boolean): CSSProperties {
-  const color = getEvaluationColor(skill, evaluation);
-  if (active) {
-    return {
-      background: color,
-      borderColor: color,
-      color: getEvaluationInk(skill, evaluation),
-    };
-  }
-  return {
-    background: getEvaluationTint(skill, evaluation, 0.24),
-    borderColor: color,
-    color: '#1e293b',
-  };
 }
 
 const ZONE_TAGS: Record<SideOutDistributionTarget, string> = {
@@ -209,238 +191,130 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     0,
   );
 
-  const toggleValue = <T extends string>(values: T[], value: T, checked: boolean): T[] =>
-    checked ? [...values, value] : values.filter((entry) => entry !== value);
-
   const areaFill = (bucket: SideOutDistributionBucket, scale: number): string => {
     const pct = bucket.pctOfSets ?? 0;
     const alpha = scale === 0 ? 0.06 : 0.08 + 0.62 * (pct / scale);
     return `rgba(75, 97, 209, ${alpha.toFixed(3)})`;
   };
 
+  // The study stores "every value" as the full list; the chips show it as "All".
+  const chips = <T extends string>(values: readonly T[], full: readonly T[]): T[] => (
+    values.length === 0 || values.length >= full.length ? [] : [...values]
+  );
+  const fromChips = <T extends string>(next: readonly T[], full: readonly T[]): T[] => (
+    next.length === 0 ? [...full] : [...next]
+  );
+  const all = t('setterViewReceptionAll');
+
   const renderFilters = () => (
-    <section className="ovs-filter-panel" aria-label={t('sideOutStudy')}>
-      <div className="ovs-filter-grid">
+    <section className="sideout-study__filters" aria-label={t('sideOutStudy')}>
+      <FilterGroups>
         {!lockedTeam && (
-          <div className="ovs-filter-group">
-            <label className="ovs-filter-group__title" htmlFor="sideout-filter-team">{t('filterTeam')}</label>
-            <select
-              id="sideout-filter-team"
-              value={filters.team}
-              onChange={(event) => setFilters({
+          <FilterGroup title={t('filterTeam')}>
+            <ChipSelect
+              single
+              options={[
+                { value: 'home', label: stats.teamStats.home.teamName || t('homeTeam') },
+                { value: 'away', label: stats.teamStats.away.teamName || t('awayTeam') },
+              ]}
+              selected={[filters.team]}
+              onChange={(next) => setFilters({
                 ...filters,
-                team: event.target.value as 'home' | 'away',
+                team: (next[0] ?? filters.team) as TeamSide,
                 setterPlayerId: 'all',
                 receiverPlayerId: 'all',
               })}
-            >
-              <option value="home">{stats.teamStats.home.teamName || t('homeTeam')}</option>
-              <option value="away">{stats.teamStats.away.teamName || t('awayTeam')}</option>
-            </select>
-          </div>
+            />
+          </FilterGroup>
         )}
-        <div className={`ovs-filter-group${filters.setNumber !== 'all' ? ' is-filtered' : ''}`}>
-          <label className="ovs-filter-group__title" htmlFor="sideout-filter-set">{t('filterSet')}</label>
-          <select
-            id="sideout-filter-set"
-            value={String(filters.setNumber)}
-            onChange={(event) => setFilters({
-              ...filters,
-              setNumber: event.target.value === 'all' ? 'all' : Number.parseInt(event.target.value, 10),
-            })}
-          >
-            <option value="all">{t('allSets')}</option>
-            {setNumbers.map((setNumber) => (
-              <option key={setNumber} value={setNumber}>{`${t('sets')} ${setNumber}`}</option>
-            ))}
-          </select>
-        </div>
-        <div className={`ovs-filter-group${filters.setterPlayerId !== 'all' ? ' is-filtered' : ''}`}>
-          <label className="ovs-filter-group__title" htmlFor="sideout-filter-setter">{t('sideOutFilterSetter')}</label>
-          <select
-            id="sideout-filter-setter"
-            value={filters.setterPlayerId}
-            onChange={(event) => setFilters({ ...filters, setterPlayerId: event.target.value })}
-          >
-            <option value="all">{t('allPlayers')}</option>
-            {setterOptions.map((option) => (
-              <option key={option.playerId} value={option.playerId}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className={`ovs-filter-group${filters.receiverPlayerId !== 'all' ? ' is-filtered' : ''}`}>
-          <label className="ovs-filter-group__title" htmlFor="sideout-filter-receiver">{t('sideOutFilterReceiver')}</label>
-          <select
-            id="sideout-filter-receiver"
-            value={filters.receiverPlayerId}
-            onChange={(event) => setFilters({ ...filters, receiverPlayerId: event.target.value })}
-          >
-            <option value="all">{t('allPlayers')}</option>
-            {receiverOptions.map((option) => (
-              <option key={option.playerId} value={option.playerId}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <fieldset className={`ovs-filter-group${filters.receptionEvaluations.length > 0 && filters.receptionEvaluations.length < SIDEOUT_EVALUATIONS.length ? ' is-filtered' : ''}`}>
-          <legend className="ovs-filter-group__title">{t('sideOutFilterReception')}</legend>
-          <div className="ovs-filter-chips">
-            <button
-              type="button"
-              className={`ovs-filter-chip${filters.receptionEvaluations.length === SIDEOUT_EVALUATIONS.length ? ' is-active' : ''}`}
-              aria-pressed={filters.receptionEvaluations.length === SIDEOUT_EVALUATIONS.length}
-              onClick={() => setFilters({ ...filters, receptionEvaluations: [...SIDEOUT_EVALUATIONS] })}
-            >
-              {t('setterViewReceptionAll')}
-            </button>
-            <span className="ovs-filter-divider" aria-hidden="true" />
-            {SIDEOUT_EVALUATIONS.map((evaluation) => {
-              const active = filters.receptionEvaluations.includes(evaluation);
-              return (
-                <button
-                  key={evaluation}
-                  type="button"
-                  className={`ovs-filter-chip ovs-filter-chip--eval${active ? ' is-active' : ''}`}
-                  style={evalChipStyle('receive', evaluation, active)}
-                  aria-pressed={active}
-                  onClick={() => setFilters({
-                    ...filters,
-                    receptionEvaluations: toggleValue<SkillEvaluation>(filters.receptionEvaluations, evaluation, !active),
-                  })}
-                >
-                  {evaluation}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        <fieldset className={`ovs-filter-group${filters.serveTypes.length > 0 && filters.serveTypes.length < SERVE_TYPE_GROUPS.length ? ' is-filtered' : ''}`}>
-          <legend className="ovs-filter-group__title">{t('sideOutFilterServeType')}</legend>
-          <div className="ovs-filter-chips">
-            {SERVE_TYPE_GROUPS.map((serveType) => {
-              const active = filters.serveTypes.includes(serveType);
-              return (
-                <button
-                  key={serveType}
-                  type="button"
-                  className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                  aria-pressed={active}
-                  onClick={() => setFilters({
-                    ...filters,
-                    serveTypes: toggleValue<SetterDistributionServeType>(filters.serveTypes, serveType, !active),
-                  })}
-                >
-                  {t(SERVE_TYPE_LABEL_KEYS[serveType])}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        <fieldset className={`ovs-filter-group${filters.serveStartZones.length > 0 && filters.serveStartZones.length < SERVE_START_ZONES.length ? ' is-filtered' : ''}`}>
-          <legend className="ovs-filter-group__title">{t('sideOutFilterServeStartZone')}</legend>
-          <div className="ovs-filter-chips">
-            {SERVE_START_ZONES.map((zone) => {
-              const active = filters.serveStartZones.includes(zone);
-              return (
-                <button
-                  key={zone}
-                  type="button"
-                  className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                  aria-pressed={active}
-                  onClick={() => setFilters({
-                    ...filters,
-                    serveStartZones: toggleValue<string>(filters.serveStartZones, zone, !active),
-                  })}
-                >
-                  {zone}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        <fieldset className={`ovs-filter-group${filters.receptionZones.length > 0 && filters.receptionZones.length < SERVE_TARGET_ZONES.length ? ' is-filtered' : ''}`}>
-          <legend className="ovs-filter-group__title">{t('sideOutFilterReceptionZone')}</legend>
-          <div className="ovs-filter-chips">
-            {SERVE_TARGET_ZONES.map((zone) => {
-              const active = filters.receptionZones.includes(zone);
-              return (
-                <button
-                  key={zone}
-                  type="button"
-                  className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                  aria-pressed={active}
-                  onClick={() => setFilters({
-                    ...filters,
-                    receptionZones: toggleValue<string>(filters.receptionZones, zone, !active),
-                  })}
-                >
-                  {zone}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        <fieldset className={`ovs-filter-group${filters.attackEvaluations.length > 0 && filters.attackEvaluations.length < SIDEOUT_EVALUATIONS.length ? ' is-filtered' : ''}`}>
-          <legend className="ovs-filter-group__title">{t('sideOutFilterAttackResult')}</legend>
-          <div className="ovs-filter-chips">
-            <button
-              type="button"
-              className={`ovs-filter-chip${filters.attackEvaluations.length === SIDEOUT_EVALUATIONS.length ? ' is-active' : ''}`}
-              aria-pressed={filters.attackEvaluations.length === SIDEOUT_EVALUATIONS.length}
-              onClick={() => setFilters({ ...filters, attackEvaluations: [...SIDEOUT_EVALUATIONS] })}
-            >
-              {t('setterViewReceptionAll')}
-            </button>
-            <span className="ovs-filter-divider" aria-hidden="true" />
-            {SIDEOUT_EVALUATIONS.map((evaluation) => {
-              const active = filters.attackEvaluations.includes(evaluation);
-              return (
-                <button
-                  key={evaluation}
-                  type="button"
-                  className={`ovs-filter-chip ovs-filter-chip--eval${active ? ' is-active' : ''}`}
-                  style={evalChipStyle('attack', evaluation, active)}
-                  aria-pressed={active}
-                  onClick={() => setFilters({
-                    ...filters,
-                    attackEvaluations: toggleValue<SkillEvaluation>(filters.attackEvaluations, evaluation, !active),
-                  })}
-                >
-                  {evaluation}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        <fieldset className={`ovs-filter-group${filters.attackBallTypes.length > 0 && filters.attackBallTypes.length < SIDEOUT_ATTACK_BALL_TYPES.length ? ' is-filtered' : ''}`}>
-          <legend className="ovs-filter-group__title">{t('sideOutFilterAttackBallType')}</legend>
-          <div className="ovs-filter-chips">
-            {SIDEOUT_ATTACK_BALL_TYPES.map((ballType) => {
-              const active = filters.attackBallTypes.includes(ballType);
-              return (
-                <button
-                  key={ballType}
-                  type="button"
-                  className={`ovs-filter-chip${active ? ' is-active' : ''}`}
-                  title={t(BALL_TYPE_LABEL_KEYS[ballType])}
-                  aria-pressed={active}
-                  onClick={() => setFilters({
-                    ...filters,
-                    attackBallTypes: toggleValue<SideOutAttackBallType>(filters.attackBallTypes, ballType, !active),
-                  })}
-                >
-                  {ballType}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-      </div>
+        {setNumbers.length > 1 ? (
+          <FilterGroup title={t('filterSet')} active={filters.setNumber !== 'all'}>
+            <ChipSelect
+              single
+              allLabel={all}
+              options={setNumbers.map((value) => ({ value, label: String(value) }))}
+              selected={filters.setNumber === 'all' ? [] : [filters.setNumber]}
+              onChange={(next) => setFilters({ ...filters, setNumber: next[0] ?? 'all' })}
+            />
+          </FilterGroup>
+        ) : null}
+        {setterOptions.length > 0 ? (
+          <FilterGroup title={t('sideOutFilterSetter')} active={filters.setterPlayerId !== 'all'}>
+            <ChipSelect
+              single
+              allLabel={all}
+              options={setterOptions.map((option) => ({ value: option.playerId, label: option.label }))}
+              selected={filters.setterPlayerId === 'all' ? [] : [filters.setterPlayerId]}
+              onChange={(next) => setFilters({ ...filters, setterPlayerId: next[0] ?? 'all' })}
+            />
+          </FilterGroup>
+        ) : null}
+        {receiverOptions.length > 0 ? (
+          <FilterGroup title={t('sideOutFilterReceiver')} active={filters.receiverPlayerId !== 'all'}>
+            <ChipSelect
+              single
+              allLabel={all}
+              options={receiverOptions.map((option) => ({ value: option.playerId, label: option.label }))}
+              selected={filters.receiverPlayerId === 'all' ? [] : [filters.receiverPlayerId]}
+              onChange={(next) => setFilters({ ...filters, receiverPlayerId: next[0] ?? 'all' })}
+            />
+          </FilterGroup>
+        ) : null}
+        <FilterGroup title={t('sideOutFilterReception')} active={chips(filters.receptionEvaluations, SIDEOUT_EVALUATIONS).length > 0}>
+          <EvaluationChips
+            skill="receive"
+            allLabel={all}
+            evaluations={SIDEOUT_EVALUATIONS}
+            presets={[
+              { label: t('setterViewReceptionPositive'), value: ['#', '+'] },
+              { label: t('setterViewReceptionNegative'), value: ['!', '-'] },
+            ]}
+            selected={chips(filters.receptionEvaluations, SIDEOUT_EVALUATIONS)}
+            onChange={(next) => setFilters({ ...filters, receptionEvaluations: fromChips(next, SIDEOUT_EVALUATIONS) })}
+          />
+        </FilterGroup>
+        <FilterGroup title={t('sideOutFilterServeType')} active={chips(filters.serveTypes, SERVE_TYPE_GROUPS).length > 0}>
+          <ChipSelect
+            allLabel={all}
+            options={SERVE_TYPE_GROUPS.map((serveType) => ({ value: serveType, label: t(SERVE_TYPE_LABEL_KEYS[serveType]) }))}
+            selected={chips(filters.serveTypes, SERVE_TYPE_GROUPS)}
+            onChange={(next) => setFilters({ ...filters, serveTypes: fromChips(next, SERVE_TYPE_GROUPS) })}
+          />
+        </FilterGroup>
+        <FilterGroup title={t('sideOutFilterServeStartZone')} active={chips(filters.serveStartZones, SERVE_START_ZONES).length > 0}>
+          <ChipSelect
+            allLabel={all}
+            options={SERVE_START_ZONES.map((zone) => ({ value: zone, label: zone }))}
+            selected={chips(filters.serveStartZones, SERVE_START_ZONES)}
+            onChange={(next) => setFilters({ ...filters, serveStartZones: fromChips(next, SERVE_START_ZONES) })}
+          />
+        </FilterGroup>
+        <FilterGroup title={t('sideOutFilterReceptionZone')} active={chips(filters.receptionZones, SERVE_TARGET_ZONES).length > 0}>
+          <ChipSelect
+            allLabel={all}
+            options={SERVE_TARGET_ZONES.map((zone) => ({ value: zone, label: zone }))}
+            selected={chips(filters.receptionZones, SERVE_TARGET_ZONES)}
+            onChange={(next) => setFilters({ ...filters, receptionZones: fromChips(next, SERVE_TARGET_ZONES) })}
+          />
+        </FilterGroup>
+        <FilterGroup title={t('sideOutFilterAttackResult')} active={chips(filters.attackEvaluations, SIDEOUT_EVALUATIONS).length > 0}>
+          <EvaluationChips
+            skill="attack"
+            allLabel={all}
+            evaluations={SIDEOUT_EVALUATIONS}
+            selected={chips(filters.attackEvaluations, SIDEOUT_EVALUATIONS)}
+            onChange={(next) => setFilters({ ...filters, attackEvaluations: fromChips(next, SIDEOUT_EVALUATIONS) })}
+          />
+        </FilterGroup>
+        <FilterGroup title={t('sideOutFilterAttackBallType')} active={chips(filters.attackBallTypes, SIDEOUT_ATTACK_BALL_TYPES).length > 0}>
+          <ChipSelect
+            allLabel={all}
+            options={SIDEOUT_ATTACK_BALL_TYPES.map((ballType) => ({ value: ballType, label: ballType, title: t(BALL_TYPE_LABEL_KEYS[ballType]) }))}
+            selected={chips(filters.attackBallTypes, SIDEOUT_ATTACK_BALL_TYPES)}
+            onChange={(next) => setFilters({ ...filters, attackBallTypes: fromChips(next, SIDEOUT_ATTACK_BALL_TYPES) })}
+          />
+        </FilterGroup>
+      </FilterGroups>
     </section>
   );
 

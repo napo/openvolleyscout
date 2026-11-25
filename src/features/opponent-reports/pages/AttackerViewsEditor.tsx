@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { SplitToggle } from './SplitToggle';
 import { attackerViewFilterLabel } from '../model/attacker-view-label';
-import { getEvaluationColor, getEvaluationInk, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
-import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
+import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type { AttackSubtype } from '@src/domain/touch/types';
 import type {
   AttackerDirectionEvaluation,
@@ -35,23 +34,6 @@ const ATTACK_SUBTYPES: ReadonlyArray<{
   { value: 'T', labelKey: 'attackSubtypeTip' },
 ];
 const BLOCKER_COUNTS = [0, 1, 2, 3] as const;
-const ATTACK_EVALS: readonly AttackerDirectionEvaluation[] = ['#', '+', '!', '-', '/', '='];
-
-function evalChipStyle(skill: SkillType, evaluation: SkillEvaluation, active: boolean): CSSProperties {
-  const color = getEvaluationColor(skill, evaluation);
-  if (active) {
-    return {
-      background: color,
-      borderColor: color,
-      color: getEvaluationInk(skill, evaluation),
-    };
-  }
-  return {
-    background: getEvaluationTint(skill, evaluation, 0.24),
-    borderColor: color,
-    color: '#1e293b',
-  };
-}
 
 interface AttackerViewsEditorProps {
   views: readonly AttackerDirectionViewConfig[] | undefined;
@@ -62,6 +44,7 @@ interface AttackerViewsEditorProps {
 export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: AttackerViewsEditorProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const all = t('setterViewReceptionAll');
 
   const defaultViews = (): AttackerDirectionViewConfig[] => [
     { id: 'all', label: t('opponentReportAttackAll') },
@@ -82,20 +65,9 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
     onChange(next);
   };
 
-  const toggleItem = <T,>(
-    index: number,
-    field: keyof AttackerDirectionViewConfig,
-    value: T,
-    allValues?: readonly T[],
-  ) => {
-    const current = (activeViews[index][field] as readonly T[] | undefined) ?? [];
-    const next = current.includes(value)
-      ? current.filter((item) => item !== value)
-      : [...current, value];
-    const normalized = next.length === 0 || (allValues && next.length === allValues.length)
-      ? undefined
-      : next;
-    patchView(index, { [field]: normalized } as Partial<AttackerDirectionViewConfig>);
+  // None chosen means all: an empty choice is stored as no filter.
+  const setField = (index: number, field: keyof AttackerDirectionViewConfig, next: readonly unknown[]) => {
+    patchView(index, { [field]: next.length > 0 ? [...next] : undefined } as Partial<AttackerDirectionViewConfig>);
   };
 
   const addView = (base?: AttackerDirectionViewConfig) => {
@@ -162,10 +134,6 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
           <p className="opponent-report__hint">{t('attackerViewsHint')}</p>
           <div className="setter-views-editor__list">
             {activeViews.map((view, index) => {
-              const recEvals = view.receptionEvaluations ?? [];
-              const isRecAll = recEvals.length === 0;
-              const isRecPositive = recEvals.length === 2 && recEvals.includes('#') && recEvals.includes('+');
-              const isRecNegative = recEvals.length === 2 && recEvals.includes('!') && recEvals.includes('-');
               return (
                 <div key={view.id} className="setter-views-editor__card">
                   <div className="setter-views-editor__row">
@@ -214,238 +182,89 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
                     </div>
                   </div>
 
-                  <div className="setter-views-editor__filters">
-                    <div className={`setter-views-editor__group${view.phases?.length ? ' is-filtered' : ''}`}>
-                      <span className="setter-views-editor__group-title">{t('attackerViewPhaseLabel')}</span>
+                  <FilterGroups>
+                    <FilterGroup title={t('videoAttackSituation')} active={Boolean(view.phases?.length)}>
                       <SplitToggle separate={view.splitBy === 'phases'} onChange={(separate) => patchView(index, { splitBy: separate ? 'phases' : undefined })} />
-                      <div className="setter-views-editor__chips">
-                        <button
-                          type="button"
-                          className={`setter-views-editor__chip${!view.phases?.length ? ' is-active' : ''}`}
-                          aria-pressed={!view.phases?.length}
-                          onClick={() => patchView(index, { phases: undefined })}
-                        >
-                          {t('setterViewReceptionAll')}
-                        </button>
-                        {PHASES.map((phase) => (
-                          <button
-                            key={phase.value}
-                            type="button"
-                            className={`setter-views-editor__chip${view.phases?.includes(phase.value) ? ' is-active' : ''}`}
-                            aria-pressed={Boolean(view.phases?.includes(phase.value))}
-                            onClick={() => toggleItem(index, 'phases', phase.value)}
-                          >
-                            {t(phase.labelKey)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                      <ChipSelect
+                        allLabel={all}
+                        options={PHASES.map((phase) => ({ value: phase.value, label: t(phase.labelKey) }))}
+                        selected={view.phases ?? []}
+                        onChange={(next) => setField(index, 'phases', next)}
+                      />
+                    </FilterGroup>
 
-                    <div className={`setter-views-editor__group${view.receptionEvaluations?.length ? ' is-filtered' : ''}`}>
-                      <span className="setter-views-editor__group-title">{t('setterViewReceptionLabel')}</span>
-                      <div className="setter-views-editor__chips">
-                        <button
-                          type="button"
-                          className={`setter-views-editor__chip${isRecAll ? ' is-active' : ''}`}
-                          aria-pressed={isRecAll}
-                          onClick={() => patchView(index, { receptionEvaluations: undefined })}
-                        >
-                          {t('setterViewReceptionAll')}
-                        </button>
-                        <button
-                          type="button"
-                          className={`setter-views-editor__chip${isRecPositive ? ' is-active' : ''}`}
-                          aria-pressed={isRecPositive}
-                          onClick={() => patchView(index, { receptionEvaluations: ['#', '+'] })}
-                        >
-                          {t('setterViewReceptionPositive')}
-                        </button>
-                        <button
-                          type="button"
-                          className={`setter-views-editor__chip${isRecNegative ? ' is-active' : ''}`}
-                          aria-pressed={isRecNegative}
-                          onClick={() => patchView(index, { receptionEvaluations: ['!', '-'] })}
-                        >
-                          {t('setterViewReceptionNegative')}
-                        </button>
-                        <span className="setter-views-editor__divider" aria-hidden="true" />
-                        {RECEPTION_EVALS.map((code) => {
-                          const active = recEvals.includes(code);
-                          return (
-                            <button
-                              key={code}
-                              type="button"
-                              className={`setter-views-editor__chip setter-views-editor__chip--eval${active ? ' is-active' : ''}`}
-                              style={evalChipStyle('receive', code, active)}
-                              aria-pressed={active}
-                              onClick={() => toggleItem(index, 'receptionEvaluations', code, RECEPTION_EVALS)}
-                            >
-                              {code}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <FilterGroup title={t('setterViewReceptionLabel')} active={Boolean(view.receptionEvaluations?.length)}>
+                      <EvaluationChips
+                        skill="receive"
+                        allLabel={all}
+                        evaluations={RECEPTION_EVALS}
+                        presets={[
+                          { label: t('setterViewReceptionPositive'), value: ['#', '+'] },
+                          { label: t('setterViewReceptionNegative'), value: ['!', '-'] },
+                        ]}
+                        selected={view.receptionEvaluations ?? []}
+                        onChange={(next) => setField(index, 'receptionEvaluations', next as SetterDistributionReceptionEval[])}
+                      />
+                    </FilterGroup>
 
-                    <div className={`setter-views-editor__group${view.rotations?.length ? ' is-filtered' : ''}`}>
-                      <span className="setter-views-editor__group-title">{t('opponentReportColRotation')}</span>
+                    <FilterGroup title={t('opponentReportColRotation')} active={Boolean(view.rotations?.length)}>
                       <SplitToggle separate={view.splitBy === 'rotations'} onChange={(separate) => patchView(index, { splitBy: separate ? 'rotations' : undefined })} />
-                      <div className="setter-views-editor__chips">
-                        <button
-                          type="button"
-                          className={`setter-views-editor__chip${!view.rotations?.length ? ' is-active' : ''}`}
-                          aria-pressed={!view.rotations?.length}
-                          onClick={() => patchView(index, { rotations: undefined })}
-                        >
-                          {t('setterViewReceptionAll')}
-                        </button>
-                        {ROTATIONS.map((rot) => (
-                          <button
-                            key={rot}
-                            type="button"
-                            className={`setter-views-editor__chip${view.rotations?.includes(rot) ? ' is-active' : ''}`}
-                            aria-pressed={Boolean(view.rotations?.includes(rot))}
-                            onClick={() => toggleItem(index, 'rotations', rot, ROTATIONS)}
-                          >
-                            {`P${rot}`}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                      <ChipSelect
+                        allLabel={all}
+                        options={ROTATIONS.map((rot) => ({ value: rot, label: `P${rot}` }))}
+                        selected={view.rotations ?? []}
+                        onChange={(next) => setField(index, 'rotations', next)}
+                      />
+                    </FilterGroup>
 
-                    <div className={`setter-views-editor__group${view.attackZones?.length ? ' is-filtered' : ''}`}>
-                      <span className="setter-views-editor__group-title">{t('opponentReportAttackZone')}</span>
+                    <FilterGroup title={t('opponentReportAttackZone')} active={Boolean(view.attackZones?.length)}>
                       <SplitToggle separate={view.splitBy === 'attackZones'} onChange={(separate) => patchView(index, { splitBy: separate ? 'attackZones' : undefined })} />
-                      <div className="setter-views-editor__chips">
-                        <button
-                          type="button"
-                          className={`setter-views-editor__chip${!view.attackZones?.length ? ' is-active' : ''}`}
-                          aria-pressed={!view.attackZones?.length}
-                          onClick={() => patchView(index, { attackZones: undefined })}
-                        >
-                          {t('setterViewReceptionAll')}
-                        </button>
-                        {ATTACK_ZONES.map((zone) => (
-                          <button
-                            key={zone}
-                            type="button"
-                            className={`setter-views-editor__chip${view.attackZones?.includes(zone) ? ' is-active' : ''}`}
-                            aria-pressed={Boolean(view.attackZones?.includes(zone))}
-                            onClick={() => toggleItem(index, 'attackZones', zone, ATTACK_ZONES)}
-                          >
-                            {`Z${zone}`}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                      <ChipSelect
+                        allLabel={all}
+                        options={ATTACK_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
+                        selected={view.attackZones ?? []}
+                        onChange={(next) => setField(index, 'attackZones', next)}
+                      />
+                    </FilterGroup>
 
-                    <div className={`setter-views-editor__group${view.attackSubtypes?.length ? ' is-filtered' : ''}`}>
-                      <span className="setter-views-editor__group-title">{t('opponentReportAttackType')}</span>
-                      <div className="setter-views-editor__chips">
-                        <button
-                          type="button"
-                          className={`setter-views-editor__chip${!view.attackSubtypes?.length ? ' is-active' : ''}`}
-                          aria-pressed={!view.attackSubtypes?.length}
-                          onClick={() => patchView(index, { attackSubtypes: undefined })}
-                        >
-                          {t('setterViewReceptionAll')}
-                        </button>
-                        {ATTACK_SUBTYPES.map((st) => (
-                          <button
-                            key={st.value}
-                            type="button"
-                            className={`setter-views-editor__chip${view.attackSubtypes?.includes(st.value) ? ' is-active' : ''}`}
-                            aria-pressed={Boolean(view.attackSubtypes?.includes(st.value))}
-                            onClick={() => toggleItem(index, 'attackSubtypes', st.value, ATTACK_SUBTYPES.map((item) => item.value))}
-                          >
-                            {`${t(st.labelKey)} (${st.value})`}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    <FilterGroup title={t('opponentReportAttackType')} active={Boolean(view.attackSubtypes?.length)}>
+                      <ChipSelect
+                        allLabel={all}
+                        options={ATTACK_SUBTYPES.map((st) => ({ value: st.value, label: `${t(st.labelKey)} (${st.value})` }))}
+                        selected={view.attackSubtypes ?? []}
+                        onChange={(next) => setField(index, 'attackSubtypes', next)}
+                      />
+                    </FilterGroup>
 
-                    <div className={`setter-views-editor__group${view.blockers?.length ? ' is-filtered' : ''}`}>
-                      <span className="setter-views-editor__group-title">{t('opponentReportAttackBlockers')}</span>
-                      <div className="setter-views-editor__chips">
-                        <button
-                          type="button"
-                          className={`setter-views-editor__chip${!view.blockers?.length ? ' is-active' : ''}`}
-                          aria-pressed={!view.blockers?.length}
-                          onClick={() => patchView(index, { blockers: undefined })}
-                        >
-                          {t('setterViewReceptionAll')}
-                        </button>
-                        {BLOCKER_COUNTS.map((count) => (
-                          <button
-                            key={count}
-                            type="button"
-                            className={`setter-views-editor__chip${view.blockers?.includes(count) ? ' is-active' : ''}`}
-                            aria-pressed={Boolean(view.blockers?.includes(count))}
-                            onClick={() => toggleItem(index, 'blockers', count, BLOCKER_COUNTS)}
-                          >
-                            {String(count)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    <FilterGroup title={t('opponentReportAttackBlockers')} active={Boolean(view.blockers?.length)}>
+                      <ChipSelect
+                        allLabel={all}
+                        options={BLOCKER_COUNTS.map((count) => ({ value: count, label: String(count) }))}
+                        selected={view.blockers ?? []}
+                        onChange={(next) => setField(index, 'blockers', next)}
+                      />
+                    </FilterGroup>
 
-                    <div className={`setter-views-editor__group${view.evaluations?.length ? ' is-filtered' : ''}`}>
-                      <span className="setter-views-editor__group-title">{t('attackerViewEvaluationLabel')}</span>
-                      <div className="setter-views-editor__chips">
-                        <button
-                          type="button"
-                          className={`setter-views-editor__chip${!view.evaluations?.length ? ' is-active' : ''}`}
-                          aria-pressed={!view.evaluations?.length}
-                          onClick={() => patchView(index, { evaluations: undefined })}
-                        >
-                          {t('setterViewReceptionAll')}
-                        </button>
-                        <span className="setter-views-editor__divider" aria-hidden="true" />
-                        {ATTACK_EVALS.map((code) => {
-                          const active = Boolean(view.evaluations?.includes(code));
-                          return (
-                            <button
-                              key={code}
-                              type="button"
-                              className={`setter-views-editor__chip setter-views-editor__chip--eval${active ? ' is-active' : ''}`}
-                              style={evalChipStyle('attack', code, active)}
-                              aria-pressed={active}
-                              onClick={() => toggleItem(index, 'evaluations', code, ATTACK_EVALS)}
-                            >
-                              {code}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <FilterGroup title={t('attackerViewEvaluationLabel')} active={Boolean(view.evaluations?.length)}>
+                      <EvaluationChips
+                        skill="attack"
+                        allLabel={all}
+                        selected={view.evaluations ?? []}
+                        onChange={(next) => setField(index, 'evaluations', next as AttackerDirectionEvaluation[])}
+                      />
+                    </FilterGroup>
 
                     {combinationCodes.length > 0 ? (
-                      <div className={`setter-views-editor__group setter-views-editor__group--wide${view.combinationCodes?.length ? ' is-filtered' : ''}`}>
-                        <span className="setter-views-editor__group-title">{t('attackerViewBaseLabel')}</span>
-                        <div className="setter-views-editor__chips">
-                          <button
-                            type="button"
-                            className={`setter-views-editor__chip${!view.combinationCodes?.length ? ' is-active' : ''}`}
-                            aria-pressed={!view.combinationCodes?.length}
-                            onClick={() => patchView(index, { combinationCodes: undefined })}
-                          >
-                            {t('setterViewReceptionAll')}
-                          </button>
-                          {combinationCodes.map((code) => (
-                            <button
-                              key={code}
-                              type="button"
-                              className={`setter-views-editor__chip${view.combinationCodes?.includes(code) ? ' is-active' : ''}`}
-                              aria-pressed={Boolean(view.combinationCodes?.includes(code))}
-                              onClick={() => toggleItem(index, 'combinationCodes', code, combinationCodes)}
-                            >
-                              {code}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      <FilterGroup title={t('attackerViewBaseLabel')} active={Boolean(view.combinationCodes?.length)} wide>
+                        <ChipSelect
+                          allLabel={all}
+                          options={combinationCodes.map((code) => ({ value: code, label: code }))}
+                          selected={view.combinationCodes ?? []}
+                          onChange={(next) => setField(index, 'combinationCodes', next)}
+                        />
+                      </FilterGroup>
                     ) : null}
-                  </div>
+                  </FilterGroups>
                 </div>
               );
             })}

@@ -7,20 +7,22 @@ import {
   blockersAfterAttack,
   isHighBall,
   previousSet,
-} from '@src/features/analytics/attack-context/attack-context';
+} from '../../analytics/attack-context/attack-context';
 import {
   matchesScoreSituation,
   type ScoreSituation,
-} from '@src/features/analytics/dashboard/selectors/rally-context-filters';
+} from '../../analytics/dashboard/selectors/rally-context-filters';
 import {
   classifyAttackPrecedingContext,
   classifyRallyTouchPhases,
   type TouchPhase,
-} from '@src/features/analytics/rally-phase/rally-phase-classifier';
-import { attackZoneNumber } from '@src/features/analytics/sideout/sideout-distribution';
+} from '../../analytics/rally-phase/rally-phase-classifier';
+import { attackZoneNumber } from '../../analytics/sideout/sideout-distribution';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import type { VideoEventEntry } from './video-event-index';
-import { isLateInSet } from '@src/features/analytics/score-situation/score-situation-settings';
+import { isLateInSet } from '../../analytics/score-situation/score-situation-settings';
+
+// Relative runtime imports: also run by the node/ts-node tests, which have no @src alias.
 
 /**
  * Contextual video filters: a team in focus, a phase, a chain of skills, each
@@ -70,6 +72,11 @@ export interface VideoChainFilters {
   rallyOutcome: 'all' | 'won' | 'lost';
   /** Skills of the chain (any order; applied in rally order). Empty: every skill. */
   chain: SkillType[];
+  /**
+   * The skill of the chain whose actions are shown; the others must come before or after it
+   * in the same rally, in rally order. Missing or not in the chain: the last skill of the chain.
+   */
+  shown?: SkillType;
   /** Attributes per skill; `any` applies when the chain is empty. */
   attributes: Partial<Record<SkillType | 'any', VideoSkillAttributes>>;
 }
@@ -239,6 +246,12 @@ export function orderVideoChain(chain: readonly SkillType[]): SkillType[] {
   return VIDEO_CHAIN_SKILL_ORDER.filter((skill) => chain.includes(skill));
 }
 
+/** The skill whose actions are shown: the one chosen, if it is in the chain, else the last of the chain. */
+export function shownVideoSkill(filters: Pick<VideoChainFilters, 'chain' | 'shown'>): SkillType | undefined {
+  const chain = orderVideoChain(filters.chain);
+  return filters.shown && chain.includes(filters.shown) ? filters.shown : chain.at(-1);
+}
+
 export function applyVideoChainFilters<E extends VideoEventEntry>(
   items: readonly VideoChainEntry<E>[],
   filters: VideoChainFilters,
@@ -250,8 +263,10 @@ export function applyVideoChainFilters<E extends VideoEventEntry>(
       .map((item) => item.entry);
   }
 
-  const targetSkill = chain[chain.length - 1];
-  const predecessors = chain.slice(0, -1);
+  const targetSkill = shownVideoSkill(filters)!;
+  const position = chain.indexOf(targetSkill);
+  const before = chain.slice(0, position);
+  const after = chain.slice(position + 1);
   const byRally = new Map<string, VideoChainEntry<E>[]>();
   for (const item of items) {
     const list = byRally.get(item.rallyKey);
@@ -260,24 +275,139 @@ export function applyVideoChainFilters<E extends VideoEventEntry>(
   }
   for (const list of byRally.values()) list.sort((left, right) => left.order - right.order);
 
+  // Whether `links` happen one after the other, in this order, among `candidates`.
+  const followsChain = (candidates: readonly VideoChainEntry<E>[], links: readonly SkillType[]): boolean => {
+    let next = 0;
+    for (const candidate of candidates) {
+      if (next === links.length) break;
+      const skill = links[next];
+      if (candidate.entry.skill === skill && matchesSkillAttributes(candidate, filters.attributes[skill])) next += 1;
+    }
+    return next === links.length;
+  };
+
   return items
     .filter((item) => {
       if (item.entry.skill !== targetSkill) return false;
       if (!matchesSkillAttributes(item, filters.attributes[targetSkill])) return false;
       if (!matchesContext(item, filters)) return false;
-      if (predecessors.length === 0) return true;
-      // Each previous skill needs a matching action earlier in the rally, in rally order.
+      if (before.length === 0 && after.length === 0) return true;
+      // The skills before the one shown happen earlier in the rally, those after it later, in rally order.
       const rally = byRally.get(item.rallyKey) ?? [];
-      let next = 0;
-      for (const candidate of rally) {
-        if (candidate.order >= item.order) break;
-        const skill = predecessors[next];
-        if (candidate.entry.skill === skill && matchesSkillAttributes(candidate, filters.attributes[skill])) {
-          next += 1;
-          if (next === predecessors.length) return true;
-        }
-      }
-      return false;
+      return followsChain(rally.filter((candidate) => candidate.order < item.order), before)
+        && followsChain(rally.filter((candidate) => candidate.order > item.order), after);
     })
     .map((item) => item.entry);
+}
+
+/** The skills whose attributes apply (and are shown): the chain, or "any skill" without one. */
+function activeAttributeKeys(filters: VideoChainFilters): Array<SkillType | 'any'> {
+  const chain = orderVideoChain(filters.chain);
+  return chain.length > 0 ? chain : ['any'];
+}
+
+/** Whether nothing is filtered. Attributes of skills no longer in the chain do not count: they filter nothing. */
+export function isDefaultVideoChainFilters(filters: VideoChainFilters): boolean {
+  const attributesEmpty = activeAttributeKeys(filters)
+    .map((key) => filters.attributes[key])
+    .every((attributes) => !attributes || Object.values(attributes).every((value) => !Array.isArray(value) || value.length === 0));
+  return filters.team === 'all'
+    && filters.setNumbers.length === 0
+    && filters.phases.length === 0
+    && filters.rotations.length === 0
+    && filters.scoreSituations.length === 0
+    && filters.rallyOutcome === 'all'
+    && filters.chain.length === 0
+    && attributesEmpty;
+}
+
+/**
+ * Drops the chosen players the filters can no longer show (another team, another match), so no
+ * hidden choice keeps filtering. The actions shown follow the team filter; an earlier link of
+ * the chain may be either team. `playerIdsFor` gives the players offered for a team scope.
+ */
+export function pruneVideoChainPlayers(
+  filters: VideoChainFilters,
+  playerIdsFor: (scope: VideoTeamScope) => ReadonlySet<string>,
+): VideoChainFilters {
+  const target = shownVideoSkill(filters);
+  let changed = false;
+  const attributes: VideoChainFilters['attributes'] = {};
+  for (const [key, value] of Object.entries(filters.attributes) as Array<[SkillType | 'any', VideoSkillAttributes | undefined]>) {
+    if (!value?.playerIds?.length) {
+      attributes[key] = value;
+      continue;
+    }
+    const allowed = playerIdsFor(key === 'any' || key === target ? filters.team : 'all');
+    const playerIds = value.playerIds.filter((id) => allowed.has(id));
+    if (playerIds.length !== value.playerIds.length) changed = true;
+    attributes[key] = { ...value, playerIds };
+  }
+  return changed ? { ...filters, attributes } : filters;
+}
+
+type LegacyVideoFilters = {
+  team?: 'all' | TeamSide;
+  setNumbers?: number[];
+  skills?: SkillType[];
+  evaluations?: SkillEvaluation[];
+  playerIds?: string[];
+  phase?: 'all' | 'breakpoint' | 'sideout';
+  setterPositions?: number[];
+  rallyOutcome?: 'all' | 'won' | 'lost';
+  serveStartZones?: string[];
+  serveTypes?: SetterDistributionServeType[];
+  receptionZones?: string[];
+  receiverIds?: string[];
+};
+
+const LEGACY_EVALUATION_COUNT = 6;
+
+/**
+ * Filters saved before the chain filters (video filter presets): converted so
+ * nothing saved is lost. The old phase covered transitions too, the setter
+ * position is the rotation, and the serve/receiver filters become the serve and
+ * reception links of the chain. Several old skills meant "any of them", which a
+ * chain cannot say: then the skill choice is dropped and the rest kept.
+ */
+export function toVideoChainFilters(raw: unknown): VideoChainFilters {
+  const defaults = createDefaultVideoChainFilters();
+  if (typeof raw !== 'object' || raw === null) return defaults;
+  if (Array.isArray((raw as Partial<VideoChainFilters>).chain)) {
+    return { ...defaults, ...(raw as Partial<VideoChainFilters>), attributes: { ...(raw as VideoChainFilters).attributes } };
+  }
+  const legacy = raw as LegacyVideoFilters;
+  const filters: VideoChainFilters = {
+    ...defaults,
+    team: legacy.team ?? 'all',
+    setNumbers: legacy.setNumbers ?? [],
+    rotations: legacy.setterPositions ?? [],
+    rallyOutcome: legacy.rallyOutcome ?? 'all',
+    phases: legacy.phase === 'breakpoint' ? ['break_point', 'transition_break_point']
+      : legacy.phase === 'sideout' ? ['point', 'transition_point'] : [],
+  };
+  const skills = legacy.skills ?? [];
+  const shown: SkillType | 'any' = skills.length === 1 ? skills[0] : 'any';
+  const evaluations = legacy.evaluations && legacy.evaluations.length < LEGACY_EVALUATION_COUNT ? legacy.evaluations : [];
+  const chain: SkillType[] = shown === 'any' ? [] : [shown];
+  const attributes: VideoChainFilters['attributes'] = {};
+  if (evaluations.length > 0 || (legacy.playerIds ?? []).length > 0) {
+    attributes[shown] = { evaluations, playerIds: legacy.playerIds ?? [] };
+  }
+  const serveFilters = {
+    serveTypes: legacy.serveTypes ?? [],
+    serveStartZones: legacy.serveStartZones ?? [],
+    targetZones: legacy.receptionZones ?? [],
+  };
+  if (Object.values(serveFilters).some((value) => value.length > 0)) {
+    chain.push('serve');
+    attributes.serve = { ...attributes.serve, ...serveFilters };
+  }
+  if ((legacy.receiverIds ?? []).length > 0) {
+    chain.push('receive');
+    attributes.receive = { ...attributes.receive, playerIds: legacy.receiverIds };
+  }
+  // Without an explicit skill, the serve/receiver filters become a chain of their own (the serves
+  // or receptions of those rallies) rather than being lost.
+  return { ...filters, chain, attributes };
 }

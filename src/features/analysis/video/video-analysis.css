@@ -1048,32 +1048,3 @@ div.video-analysis__error ul {
   padding-left: 1.2rem;
 }
 
-.video-analysis__chain {
-  grid-column: 1 / -1;
-  border: 1px solid rgba(127, 127, 127, 0.3);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-}
-
-.video-analysis__chain > summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.video-analysis__chain-hint,
-.video-analysis__chain-summary {
-  margin: 0.5rem 0;
-  font-size: 0.85rem;
-}
-
-.video-analysis__chain-step {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.5rem 0.75rem;
-  margin-top: 0.5rem;
-}
-
-.video-analysis__chain-step > strong {
-  flex-basis: 100%;
-}
