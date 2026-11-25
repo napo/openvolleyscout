@@ -26,6 +26,7 @@ import {
   getEligibleLiberoPlayerIds,
   getRoleChangesFromPreviousSet,
   getRoleOrderMismatchPositions,
+  getUnconfirmedAutoLiberoMiddles,
   getSetterCourtPosition,
   isTacticalRoleUsedByOtherPosition,
   rotateTeamSetSetupClockwise,
@@ -185,6 +186,7 @@ export function TeamSetupScreen({
   const isVertical = useCourtOrientationStore((s) => s.orientation) === 'vertical';
   const setterPosition = getSetterCourtPosition(state);
   const duplicateTacticalRoles = getDuplicateTacticalRoles(state);
+  const unconfirmedLiberoMiddles = getUnconfirmedAutoLiberoMiddles(state, team);
   const lineupPlayerIds = new Set(COURT_POSITIONS.map((position) => state.slots[position]).filter(Boolean));
   const eligibleLiberoPlayerIds = getEligibleLiberoPlayerIds(team).filter((playerId) => !lineupPlayerIds.has(playerId));
   const halfCourtPlayers = COURT_POSITIONS.map((position) => {
@@ -239,6 +241,14 @@ export function TeamSetupScreen({
               </button>
             )}
           </div>
+        )}
+
+        {unconfirmedLiberoMiddles.length > 0 && (
+          <p className="set-start-notice set-start-notice--warning" role="alert">
+            {t('setSetupLiberoMiddlesUnconfirmed', {
+              players: unconfirmedLiberoMiddles.map((playerId) => getPlayerLabel(team, playerId)).join(', '),
+            })}
+          </p>
         )}
 
         {lineupPlayerIds.size < COURT_POSITIONS.length && (

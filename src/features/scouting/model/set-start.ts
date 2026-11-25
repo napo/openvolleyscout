@@ -406,6 +406,28 @@ export function getRoleOrderMismatchPositions(
   });
 }
 
+/**
+ * Players the libero will replace automatically (the middle-blocker slots)
+ * whose roster role does not say "middle blocker". Their middle role was only
+ * assumed from the lineup order, so the scout must confirm it: a wrong guess
+ * sends the libero in for an outside hitter.
+ */
+export function getUnconfirmedAutoLiberoMiddles(
+  teamState: TeamSetSetupState,
+  team: Team,
+): string[] {
+  if (!teamState.liberoAutoMiddleReplacement || !teamState.liberoPlayerIds.some(Boolean)) {
+    return [];
+  }
+  return COURT_POSITIONS
+    .filter((position) => {
+      const role = teamState.tacticalRoles[position];
+      return Boolean(teamState.slots[position]) && Boolean(role) && getRoleFamily(role) === 'middle';
+    })
+    .map((position) => teamState.slots[position])
+    .filter((playerId) => team.players.find((player) => player.id === playerId)?.role !== 'middle_blocker');
+}
+
 /** Players who start this set in a different kind of role than in the previous set (e.g. outside → middle). */
 export function getRoleChangesFromPreviousSet(
   teamState: TeamSetSetupState,

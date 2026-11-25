@@ -712,6 +712,7 @@ export const ro = {
   setSetupReviewStepTitle: 'Verificare și confirmare',
   setSetupPlayerMoved: '{{player}} era deja alocat și a fost mutat din {{fromPosition}} în {{toPosition}}.',
   setSetupRoleOrderMismatch: "Rolurile din {{positions}} nu respectă ordinea rolurilor echipei pornind de la ridicător. Verifică-le: ele decid pe cine înlocuiește liberoul, formațiile și statisticile pe rol.",
+  setSetupLiberoMiddlesUnconfirmed: "Liberoul va intra automat în locul lui {{players}}, marcate aici ca centrale, dar fără acest rol în echipă. Verifică dacă sunt cu adevărat centralele voastre sau schimbă rolurile înainte de start.",
   setSetupRoleChangedFromPreviousSet: "Rol diferit față de setul anterior: {{players}}.",
   setSetupRealignRoles: "Realiniază rolurile",
   correctStartingLineup: "Corectează formația inițială",

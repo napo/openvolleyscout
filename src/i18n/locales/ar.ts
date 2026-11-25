@@ -712,6 +712,7 @@ export const ar = {
   setSetupReviewStepTitle: 'المراجعة والتأكيد',
   setSetupPlayerMoved: 'كان {{player}} مُعينًا بالفعل وتم نقله من {{fromPosition}} إلى {{toPosition}}.',
   setSetupRoleOrderMismatch: "الأدوار في {{positions}} لا تتبع ترتيب أدوار الفريق بدءًا من المعدّ. تحقّق منها: فهي تحدد من يستبدله الليبرو والتشكيلات والإحصاءات حسب الدور.",
+  setSetupLiberoMiddlesUnconfirmed: "سيدخل الليبرو تلقائيًا بدلًا من {{players}}، المحددين هنا كلاعبي وسط لكن دون هذا الدور في قائمة الفريق. تحقّق من أنهم لاعبو الوسط فعلًا، أو غيّر الأدوار قبل البدء.",
   setSetupRoleChangedFromPreviousSet: "دور مختلف عن الشوط السابق: {{players}}.",
   setSetupRealignRoles: "إعادة ترتيب الأدوار",
   correctStartingLineup: "تصحيح التشكيلة الأساسية",

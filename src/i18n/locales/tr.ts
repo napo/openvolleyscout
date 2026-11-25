@@ -710,6 +710,7 @@ export const tr = {
   setSetupReviewStepTitle: 'Gözden Geçir ve Onayla',
   setSetupPlayerMoved: '{{player}} zaten tahsis edilmişti ve {{fromPosition}} den {{toPosition}} ye taşındı.',
   setSetupRoleOrderMismatch: "{{positions}} konumlarındaki roller, pasörden itibaren takımın rol sırasına uymuyor. Kontrol edin: liberonun kimin yerine gireceğini, dizilişleri ve role göre istatistikleri belirlerler.",
+  setSetupLiberoMiddlesUnconfirmed: "Libero, burada orta oyuncu olarak işaretlenen ama takım kadrosunda bu rolü olmayan {{players}} yerine otomatik olarak girecek. Gerçekten orta oyuncularınız olduklarını kontrol edin veya başlamadan önce rolleri değiştirin.",
   setSetupRoleChangedFromPreviousSet: "Önceki setten farklı rol: {{players}}.",
   setSetupRealignRoles: "Rolleri yeniden hizala",
   correctStartingLineup: "Başlangıç dizilişini düzelt",

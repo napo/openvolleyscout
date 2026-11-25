@@ -712,6 +712,7 @@ export const es = {
   setSetupReviewStepTitle: 'Revisar y Confirmar',
   setSetupPlayerMoved: '{{player}} ya estaba asignada y se ha movido de {{fromPosition}} a {{toPosition}}.',
   setSetupRoleOrderMismatch: "Los roles en {{positions}} no siguen el orden de roles del equipo a partir de la colocadora. Revísalos: deciden a quién sustituye el líbero, las formaciones y las estadísticas por rol.",
+  setSetupLiberoMiddlesUnconfirmed: "El líbero entrará automáticamente por {{players}}, marcadas aquí como centrales pero sin ese rol en el equipo. Comprueba que de verdad son tus centrales o cambia los roles antes de empezar.",
   setSetupRoleChangedFromPreviousSet: "Rol distinto al del set anterior: {{players}}.",
   setSetupRealignRoles: "Realinear roles",
   correctStartingLineup: "Corregir formación inicial",

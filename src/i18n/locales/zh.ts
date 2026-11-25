@@ -710,6 +710,7 @@ export const zh = {
   setSetupReviewStepTitle: '审核并确认',
   setSetupPlayerMoved: '{{player}} 已分配并已从 {{fromPosition}} 移至 {{toPosition}}。',
   setSetupRoleOrderMismatch: "{{positions}} 的角色不符合从二传开始计算的球队角色顺序。请检查：它们决定自由人替换谁、阵型以及按角色的统计。",
+  setSetupLiberoMiddlesUnconfirmed: "自由人将自动替换 {{players}}：她们在这里被标为副攻，但在球队名单中没有这个角色。请确认她们确实是副攻，或在开始前修改角色。",
   setSetupRoleChangedFromPreviousSet: "与上一局角色不同：{{players}}。",
   setSetupRealignRoles: "重新排列角色",
   correctStartingLineup: "修正首发阵容",

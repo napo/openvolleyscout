@@ -710,6 +710,7 @@ export const de = {
   setSetupReviewStepTitle: 'Überprüfe und bestätige',
   setSetupPlayerMoved: '{{player}} wurde bereits zugewiesen und wurde von {{fromPosition}} nach {{toPosition}} verschoben.',
   setSetupRoleOrderMismatch: "Die Rollen auf {{positions}} folgen nicht der Rollenreihenfolge des Teams ab dem Zuspieler. Bitte prüfen: Sie bestimmen, wen der Libero ersetzt, die Formationen und die Statistik nach Rollen.",
+  setSetupLiberoMiddlesUnconfirmed: "Der Libero wechselt automatisch für {{players}} ein, die hier als Mittelblocker markiert sind, im Kader aber nicht. Prüfe, ob das wirklich eure Mittelblocker sind, oder ändere die Rollen vor dem Start.",
   setSetupRoleChangedFromPreviousSet: "Andere Rolle als im vorherigen Satz: {{players}}.",
   setSetupRealignRoles: "Rollen neu ausrichten",
   correctStartingLineup: "Startaufstellung korrigieren",

@@ -750,6 +750,7 @@ export const it = {
   setSetupReviewStepTitle: 'Rivedi e Conferma',
   setSetupPlayerMoved: '{{player}} era già assegnato ed è stato spostato da {{fromPosition}} a {{toPosition}}.',
   setSetupRoleOrderMismatch: "I ruoli in {{positions}} non seguono l'ordine dei ruoli della squadra a partire dal palleggiatore. Controllali: decidono chi sostituisce il libero, le formazioni e le statistiche per ruolo.",
+  setSetupLiberoMiddlesUnconfirmed: "Il libero entrerà automaticamente al posto di {{players}}, indicate qui come centrali ma senza il ruolo C nella squadra. Controlla che siano davvero le vostre centrali, oppure cambia i ruoli prima di iniziare.",
   setSetupRoleChangedFromPreviousSet: "Ruolo diverso dal set precedente: {{players}}.",
   setSetupRealignRoles: "Riallinea i ruoli",
   correctStartingLineup: "Correggi formazione iniziale",

@@ -750,6 +750,7 @@ export const en = {
   setSetupReviewStepTitle: 'Review and Confirm',
   setSetupPlayerMoved: '{{player}} was already allocated and has been moved from {{fromPosition}} to {{toPosition}}.',
   setSetupRoleOrderMismatch: "Roles at {{positions}} don't follow the team's role order counted from the setter. Check them: they decide who the libero replaces, the formations and the stats by role.",
+  setSetupLiberoMiddlesUnconfirmed: "The libero will come in automatically for {{players}}, marked as middle blockers here but not in the team roster. Check that they really are your middles, or change the roles before you start.",
   setSetupRoleChangedFromPreviousSet: "Role changed from the previous set: {{players}}.",
   setSetupRealignRoles: "Realign roles",
   correctStartingLineup: "Correct starting lineup",

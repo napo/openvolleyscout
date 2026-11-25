@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { PlayerRole } from '@src/domain/systems';
 import type { Team } from '@src/domain/roster/types';
 import {
   createEmptySetStartSetupState,
+  getUnconfirmedAutoLiberoMiddles,
   rotateTeamSetSetupClockwise,
   rotateTeamSetSetupCounterClockwise,
   validateSetStartSetup,
@@ -67,5 +69,39 @@ describe('set start with an incomplete lineup', () => {
 
     const back = rotateTeamSetSetupCounterClockwise(forward);
     expect(back.slots).toEqual(state.home.slots);
+  });
+});
+
+describe('libero middles not confirmed by the roster', () => {
+  function setup() {
+    const home = team('Home', 'h');
+    const state = createEmptySetStartSetupState().home;
+    const roles = [
+      PlayerRole.MIDDLE_BLOCKER_1, PlayerRole.SETTER, PlayerRole.OUTSIDE_HITTER_1,
+      PlayerRole.MIDDLE_BLOCKER_2, PlayerRole.OPPOSITE, PlayerRole.OUTSIDE_HITTER_2,
+    ];
+    ([1, 2, 3, 4, 5, 6] as const).forEach((position, index) => {
+      state.slots[position] = `h-${position}`;
+      state.tacticalRoles[position] = roles[index];
+    });
+    state.liberoPlayerIds = ['h-7'];
+    state.liberoAutoMiddleReplacement = true;
+    return { home, state };
+  }
+
+  it('lists the assumed middles when the roster gives no roles', () => {
+    const { home, state } = setup();
+    expect(getUnconfirmedAutoLiberoMiddles(state, home)).toEqual(['h-1', 'h-4']);
+  });
+
+  it('stays quiet when the roster confirms them, or without the automatic libero', () => {
+    const { home, state } = setup();
+    home.players[0].role = 'middle_blocker';
+    home.players[3].role = 'middle_blocker';
+    expect(getUnconfirmedAutoLiberoMiddles(state, home)).toEqual([]);
+
+    const other = setup();
+    other.state.liberoAutoMiddleReplacement = false;
+    expect(getUnconfirmedAutoLiberoMiddles(other.state, other.home)).toEqual([]);
   });
 });

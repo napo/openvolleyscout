@@ -710,6 +710,7 @@ export const sl = {
   setSetupReviewStepTitle: 'Preglejte in potrdite',
   setSetupPlayerMoved: '{{player}} je že bil dodeljen in je bil premaknjen iz {{fromPosition}} v {{toPosition}}.',
   setSetupRoleOrderMismatch: "Vloge na {{positions}} ne sledijo vrstnemu redu vlog ekipe od podajalca naprej. Preveri jih: določajo, koga zamenja libero, postavitve in statistiko po vlogah.",
+  setSetupLiberoMiddlesUnconfirmed: "Libero bo samodejno vstopil namesto {{players}}, ki sta tu označena kot blokerja, v ekipi pa nimata te vloge. Preveri, ali sta res vaša blokerja, ali pa pred začetkom spremeni vloge.",
   setSetupRoleChangedFromPreviousSet: "Drugačna vloga kot v prejšnjem nizu: {{players}}.",
   setSetupRealignRoles: "Poravnaj vloge",
   correctStartingLineup: "Popravi začetno postavitev",

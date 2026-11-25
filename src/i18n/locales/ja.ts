@@ -712,6 +712,7 @@ export const ja = {
   setSetupReviewStepTitle: "確認して確定",
   setSetupPlayerMoved: "{{player}} はすでに配置されていたため、{{fromPosition}} から {{toPosition}} に移しました。",
   setSetupRoleOrderMismatch: "{{positions}} の役割が、セッターから数えたチームの役割順になっていません。確認してください：リベロが誰と交代するか、フォーメーション、役割別の統計を決めます。",
+  setSetupLiberoMiddlesUnconfirmed: "リベロは {{players}} と自動で交代します。ここではミドルブロッカーになっていますが、チーム名簿ではその役割ではありません。本当にミドルか確認するか、開始前に役割を変更してください。",
   setSetupRoleChangedFromPreviousSet: "前のセットと役割が異なります：{{players}}。",
   setSetupRealignRoles: "役割を並べ直す",
   correctStartingLineup: "スタートメンバーを修正",
