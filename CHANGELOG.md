@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.47.0 - 2026-11-25
+
+### Added
+- Skill icons: in the skill filters of the dashboards and of Video analysis each skill is now a small drawing (serve, reception, set, attack, block, dig, freeball, cover). Move the pointer over an icon to read its name.
+- Base / combination filter: in Video analysis (Set and Attack in the Skills box) and in Team performance and Player performance you can now keep only the actions played on a setter call (K1, K7...) or an attack combination (X5, V5...). The filter appears only when the scout recorded these codes.
+
+### Changed
+- In Video analysis the filters can be hidden with Hide filters, to leave room for the list of actions; a short note tells you whether filters are on. The app remembers whether you left them open or closed.
+- In Video analysis athletes are chosen from a search list grouped by team, as in the data study, instead of a long column of buttons, and the filters use the whole width of their area so the page scrolls much less.
+
 ## 0.46.0 - 2026-11-25
 
 ### Added
