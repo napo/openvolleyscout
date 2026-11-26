@@ -44,11 +44,19 @@ export function blockersAfterAttack(sorted: readonly BallTouch[], attackIndex: n
   return undefined;
 }
 
+/**
+ * A high ball is a high set or a high-ball attack. Scouting and DataVolley files store the ball type
+ * as the DataVolley letter 'H' (set type / attack type), older data may carry the word 'high_ball'.
+ */
 export function isHighBall(set: BallTouch | null, attack: BallTouch): boolean {
   return set?.advancedDetails?.set?.tempo === 'high_ball'
     || set?.advancedDetails?.set?.type === 'high_ball'
     || set?.setType === 'high_ball'
-    || attack.advancedDetails?.attack?.tempo === 'high_ball';
+    || set?.setType === 'H'
+    || (set !== null && set.setType === undefined && set.skillTypeCode === 'H')
+    || attack.advancedDetails?.attack?.tempo === 'high_ball'
+    || attack.attackType === 'H'
+    || (attack.attackType === undefined && attack.skillTypeCode === 'H');
 }
 
 /**

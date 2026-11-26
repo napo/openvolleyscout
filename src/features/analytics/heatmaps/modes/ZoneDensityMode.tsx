@@ -9,6 +9,7 @@ import type {
   SetterDistributionReceptionEval,
 } from '@src/domain/opponent-report/types';
 import { attackZoneNumber } from '../../sideout/sideout-distribution';
+import { BACK_ROW_ZONE_MAP, isHighBall, scoreBeforeRallies } from '../../attack-context/attack-context';
 import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
@@ -1281,7 +1282,6 @@ const HEATMAP_ATTACK_SUBTYPES: ReadonlyArray<{
   { value: 'T', labelKey: 'attackSubtypeTip' },
 ];
 const HEATMAP_BLOCKERS = [0, 1, 2, 3] as const;
-const BACK_ROW_ZONE_MAP: Record<number, number> = { 7: 5, 8: 6, 9: 1 };
 
 function hasAnyAttackFilter(f: HeatmapAttackFilters): boolean {
   return (
@@ -1318,15 +1318,8 @@ function filterRalliesByAttackFilters(
 ): RallyStats[] {
   if (!hasAnyAttackFilter(attackFilters)) return [...rallies];
 
-  // Track running score per set to evaluate late_set (>= 20).
-  const lateRallies = new Map<string, boolean>();
-  const scores = new Map<number, { home: number; away: number }>();
-  for (const rally of [...rallies].sort((a, b) => a.setNumber - b.setNumber || a.rallyNumber - b.rallyNumber)) {
-    const score = scores.get(rally.setNumber) ?? { home: 0, away: 0 };
-    lateRallies.set(`${rally.setNumber}:${rally.rallyNumber}`, score.home >= 20 || score.away >= 20);
-    if (rally.pointWinner) score[rally.pointWinner] += 1;
-    scores.set(rally.setNumber, score);
-  }
+  // "Late set" follows the final-phase score of Settings > Analysis, like the tactical report and Video analysis.
+  const lateRallies = scoreBeforeRallies(rallies);
 
   return rallies.map((rally) => {
     const sorted = [...rally.touches].sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
@@ -1355,10 +1348,7 @@ function filterRalliesByAttackFilters(
         if (prev.skill !== 'set' && prev.skill !== 'cover') break;
       }
 
-      const isHigh = prevSet?.advancedDetails?.set?.tempo === 'high_ball'
-        || prevSet?.advancedDetails?.set?.type === 'high_ball'
-        || prevSet?.setType === 'high_ball'
-        || touch.advancedDetails?.attack?.tempo === 'high_ball';
+      const isHigh = isHighBall(prevSet ?? null, touch);
 
       if (attackFilters.phases.length > 0) {
         const phaseOk = attackFilters.phases.some((phase) => {
