@@ -28,7 +28,7 @@ export function PlayerRadarWidget({ stats, player, filters }: PlayerRadarWidgetP
   const [scaleMode, setScaleMode] = useState<RadarScaleMode>('fixed');
   const [overlayPlayerIds, setOverlayPlayerIds] = useState<Set<string>>(new Set());
 
-  const setFilter = filters?.set ?? 'all';
+  const setFilter = useMemo(() => filters?.set ?? [], [filters?.set]);
 
   const rallies = useMemo(
     () => getFilteredRalliesForSituation(stats, { set: setFilter }),

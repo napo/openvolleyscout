@@ -4,7 +4,8 @@ import type { Team } from '@src/domain/roster/types';
 import { getPlayerDisplayName } from '@src/domain/roster/helpers';
 import type { PlayByPlayRow } from './play-by-play';
 export type PlayByPlayT = (key: TranslationKey, params?: Record<string, string | number>) => string;
-export interface PlayByPlayOptions { reference: TeamSide; setNumber?: number }
+/** `setNumbers`: the sets shown; empty or missing = every set. */
+export interface PlayByPlayOptions { reference: TeamSide; setNumbers?: readonly number[] }
 const skills: Partial<Record<SkillType, TranslationKey>> = { serve: 'skillServe', receive: 'skillReceive', attack: 'skillAttack', block: 'skillBlock', set: 'skillSet', dig: 'skillDig', freeball: 'skillFreeball', cover: 'skillCover' };
 const corrections = { point_added: 'manualCorrectionPointAdded', point_removed: 'manualCorrectionPointRemoved', rotation_forward: 'manualCorrectionRotationForward', rotation_backward: 'manualCorrectionRotationBackward', serve_assigned: 'manualCorrectionServeAssigned' } as const;
 

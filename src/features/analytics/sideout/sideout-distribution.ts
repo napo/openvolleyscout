@@ -106,7 +106,8 @@ export interface SideOutSequence {
 
 export interface SideOutStudyFilters {
   team: TeamSide;
-  setNumber: 'all' | number;
+  /** The sets studied; empty = every set. */
+  setNumbers: number[];
   setterPosition: 'all' | number;
   setterPlayerId: 'all' | string;
   receptionEvaluations: SkillEvaluation[];
@@ -125,7 +126,7 @@ export interface SideOutStudyFilters {
 export function createDefaultSideOutStudyFilters(team: TeamSide = 'home'): SideOutStudyFilters {
   return {
     team,
-    setNumber: 'all',
+    setNumbers: [],
     setterPosition: 'all',
     setterPlayerId: 'all',
     receptionEvaluations: [...SIDEOUT_EVALUATIONS],
@@ -300,7 +301,7 @@ export function extractSideOutSequences(
 
 function matchesReceptionFilters(sequence: SideOutSequence, filters: SideOutStudyFilters): boolean {
   if (sequence.teamSide !== filters.team) return false;
-  if (filters.setNumber !== 'all' && sequence.setNumber !== filters.setNumber) return false;
+  if (filters.setNumbers.length > 0 && !filters.setNumbers.includes(sequence.setNumber)) return false;
   if (filters.setterPosition !== 'all' && sequence.setterPosition !== filters.setterPosition) return false;
   if (filters.setterPlayerId !== 'all' && sequence.setterPlayerId !== filters.setterPlayerId) return false;
 

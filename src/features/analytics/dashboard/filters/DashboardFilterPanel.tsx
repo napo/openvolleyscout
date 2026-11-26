@@ -36,7 +36,7 @@ const SKILL_LABELS: Record<TrackedSkill, TranslationKey> = {
   cover: 'skillCover',
 };
 
-const SCORE_SITUATIONS: ReadonlyArray<{ value: Exclude<DashboardFilters['scoreRange'], 'all'>; labelKey: TranslationKey }> = [
+const SCORE_SITUATIONS: ReadonlyArray<{ value: DashboardFilters['scoreRange'][number]; labelKey: TranslationKey }> = [
   { value: 'tied', labelKey: 'scoreRangeTied' },
   { value: 'leading', labelKey: 'scoreRangeLeading' },
   { value: 'trailing', labelKey: 'scoreRangeTrailing' },
@@ -161,13 +161,12 @@ export function DashboardFilterPanel({
           </FilterGroup>
         ) : null}
 
-        <FilterGroup title={t('filterRallyPhase')} active={filters.rallyPhase !== 'all'}>
+        <FilterGroup title={t('filterRallyPhase')} active={filters.rallyPhase.length > 0}>
           <ChipSelect
-            single
             allLabel={all}
             options={TOUCH_PHASES.map((phase) => ({ value: phase, label: t(PHASE_LABELS[phase]) }))}
-            selected={filters.rallyPhase === 'all' ? [] : [filters.rallyPhase]}
-            onChange={(next) => updateFilter('rallyPhase', next[0] ?? 'all')}
+            selected={filters.rallyPhase}
+            onChange={(next) => updateFilter('rallyPhase', next)}
           />
         </FilterGroup>
 
@@ -183,40 +182,41 @@ export function DashboardFilterPanel({
         ) : null}
 
         {sets.length > 1 ? (
-          <FilterGroup title={t('filterSet')} active={filters.set !== 'all'}>
+          <FilterGroup title={t('filterSet')} active={filters.set.length > 0}>
             <ChipSelect
-              single
               allLabel={all}
               options={sets.map((value) => ({ value, label: String(value) }))}
-              selected={filters.set === 'all' ? [] : [filters.set]}
-              onChange={(next) => updateFilter('set', next[0] ?? 'all')}
+              selected={filters.set}
+              onChange={(next) => updateFilter('set', next)}
             />
           </FilterGroup>
         ) : null}
 
-        <FilterGroup title={t('filterRotation')} active={filters.rotation !== 'all'}>
+        <FilterGroup title={t('filterRotation')} active={filters.rotation.length > 0}>
           <ChipSelect
-            single
             allLabel={all}
             options={ROTATIONS.map((value) => ({ value, label: `P${value}` }))}
-            selected={filters.rotation === 'all' ? [] : [filters.rotation]}
-            onChange={(next) => updateFilter('rotation', next[0] ?? 'all')}
+            selected={filters.rotation}
+            onChange={(next) => updateFilter('rotation', next)}
           />
         </FilterGroup>
 
-        <FilterGroup title={t('filterScoreRange')} active={filters.scoreRange !== 'all'}>
+        <FilterGroup title={t('filterScoreRange')} active={filters.scoreRange.length > 0}>
           <ChipSelect
-            single
             allLabel={all}
             options={SCORE_SITUATIONS.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
-            selected={filters.scoreRange === 'all' ? [] : [filters.scoreRange]}
-            onChange={(next) => updateFilter('scoreRange', next[0] ?? 'all')}
+            selected={filters.scoreRange}
+            onChange={(next) => updateFilter('scoreRange', next)}
           />
-          {filters.scoreRange === 'clutch' || filters.scoreRange === 'leading' || filters.scoreRange === 'trailing' ? (
+          {/* The rule behind each situation chosen, from Settings > Analysis. */}
+          {filters.scoreRange.includes('clutch') ? (
             <span className="perf-dashboard__filter-hint">
-              {filters.scoreRange === 'clutch'
-                ? t('scoreSituationCloseRule', { from: scoreRules.closeFrom, decidingFrom: scoreRules.closeFromDecidingSet, gap: scoreRules.closeMaxGap })
-                : t('scoreSituationLeadRule', { gap: scoreRules.leadMinGap })}
+              {t('scoreSituationCloseRule', { from: scoreRules.closeFrom, decidingFrom: scoreRules.closeFromDecidingSet, gap: scoreRules.closeMaxGap })}
+            </span>
+          ) : null}
+          {filters.scoreRange.includes('leading') || filters.scoreRange.includes('trailing') ? (
+            <span className="perf-dashboard__filter-hint">
+              {t('scoreSituationLeadRule', { gap: scoreRules.leadMinGap })}
             </span>
           ) : null}
         </FilterGroup>

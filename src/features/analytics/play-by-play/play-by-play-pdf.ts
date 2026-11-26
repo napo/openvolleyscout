@@ -15,7 +15,8 @@ export interface PlayByPlayDocumentInput {
   options: PlayByPlayOptions;
 }
 export function buildPlayByPlayPdf(input: PlayByPlayDocumentInput, t: PlayByPlayT, font: PdfFontFamily = PDF_FONT_LATIN): Record<string, unknown> {
-  const sets = input.sets.filter((set) => !input.options.setNumber || set.setNumber === input.options.setNumber);
+  const chosen = input.options.setNumbers ?? [];
+  const sets = input.sets.filter((set) => chosen.length === 0 || chosen.includes(set.setNumber));
   const reference = input.options.reference;
   const other = reference === 'home' ? 'away' : 'home';
   // Explicit vector pages keep the band continuous and retain its scale on continuation pages.

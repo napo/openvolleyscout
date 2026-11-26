@@ -60,11 +60,11 @@ export function createDefaultAdvancedFilters(): AdvancedFilters {
   return {
     // Basic filters (from DashboardFilters)
     team: 'all',
-    set: 'all',
+    set: [],
     player: 'all',
     role: 'all',
     source: 'all',
-    rallyPhase: 'all',
+    rallyPhase: [],
     skill: 'all',
     evaluations: [...ALL_EVALUATIONS],
 
@@ -77,8 +77,8 @@ export function createDefaultAdvancedFilters(): AdvancedFilters {
     serverNumber: undefined,
     receiverNumber: undefined,
     attackerNumber: undefined,
-    rotation: 'all',
-    scoreRange: 'all',
+    rotation: [],
+    scoreRange: [],
     server: 'all',
     receiver: 'all',
     attacker: 'all',
@@ -97,11 +97,11 @@ export function isDefaultAdvancedFilters(filters: AdvancedFilters): boolean {
 
   return (
     filters.team === defaults.team &&
-    filters.set === defaults.set &&
+    filters.set.length === 0 &&
     filters.player === defaults.player &&
     filters.role === defaults.role &&
     filters.source === defaults.source &&
-    filters.rallyPhase === defaults.rallyPhase &&
+    filters.rallyPhase.length === 0 &&
     filters.skill === 'all' &&
     evaluationsMatch &&
     filters.tacticalSituation === 'none' &&
@@ -121,11 +121,11 @@ export function isDefaultAdvancedFilters(filters: AdvancedFilters): boolean {
 export function getAdvancedFilterCount(filters: AdvancedFilters): number {
   let count = 0;
   if (filters.team !== 'all') count++;
-  if (filters.set !== 'all') count++;
+  if (filters.set.length > 0) count++;
   if (filters.player !== 'all') count++;
   if (filters.role !== 'all') count++;
   if (filters.source !== 'all') count++;
-  if (filters.rallyPhase !== 'all') count++;
+  if (filters.rallyPhase.length > 0) count++;
   if (filters.skill !== 'all') count++;
   if (filters.evaluations.length < ALL_EVALUATIONS.length) count++;
   if (filters.tacticalSituation !== 'none') count++;

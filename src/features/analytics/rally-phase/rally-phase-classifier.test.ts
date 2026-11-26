@@ -998,7 +998,7 @@ describe('filterTouchesByPhase', () => {
         makeTouch({ setNumber: 1, rallyNumber: 5, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
       ],
     });
-    assert.strictEqual(filterTouchesByPhase([rally], 'all').length, 2);
+    assert.strictEqual(filterTouchesByPhase([rally], []).length, 2);
   });
 
   it('filters touches across rallies down to the requested phase', () => {
@@ -1023,11 +1023,11 @@ describe('filterTouchesByPhase', () => {
       ],
     });
 
-    const breakPointTouches = filterTouchesByPhase([rallyA, rallyB], 'break_point');
+    const breakPointTouches = filterTouchesByPhase([rallyA, rallyB], ['break_point']);
     assert.strictEqual(breakPointTouches.length, 2);
     assert.ok(breakPointTouches.every((t) => t.skill === 'serve'));
 
-    const pointTouches = filterTouchesByPhase([rallyA, rallyB], 'point');
+    const pointTouches = filterTouchesByPhase([rallyA, rallyB], ['point']);
     assert.strictEqual(pointTouches.length, 2);
     assert.ok(pointTouches.every((t) => t.skill === 'receive'));
   });

@@ -16,14 +16,15 @@ interface CrossRotationAnalysisPanelProps {
 export function CrossRotationAnalysisPanel({ stats }: CrossRotationAnalysisPanelProps) {
   const { t } = useTranslation();
   const scope = statsScopeKey(stats);
-  const [setNumber, setSetNumber, resetSet] = useRememberedState<number | 'all'>('cross-rotation-set', scope, () => 'all');
+  const [chosenSets, setChosenSets, resetSet] = useRememberedState<number[]>('cross-rotation-sets', scope, () => []);
   const setNumbers = useMemo(() => stats.setStats.map((set) => set.setNumber), [stats.setStats]);
-  // One set: the table is counted again from that set's rallies, with the same rules as the whole match.
-  const shown = useMemo(() => (
-    setNumber === 'all' || !setNumbers.includes(setNumber)
+  // Some sets only: the table is counted again from their rallies, with the same rules as the whole match.
+  const shown = useMemo(() => {
+    const sets = chosenSets.filter((value) => setNumbers.includes(value));
+    return sets.length === 0
       ? stats
-      : { ...stats, crossRotationStats: buildCrossRotationStatsFromRallies(stats.rallyStats.filter((rally) => rally.setNumber === setNumber)) }
-  ), [stats, setNumber, setNumbers]);
+      : { ...stats, crossRotationStats: buildCrossRotationStatsFromRallies(stats.rallyStats.filter((rally) => sets.includes(rally.setNumber))) };
+  }, [stats, chosenSets, setNumbers]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeCell, setActiveCell] = useState<CrossRotationActiveCell | null>(null);
   const [pinned, setPinned] = useState(false);
@@ -75,17 +76,16 @@ export function CrossRotationAnalysisPanel({ stats }: CrossRotationAnalysisPanel
       {setNumbers.length > 1 ? (
         <>
           <FilterGroups>
-            <FilterGroup title={t('filterSet')} active={setNumber !== 'all'}>
+            <FilterGroup title={t('filterSet')} active={chosenSets.length > 0}>
               <ChipSelect
-                single
                 allLabel={t('setterViewReceptionAll')}
                 options={setNumbers.map((value) => ({ value, label: String(value) }))}
-                selected={setNumber === 'all' ? [] : [setNumber]}
-                onChange={(next) => { dismissPinned(); setSetNumber(next[0] ?? 'all'); }}
+                selected={chosenSets}
+                onChange={(next) => { dismissPinned(); setChosenSets(next); }}
               />
             </FilterGroup>
           </FilterGroups>
-          <ResetFiltersButton count={setNumber !== 'all' ? 1 : 0} onReset={() => { dismissPinned(); resetSet(); }} />
+          <ResetFiltersButton count={chosenSets.length > 0 ? 1 : 0} onReset={() => { dismissPinned(); resetSet(); }} />
         </>
       ) : null}
       <p className="cross-rotation-analysis__description">{t('crossRotationAnalysisDescription')}</p>

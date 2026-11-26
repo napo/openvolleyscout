@@ -232,13 +232,12 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           </FilterGroup>
         )}
         {setNumbers.length > 1 ? (
-          <FilterGroup title={t('filterSet')} active={filters.setNumber !== 'all'}>
+          <FilterGroup title={t('filterSet')} active={filters.setNumbers.length > 0}>
             <ChipSelect
-              single
               allLabel={all}
               options={setNumbers.map((value) => ({ value, label: String(value) }))}
-              selected={filters.setNumber === 'all' ? [] : [filters.setNumber]}
-              onChange={(next) => setFilters({ ...filters, setNumber: next[0] ?? 'all' })}
+              selected={filters.setNumbers}
+              onChange={(next) => setFilters({ ...filters, setNumbers: next })}
             />
           </FilterGroup>
         ) : null}

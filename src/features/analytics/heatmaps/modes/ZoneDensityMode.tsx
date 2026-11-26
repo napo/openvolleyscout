@@ -13,7 +13,7 @@ import { BACK_ROW_ZONE_MAP, isHighBall, scoreBeforeRallies } from '../../attack-
 import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
-import { ALL_EVALUATIONS } from '../../dashboard/filters/dashboard-filters';
+import { ALL_EVALUATIONS, matchesAny } from '../../dashboard/filters/dashboard-filters';
 import { getTeamsToShow } from '../../dashboard/selectors/dashboard-selectors';
 import { useFilterActions } from '../../stores/filter-selectors';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
@@ -169,17 +169,17 @@ function buildHeatPointsForTeam(
   filters: DashboardFilters | undefined,
   startZoneFilter: string | undefined,
   heatEvents: Map<string, HeatmapEvent>,
-  rallyPhaseFilter: 'all' | TouchPhase = 'all',
+  rallyPhaseFilter: readonly TouchPhase[] = [],
   attackContextFilter: 'all' | AttackPrecedingContext = 'all',
 ): DensityPoint[] {
   const points: DensityPoint[] = [];
 
   for (const rally of rallies) {
-    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const phaseMap = rallyPhaseFilter.length > 0 ? classifyRallyTouchPhases(rally) : null;
     const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
-      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (phaseMap && !matchesAny(rallyPhaseFilter, phaseMap.get(touch.id))) continue;
       if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
@@ -209,17 +209,17 @@ function buildEndZoneHeatPoints(
   filters: DashboardFilters | undefined,
   startZoneFilter: string | undefined,
   heatEvents: Map<string, HeatmapEvent>,
-  rallyPhaseFilter: 'all' | TouchPhase = 'all',
+  rallyPhaseFilter: readonly TouchPhase[] = [],
   attackContextFilter: 'all' | AttackPrecedingContext = 'all',
 ): DensityPoint[] {
   const points: DensityPoint[] = [];
 
   for (const rally of rallies) {
-    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const phaseMap = rallyPhaseFilter.length > 0 ? classifyRallyTouchPhases(rally) : null;
     const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
-      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (phaseMap && !matchesAny(rallyPhaseFilter, phaseMap.get(touch.id))) continue;
       if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
@@ -257,7 +257,7 @@ function isOutOfBoundsError(touch: BallTouch): boolean {
   return (touch.skill === 'attack' || touch.skill === 'serve') && touch.evaluation === '=';
 }
 
-function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): Arrow[] {
+function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: readonly TouchPhase[] = [], attackContextFilter: 'all' | AttackPrecedingContext = 'all'): Arrow[] {
   const arrows: Arrow[] = [];
   // Keyed by zone-pair AND evaluation: touches on the same path can end
   // differently (a kill vs. an error), so they get separate arrows -
@@ -266,12 +266,12 @@ function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillF
   const arrowMap = new Map<string, { count: number; evaluation?: SkillEvaluation; skill: SkillType }>();
 
   for (const rally of rallies) {
-    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const phaseMap = rallyPhaseFilter.length > 0 ? classifyRallyTouchPhases(rally) : null;
     const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (!['attack', 'receive', 'serve'].includes(touch.skill)) continue;
       if (touch.teamSide !== teamSide) continue;
-      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (phaseMap && !matchesAny(rallyPhaseFilter, phaseMap.get(touch.id))) continue;
       if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (!touch.startZoneCode || !touch.endZoneCode) continue;
 
@@ -319,7 +319,7 @@ function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillF
   return arrows;
 }
 
-function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[][] {
+function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: readonly TouchPhase[] = [], attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[][] {
   // Full-court grid with subzones: 6 columns x 6 rows
   // Each zone (1-9) is divided into 2x2 subzones (C, B, D, A)
   // Full court layout:
@@ -338,11 +338,11 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
   const zoneMatrix: Record<string, number> = {};
 
   for (const rally of rallies) {
-    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const phaseMap = rallyPhaseFilter.length > 0 ? classifyRallyTouchPhases(rally) : null;
     const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
-      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (phaseMap && !matchesAny(rallyPhaseFilter, phaseMap.get(touch.id))) continue;
       if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
 
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
@@ -386,16 +386,16 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
   return grid;
 }
 
-function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[][] {
+function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: readonly TouchPhase[] = [], attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[][] {
   const grid: number[][] = Array(6).fill(null).map(() => Array(6).fill(0));
   const zoneMatrix: Record<string, number> = {};
 
   for (const rally of rallies) {
-    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const phaseMap = rallyPhaseFilter.length > 0 ? classifyRallyTouchPhases(rally) : null;
     const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
-      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (phaseMap && !matchesAny(rallyPhaseFilter, phaseMap.get(touch.id))) continue;
       if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
@@ -431,19 +431,19 @@ function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFil
   return grid;
 }
 
-function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[][] {
+function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: readonly TouchPhase[] = [], attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[][] {
   const grid: number[][] = Array(6).fill(null).map(() => Array(6).fill(0));
   const zoneMatrix: Record<string, number> = {};
 
   for (const rally of rallies) {
-    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const phaseMap = rallyPhaseFilter.length > 0 ? classifyRallyTouchPhases(rally) : null;
     const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
       // Serve's origin is outside the court (see buildServeStartCounts) -
       // excluded here so it isn't double-counted inside the in-court grid.
       if (touch.skill === 'serve') continue;
-      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (phaseMap && !matchesAny(rallyPhaseFilter, phaseMap.get(touch.id))) continue;
       if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
@@ -482,7 +482,7 @@ function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillF
  * Serve counts by lane row, for the badges drawn outside the court (the
  * server stands behind their own baseline, not inside an in-court zone).
  */
-function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[] {
+function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: readonly TouchPhase[] = [], attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[] {
   const counts = Array(6).fill(0);
   if (skill && skill !== 'all' && skill !== 'serve') return counts;
   // Serve touches never carry a receive/dig preceding context - this filter
@@ -490,11 +490,11 @@ function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSki
   if (attackContextFilter !== 'all') return counts;
 
   for (const rally of rallies) {
-    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const phaseMap = rallyPhaseFilter.length > 0 ? classifyRallyTouchPhases(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
       if (touch.skill !== 'serve') continue;
-      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (phaseMap && !matchesAny(rallyPhaseFilter, phaseMap.get(touch.id))) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (!touch.startZoneCode) continue;
@@ -517,17 +517,17 @@ function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSki
  * view) - used to surface a "plus N errors" note instead of silently
  * dropping them.
  */
-function countOutOfBoundsErrors(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number {
+function countOutOfBoundsErrors(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: readonly TouchPhase[] = [], attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number {
   if (skill && skill !== 'all' && skill !== 'attack' && skill !== 'serve') return 0;
 
   let count = 0;
   for (const rally of rallies) {
-    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const phaseMap = rallyPhaseFilter.length > 0 ? classifyRallyTouchPhases(rally) : null;
     const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
       if (!isOutOfBoundsError(touch)) continue;
-      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (phaseMap && !matchesAny(rallyPhaseFilter, phaseMap.get(touch.id))) continue;
       if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
@@ -1406,7 +1406,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   const [rotation, setRotation] = useState<ChartRotation>(0);
   // The skill and the rally phase are the ones of the dashboard filters above: one choice, not two.
   const skill: HeatmapSkillFilter = filters?.skill ?? initialSkill ?? 'all';
-  const rallyPhaseFilter: 'all' | TouchPhase = filters?.rallyPhase ?? 'all';
+  const rallyPhaseFilter = useMemo(() => filters?.rallyPhase ?? [], [filters?.rallyPhase]);
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>('density');
   const [startZoneFilter, setStartZoneFilter] = useState<string>('all');
   const [attackContextFilter, setAttackContextFilter] = useState<'all' | AttackPrecedingContext>('all');
@@ -1420,8 +1420,9 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
 
   const filteredRallies = useMemo(() => {
     let rallies = stats.rallyStats;
-    if (filters?.set && filters.set !== 'all') {
-      rallies = rallies.filter(r => r.setNumber === filters.set);
+    const sets = filters?.set ?? [];
+    if (sets.length > 0) {
+      rallies = rallies.filter(r => sets.includes(r.setNumber));
     }
     // Phase is a per-touch classification (not a whole-rally one), so it's
     // applied per-touch inside each builder below instead of here.
@@ -1468,11 +1469,11 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   const availableStartZones = useMemo(() => {
     const zones = new Set<string>();
     for (const rally of effectiveRallies) {
-      const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+      const phaseMap = rallyPhaseFilter.length > 0 ? classifyRallyTouchPhases(rally) : null;
       const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
       for (const touch of rally.touches) {
         if (touch.teamSide !== teamSide) continue;
-        if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+        if (phaseMap && !matchesAny(rallyPhaseFilter, phaseMap.get(touch.id))) continue;
         if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
         if (skill !== 'all' && touch.skill !== skill) continue;
         if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;

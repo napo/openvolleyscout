@@ -379,9 +379,10 @@ export function classifyRallyTouchPhases(rally: RallyStats): Map<string, TouchPh
 /** Filters touches across rallies by the shared active phase filter (touch-level). */
 export function filterTouchesByPhase(
   rallies: readonly RallyStats[],
-  phase: TouchPhase | 'all',
+  phases: readonly TouchPhase[],
 ): BallTouch[] {
-  if (phase === 'all') {
+  // No phase chosen: every touch.
+  if (phases.length === 0) {
     return rallies.flatMap((r) => r.touches);
   }
 
@@ -389,7 +390,8 @@ export function filterTouchesByPhase(
   for (const rally of rallies) {
     const phaseMap = classifyRallyTouchPhases(rally);
     for (const touch of rally.touches) {
-      if (phaseMap.get(touch.id) === phase) result.push(touch);
+      const phase = phaseMap.get(touch.id);
+      if (phase && phases.includes(phase)) result.push(touch);
     }
   }
   return result;

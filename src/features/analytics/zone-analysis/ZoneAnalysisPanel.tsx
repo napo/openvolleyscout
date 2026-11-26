@@ -111,9 +111,11 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
   }, [attacks, team, roleOf]);
   const update = (patch: Partial<ZoneAnalysisFilters>) => { setFilters({ ...filters, ...patch }); setSelectedZone(null); };
   const stepRotation = (step: 1 | -1) => {
-    const index = filters.rotation === 'all' ? (step === 1 ? -1 : 0) : ROTATION_ORDER.indexOf(filters.rotation);
+    // The two buttons walk the rotations one at a time, from the last one chosen.
+    const current = filters.rotations.at(-1);
+    const index = current === undefined ? (step === 1 ? -1 : 0) : ROTATION_ORDER.indexOf(current);
     const next = ROTATION_ORDER[(index + step + ROTATION_ORDER.length) % ROTATION_ORDER.length];
-    update({ rotation: next });
+    update({ rotations: [next] });
   };
   const all = t('setterViewReceptionAll');
   const teamName = (side: TeamSide) => stats.teamStats[side].teamName || t(side === 'home' ? 'homeTeam' : 'awayTeam');
@@ -223,23 +225,21 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
             />
           </FilterGroup>
           {setNumbers.length > 1 ? (
-            <FilterGroup title={t('filterSet')} active={filters.setNumber !== 'all'}>
+            <FilterGroup title={t('filterSet')} active={filters.setNumbers.length > 0}>
               <ChipSelect
-                single
                 allLabel={all}
                 options={setNumbers.map((value) => ({ value, label: String(value) }))}
-                selected={filters.setNumber === 'all' ? [] : [filters.setNumber]}
-                onChange={(next) => update({ setNumber: next[0] ?? 'all' })}
+                selected={filters.setNumbers}
+                onChange={(next) => update({ setNumbers: next })}
               />
             </FilterGroup>
           ) : null}
-          <FilterGroup title={t('filterRotation')} active={filters.rotation !== 'all'}>
+          <FilterGroup title={t('filterRotation')} active={filters.rotations.length > 0}>
             <ChipSelect
-              single
               allLabel={all}
               options={ROTATION_ORDER.map((r) => ({ value: r, label: `P${r}` }))}
-              selected={filters.rotation === 'all' ? [] : [filters.rotation]}
-              onChange={(next) => update({ rotation: (next[0] ?? 'all') as RotationNumber | 'all' })}
+              selected={filters.rotations}
+              onChange={(next) => update({ rotations: next as RotationNumber[] })}
             />
           </FilterGroup>
           {attackerRoles.length > 0 ? (
@@ -303,7 +303,11 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
 
       <div className="zone-analysis__rotation-bar">
         <button type="button" className="btn-secondary" onClick={() => stepRotation(-1)}>{t('zoneAnalysisPrevRotation')}</button>
-        <strong>{filters.rotation === 'all' ? t('zoneAnalysisAllRotations') : `P${filters.rotation}`}</strong>
+        <strong>
+          {filters.rotations.length === 0
+            ? t('zoneAnalysisAllRotations')
+            : ROTATION_ORDER.filter((rotation) => filters.rotations.includes(rotation)).map((rotation) => `P${rotation}`).join(' · ')}
+        </strong>
         <button type="button" className="btn-secondary" onClick={() => stepRotation(1)}>{t('zoneAnalysisNextRotation')}</button>
         <span className="zone-analysis__total">{t('zoneAnalysisTotal', { count: String(result.total) })}</span>
       </div>

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
 import type { AdvancedFilters } from '../filters/advanced-filters';
+import { normalizeDashboardFilters } from '../dashboard/filters/dashboard-filters';
 import type { MatchTabellinoReport } from '@src/features/scouting/model/match-report';
 import { isTrendsSnapshot, type TrendsSnapshot, type TrendsViewSubTab } from '../trends/trends-data-source';
 import type { RadarAxisId } from '../radar/model/radar-metrics';
@@ -110,7 +111,9 @@ export function toWireSnapshot(snapshot: SharedStatsSnapshot): WireSnapshot {
   };
 }
 
-export function fromWireSnapshot(wire: WireSnapshot): SharedStatsSnapshot {
+export function fromWireSnapshot(received: WireSnapshot): SharedStatsSnapshot {
+  // A link made by an older version holds one set, phase, rotation or score situation: read as a list.
+  const wire: WireSnapshot = { ...received, filters: normalizeDashboardFilters(received.filters) };
   if (!wire.stats) return { ...wire, stats: undefined };
   const bySet = new Map<number, RallyStats[]>();
   for (const rally of wire.stats.rallyStats) {
@@ -136,7 +139,8 @@ export function isWireSnapshot(value: unknown): value is WireSnapshot {
     && playByPlay.sets.every((set) => set && Array.isArray(set.rows))
     && playByPlay.homeTeam && Array.isArray(playByPlay.homeTeam.players)
     && playByPlay.awayTeam && Array.isArray(playByPlay.awayTeam.players)
-    && (playByPlay.reference === 'home' || playByPlay.reference === 'away') && typeof playByPlay.setNumber === 'number',
+    && (playByPlay.reference === 'home' || playByPlay.reference === 'away') && typeof playByPlay.setNumber === 'number'
+    && (playByPlay.setNumbers === undefined || (Array.isArray(playByPlay.setNumbers) && playByPlay.setNumbers.every((value) => typeof value === 'number'))),
   );
   if (!validPlayByPlay) return false;
   if (lockedTeam !== undefined && lockedTeam !== 'home' && lockedTeam !== 'away') return false;

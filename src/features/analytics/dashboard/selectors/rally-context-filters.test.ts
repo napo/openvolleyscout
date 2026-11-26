@@ -34,25 +34,35 @@ function rally(partial: Partial<RallyStats> & { score?: [number, number]; rotati
 describe('rally context filters', () => {
   it('reads the score situation from the given team', () => {
     const r = rally({ score: [10, 8] });
-    expect(rallyMatchesContext(r, { scoreRange: 'leading' }, 'home')).toBe(true);
-    expect(rallyMatchesContext(r, { scoreRange: 'trailing' }, 'away')).toBe(true);
-    expect(rallyMatchesContext(r, { scoreRange: 'leading' }, 'away')).toBe(false);
-    expect(rallyMatchesContext(rally({ score: [7, 7] }), { scoreRange: 'tied' }, 'away')).toBe(true);
+    expect(rallyMatchesContext(r, { scoreRange: ['leading'] }, 'home')).toBe(true);
+    expect(rallyMatchesContext(r, { scoreRange: ['trailing'] }, 'away')).toBe(true);
+    expect(rallyMatchesContext(r, { scoreRange: ['leading'] }, 'away')).toBe(false);
+    expect(rallyMatchesContext(rally({ score: [7, 7] }), { scoreRange: ['tied'] }, 'away')).toBe(true);
   });
 
   it('counts a close finish from 20 points (12 in a deciding set) with a gap of 2 or less', () => {
-    expect(rallyMatchesContext(rally({ score: [22, 20] }), { scoreRange: 'clutch' }, 'home')).toBe(true);
-    expect(rallyMatchesContext(rally({ score: [20, 17] }), { scoreRange: 'clutch' }, 'home')).toBe(false);
-    expect(rallyMatchesContext(rally({ score: [19, 18] }), { scoreRange: 'clutch' }, 'home')).toBe(false);
-    expect(rallyMatchesContext(rally({ score: [12, 11], setTargetPoints: 15 }), { scoreRange: 'clutch' }, 'away')).toBe(true);
-    expect(rallyMatchesContext(rally({ score: [11, 10], setTargetPoints: 15 }), { scoreRange: 'clutch' }, 'away')).toBe(false);
+    expect(rallyMatchesContext(rally({ score: [22, 20] }), { scoreRange: ['clutch'] }, 'home')).toBe(true);
+    expect(rallyMatchesContext(rally({ score: [20, 17] }), { scoreRange: ['clutch'] }, 'home')).toBe(false);
+    expect(rallyMatchesContext(rally({ score: [19, 18] }), { scoreRange: ['clutch'] }, 'home')).toBe(false);
+    expect(rallyMatchesContext(rally({ score: [12, 11], setTargetPoints: 15 }), { scoreRange: ['clutch'] }, 'away')).toBe(true);
+    expect(rallyMatchesContext(rally({ score: [11, 10], setTargetPoints: 15 }), { scoreRange: ['clutch'] }, 'away')).toBe(false);
   });
 
   it('reads the rotation of the given team', () => {
     const r = rally({ rotations: { home: 2, away: 5 } });
-    expect(rallyMatchesContext(r, { rotation: 2 }, 'home')).toBe(true);
-    expect(rallyMatchesContext(r, { rotation: 2 }, 'away')).toBe(false);
-    expect(rallyMatchesContext(r, { rotation: 5 }, 'away')).toBe(true);
+    expect(rallyMatchesContext(r, { rotation: [2] }, 'home')).toBe(true);
+    expect(rallyMatchesContext(r, { rotation: [2] }, 'away')).toBe(false);
+    expect(rallyMatchesContext(r, { rotation: [5] }, 'away')).toBe(true);
+  });
+
+  it('several rotations or score situations keep the rallies in any of them', () => {
+    const r = rally({ rotations: { home: 2, away: 5 }, score: [10, 8] });
+    expect(rallyMatchesContext(r, { rotation: [1, 2] }, 'home')).toBe(true);
+    expect(rallyMatchesContext(r, { rotation: [1, 3] }, 'home')).toBe(false);
+    expect(rallyMatchesContext(r, { scoreRange: ['tied', 'leading'] }, 'home')).toBe(true);
+    expect(rallyMatchesContext(r, { scoreRange: ['tied', 'trailing'] }, 'home')).toBe(false);
+    // Both groups together: each must be satisfied.
+    expect(rallyMatchesContext(r, { rotation: [2], scoreRange: ['trailing'] }, 'home')).toBe(false);
   });
 
   it('keeps the rallies in which the player served, received or attacked', () => {
@@ -64,18 +74,18 @@ describe('rally context filters', () => {
 
   it('never matches an active filter without the rally context, and keeps everything without filters', () => {
     const bare = { ...rally({}), scoreBefore: undefined, rotations: undefined };
-    expect(rallyMatchesContext(bare, { rotation: 1 }, 'home')).toBe(false);
-    expect(rallyMatchesContext(bare, { scoreRange: 'tied' }, 'home')).toBe(false);
+    expect(rallyMatchesContext(bare, { rotation: [1] }, 'home')).toBe(false);
+    expect(rallyMatchesContext(bare, { scoreRange: ['tied'] }, 'home')).toBe(false);
     const rallies = [bare];
-    expect(filterRalliesForTeam(rallies, { rotation: 'all' }, 'home')).toBe(rallies);
+    expect(filterRalliesForTeam(rallies, { rotation: [] }, 'home')).toBe(rallies);
   });
 
   it('filters each touch from its own team', () => {
     const home = touch({ teamSide: 'home' });
     const away = touch({ teamSide: 'away' });
     const r = rally({ touches: [home, away], rotations: { home: 3, away: 1 } });
-    expect(filterTouchesByRallyContext([r], [home, away], { rotation: 3 })).toEqual([home]);
-    expect(filterTouchesByRallyContext([r], [home, away], { rotation: 1 })).toEqual([away]);
+    expect(filterTouchesByRallyContext([r], [home, away], { rotation: [3] })).toEqual([home]);
+    expect(filterTouchesByRallyContext([r], [home, away], { rotation: [1] })).toEqual([away]);
   });
 });
 
@@ -110,11 +120,11 @@ describe('rally context on a real match', () => {
 
   it('narrows the dashboard touches with the rotation filter', () => {
     const all = getFilteredTouches(stats, { ...createDefaultFilters(), team: 'home' });
-    const p1 = getFilteredTouches(stats, { ...createDefaultFilters(), team: 'home', rotation: 1 });
+    const p1 = getFilteredTouches(stats, { ...createDefaultFilters(), team: 'home', rotation: [1] });
     expect(p1.length).toBeGreaterThan(0);
     expect(p1.length).toBeLessThan(all.length);
     const byRotation = ([1, 2, 3, 4, 5, 6] as const)
-      .map((rotation) => getFilteredTouches(stats, { ...createDefaultFilters(), team: 'home', rotation }).length);
+      .map((rotation) => getFilteredTouches(stats, { ...createDefaultFilters(), team: 'home', rotation: [rotation] }).length);
     expect(byRotation.reduce((sum, n) => sum + n, 0)).toBe(all.length);
   });
 });

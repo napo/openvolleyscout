@@ -2,7 +2,7 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
-import type { DashboardFilters } from '../filters/dashboard-filters';
+import { matchesAny, type DashboardFilters, type ScoreSituation } from '../filters/dashboard-filters';
 import { getScoreSituationSettings, isLateInSet } from '../../score-situation/score-situation-settings';
 import { rallyBaseCodes } from './base-code';
 
@@ -20,7 +20,7 @@ import { rallyBaseCodes } from './base-code';
  */
 export type RallyContextFilters = Pick<DashboardFilters, 'rotation' | 'scoreRange' | 'server' | 'receiver' | 'attacker' | 'base'>;
 
-export type ScoreSituation = Exclude<RallyContextFilters['scoreRange'], 'all'>;
+export type { ScoreSituation } from '../filters/dashboard-filters';
 
 /**
  * Whether a score (before the rally, seen from one team) is in the given situation, with the
@@ -41,8 +41,8 @@ export function matchesScoreSituation(
 }
 
 export function hasRallyContextFilter(filters: Partial<RallyContextFilters>): boolean {
-  return (filters.rotation ?? 'all') !== 'all'
-    || (filters.scoreRange ?? 'all') !== 'all'
+  return (filters.rotation?.length ?? 0) > 0
+    || (filters.scoreRange?.length ?? 0) > 0
     || (filters.server ?? 'all') !== 'all'
     || (filters.receiver ?? 'all') !== 'all'
     || (filters.attacker ?? 'all') !== 'all'
@@ -59,15 +59,15 @@ export function rallyMatchesContext(
   filters: Partial<RallyContextFilters>,
   teamSide: TeamSide,
 ): boolean {
-  const rotation = filters.rotation ?? 'all';
-  if (rotation !== 'all' && rally.rotations?.[teamSide] !== rotation) return false;
+  // Several rotations or score situations: the rally passes when it is in any of them.
+  if (!matchesAny(filters.rotation, rally.rotations?.[teamSide])) return false;
 
-  const scoreRange = filters.scoreRange ?? 'all';
-  if (scoreRange !== 'all') {
+  const scoreRange = filters.scoreRange ?? [];
+  if (scoreRange.length > 0) {
     if (!rally.scoreBefore) return false;
     const own = rally.scoreBefore[teamSide];
     const opponent = rally.scoreBefore[teamSide === 'home' ? 'away' : 'home'];
-    if (!matchesScoreSituation(own, opponent, rally.setTargetPoints, scoreRange)) return false;
+    if (!scoreRange.some((situation) => matchesScoreSituation(own, opponent, rally.setTargetPoints, situation))) return false;
   }
 
   if ((filters.server ?? 'all') !== 'all' && !playerDid(rally, 'serve', filters.server!)) return false;

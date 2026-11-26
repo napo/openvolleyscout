@@ -107,7 +107,12 @@ describe('zone analysis', () => {
     expect(filterZoneAnalysisAttacks(all, base)).toHaveLength(3);
     expect(filterZoneAnalysisAttacks(all, { ...base, phase: 'reception' })).toHaveLength(2);
     expect(filterZoneAnalysisAttacks(all, { ...base, phase: 'transition' })).toHaveLength(1);
-    expect(filterZoneAnalysisAttacks(all, { ...base, rotation: 3 })).toHaveLength(2);
+    expect(filterZoneAnalysisAttacks(all, { ...base, rotations: [3] })).toHaveLength(2);
+    // Several rotations or sets: an attack in any of them is kept.
+    expect(filterZoneAnalysisAttacks(all, { ...base, rotations: [3, 1] })).toHaveLength(3);
+    expect(filterZoneAnalysisAttacks(all, { ...base, rotations: [5] })).toHaveLength(0);
+    expect(filterZoneAnalysisAttacks(all, { ...base, setNumbers: [1, 2] })).toHaveLength(3);
+    expect(filterZoneAnalysisAttacks(all, { ...base, setNumbers: [2] })).toHaveLength(0);
     expect(filterZoneAnalysisAttacks(all, { ...base, team: 'away' })).toHaveLength(1);
   });
 

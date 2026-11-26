@@ -23,7 +23,7 @@ export function TeamRadarWidget({ stats, filters }: TeamRadarWidgetProps) {
   const [axisIds, setAxisIds] = useState<RadarAxisId[]>([...DEFAULT_RADAR_AXIS_IDS]);
   const [scaleMode, setScaleMode] = useState<RadarScaleMode>('fixed');
 
-  const setFilter = filters?.set ?? 'all';
+  const setFilter = useMemo(() => filters?.set ?? [], [filters?.set]);
 
   const rallies = useMemo(
     () => getFilteredRalliesForSituation(stats, { set: setFilter }),

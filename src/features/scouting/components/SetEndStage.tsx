@@ -143,7 +143,7 @@ export function SetEndStage({
 
           {statsView === 'play-by-play' ? (
             <div className="stats-view-tabs__panel" role="tabpanel">
-              <PlayByPlayPanel homeTeam={homeTeam} awayTeam={awayTeam} stats={matchStats} eventLog={eventLog} metadata={metadata} initialSet={setSummary.setNumber} />
+              <PlayByPlayPanel homeTeam={homeTeam} awayTeam={awayTeam} stats={matchStats} eventLog={eventLog} metadata={metadata} initialSets={[setSummary.setNumber]} />
             </div>
           ) : statsView === 'report' ? (
             <div className="stats-view-tabs__panel" role="tabpanel">

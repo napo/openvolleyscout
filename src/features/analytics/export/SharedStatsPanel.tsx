@@ -6,7 +6,7 @@ import { SideOutStudyPanel } from '../sideout/SideOutStudyPanel';
 import { CrossRotationAnalysisPanel } from '../cross-rotation/CrossRotationAnalysisPanel';
 import { ZoneAnalysisPanel } from '@src/features/analytics/zone-analysis/ZoneAnalysisPanel';
 import { DEFAULT_DATAVOLLEY_CODE_TABLES } from '@src/domain/match/code-tables';
-import { PlayByPlayPanel } from '../play-by-play/PlayByPlayPanel';
+import { PlayByPlayPanel, sharedPlayByPlaySets } from '../play-by-play/PlayByPlayPanel';
 import { MatchReportView } from '@src/features/scouting/components/MatchReportTable';
 import '@src/features/scouting/scouting-screen.css';
 import { TrendsPanel } from '../trends/TrendsPanel';
@@ -91,7 +91,7 @@ export function SharedStatsPanel({ tabId, snapshot }: { tabId: SharedStatsTabId;
           metadata={pbp.metadata}
           precomputedSets={pbp.sets}
           initialReference={pbp.reference}
-          initialSet={pbp.setNumber}
+          initialSets={sharedPlayByPlaySets(pbp)}
         />
       </div>
     ) : null;

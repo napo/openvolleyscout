@@ -123,9 +123,9 @@ export function EfficiencyWidget({
   const teamsToShow = getTeamsToShow(stats, filters);
   const selectedPlayer = filters.player !== 'all' ? getSelectedPlayer(stats, filters.player) : null;
   const needsFiltered =
-    filters.set !== 'all'
+    filters.set.length > 0
     || filters.source !== 'all'
-    || filters.rallyPhase !== 'all'
+    || filters.rallyPhase.length > 0
     || filters.player !== 'all'
     || filters.role !== 'all';
 

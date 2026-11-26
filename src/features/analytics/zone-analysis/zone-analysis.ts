@@ -62,8 +62,9 @@ export interface ZoneAnalysisFilters {
   mode: ZoneAnalysisMode;
   grid: ZoneAnalysisGrid;
   phase: ZoneAnalysisPhase;
-  setNumber: 'all' | number;
-  rotation: 'all' | RotationNumber;
+  /** Sets and rotations studied; an empty list means all of them. */
+  setNumbers: number[];
+  rotations: RotationNumber[];
   playerId: 'all' | string;
   /** Attacker roles kept (empty = every role). */
   roles: RoleGroup[];
@@ -71,7 +72,7 @@ export interface ZoneAnalysisFilters {
 }
 
 export function createDefaultZoneAnalysisFilters(team: TeamSide = 'home'): ZoneAnalysisFilters {
-  return { team, mode: 'classic', grid: 6, phase: 'all', setNumber: 'all', rotation: 'all', playerId: 'all', roles: [], evaluations: [] };
+  return { team, mode: 'classic', grid: 6, phase: 'all', setNumbers: [], rotations: [], playerId: 'all', roles: [], evaluations: [] };
 }
 
 /** One attack with everything the filters and the zones need. */
@@ -180,8 +181,8 @@ export function filterZoneAnalysisAttacks(
     }
     if (attack.teamSide !== filters.team) return false;
     if (filters.phase !== 'all' && attack.phase !== filters.phase) return false;
-    if (filters.setNumber !== 'all' && attack.setNumber !== filters.setNumber) return false;
-    if (filters.rotation !== 'all' && attack.rotation !== filters.rotation) return false;
+    if (filters.setNumbers.length > 0 && !filters.setNumbers.includes(attack.setNumber)) return false;
+    if (filters.rotations.length > 0 && (attack.rotation === null || !filters.rotations.includes(attack.rotation))) return false;
     if (filters.playerId !== 'all' && attack.touch.playerId !== filters.playerId) return false;
     if (filters.evaluations.length > 0
       && (!attack.touch.evaluation || !filters.evaluations.includes(attack.touch.evaluation))) return false;

@@ -21,7 +21,15 @@ export interface PlayByPlayShare {
   awayTeam: Team;
   metadata?: MatchMetadata | null;
   reference: TeamSide;
+  /** The one set shown, or 0: what older links carry and older viewers read. */
   setNumber: number;
+  /** The sets shown; empty = every set. Missing in links made before several sets could be chosen. */
+  setNumbers?: number[];
+}
+
+/** The sets a shared play by play shows, also from a link that carries one set only. */
+export function sharedPlayByPlaySets(share: Pick<PlayByPlayShare, 'setNumber' | 'setNumbers'>): number[] {
+  return share.setNumbers ?? (share.setNumber ? [share.setNumber] : []);
 }
 
 /** The dedicated play-by-play PDF of what is on screen: the one PDF of this tab. */
@@ -31,12 +39,12 @@ export async function exportPlayByPlayShare(share: PlayByPlayShare, t: Parameter
     sets: share.sets,
     teams: { home: share.homeTeam, away: share.awayTeam },
     metadata: share.metadata,
-    options: { reference: share.reference, setNumber: share.setNumber },
+    options: { reference: share.reference, setNumbers: sharedPlayByPlaySets(share) },
   }, t);
 }
 
-export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata, initialSet, initialReference = 'home', precomputedSets, shareRef }: {
-  homeTeam: Team; awayTeam: Team; stats?: MatchStats; eventLog?: readonly MatchEvent[]; metadata?: MatchMetadata | null; initialSet?: number; initialReference?: TeamSide;
+export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata, initialSets, initialReference = 'home', precomputedSets, shareRef }: {
+  homeTeam: Team; awayTeam: Team; stats?: MatchStats; eventLog?: readonly MatchEvent[]; metadata?: MatchMetadata | null; initialSets?: readonly number[]; initialReference?: TeamSide;
   /** Shared viewer: the timeline already built by the sender. */
   precomputedSets?: PlayByPlaySet[];
   /** Filled with what is on screen, for the share link. */
@@ -44,19 +52,19 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
 }) {
   const { t } = useTranslation();
   // The choices are still there when the user comes back from another tab; a shared link opens as sent.
-  const scope = precomputedSets ? `shared|${initialReference}|${initialSet ?? 0}` : `${metadata?.id ?? ''}|${stats ? statsScopeKey(stats) : ''}`;
-  const [choice, setChoice, resetChoice] = useRememberedState('play-by-play', scope, () => ({ reference: initialReference, setNumber: initialSet ?? 0 }));
-  const { reference, setNumber } = choice;
+  const scope = precomputedSets ? `shared|${initialReference}|${(initialSets ?? []).join(',')}` : `${metadata?.id ?? ''}|${stats ? statsScopeKey(stats) : ''}`;
+  const [choice, setChoice, resetChoice] = useRememberedState('play-by-play', scope, () => ({ reference: initialReference, setNumbers: [...(initialSets ?? [])] }));
+  const { reference, setNumbers } = choice;
   const sets = useMemo(() => {
     if (precomputedSets) return precomputedSets;
     if (!stats || !eventLog) return [];
     const roles = new Map([...homeTeam.players, ...awayTeam.players].map((player) => [player.id, player.role]));
     return buildPlayByPlay(stats, eventLog, (playerId) => roles.get(playerId));
   }, [precomputedSets, stats, eventLog, homeTeam, awayTeam]);
-  if (shareRef) shareRef.current = { sets, homeTeam, awayTeam, metadata, reference, setNumber };
+  if (shareRef) shareRef.current = { sets, homeTeam, awayTeam, metadata, reference, setNumber: setNumbers.length === 1 ? setNumbers[0] : 0, setNumbers };
   const teams = { home: homeTeam, away: awayTeam };
-  const options = { reference, setNumber };
-  const visibleSets = sets.filter((set) => !setNumber || set.setNumber === setNumber);
+  const options = { reference, setNumbers };
+  const visibleSets = sets.filter((set) => setNumbers.length === 0 || setNumbers.includes(set.setNumber));
   return <section className="play-by-play" aria-label={t('pbpTitle')}>
     <h3>{t('pbpTitle')}</h3><p className="play-by-play__intro">{t('pbpDescription')}</p>
     <FilterGroups>
@@ -69,19 +77,18 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
         />
       </FilterGroup>
       {sets.length > 1 ? (
-        <FilterGroup title={t('pbpSets')} active={setNumber !== 0}>
+        <FilterGroup title={t('pbpSets')} active={setNumbers.length > 0}>
           <ChipSelect
-            single
             allLabel={t('allSets')}
             options={sets.map((set) => ({ value: set.setNumber, label: String(set.setNumber) }))}
-            selected={setNumber === 0 ? [] : [setNumber]}
-            onChange={(next) => setChoice({ ...choice, setNumber: next[0] ?? 0 })}
+            selected={setNumbers}
+            onChange={(next) => setChoice({ ...choice, setNumbers: next })}
           />
         </FilterGroup>
       ) : null}
     </FilterGroups>
     <div className="play-by-play__controls">
-      <ResetFiltersButton count={setNumber !== 0 ? 1 : 0} onReset={resetChoice} />
+      <ResetFiltersButton count={setNumbers.length > 0 ? 1 : 0} onReset={resetChoice} />
     </div>
     <p className="play-by-play__legend">P: {t('pbpRotation')}. {t('pbpLegend')}</p>
     {!visibleSets.length || visibleSets.every((set) => !set.rows.length) ? <EmptyState>{t('pbpEmpty')}</EmptyState> : visibleSets.map((set) => {

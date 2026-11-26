@@ -28,8 +28,8 @@ export function getFilteredRallies(
 ): RallyStats[] {
   let rallies = stats.rallyStats;
 
-  if (filters.set !== 'all') {
-    rallies = rallies.filter((r) => r.setNumber === filters.set);
+  if (filters.set.length > 0) {
+    rallies = rallies.filter((r) => filters.set.includes(r.setNumber));
   }
 
   return rallies;
@@ -209,9 +209,9 @@ export function getFilteredTeamStats(
 ): FilteredTeamStats {
   const hasEvaluationFilter = filters.evaluations.length < 6; // 6 is the total number of evaluations
   const needsReaggregation =
-    filters.set !== 'all'
+    filters.set.length > 0
     || filters.source !== 'all'
-    || filters.rallyPhase !== 'all'
+    || filters.rallyPhase.length > 0
     || filters.player !== 'all'
     || filters.role !== 'all'
     || hasEvaluationFilter

@@ -129,3 +129,28 @@ describe('shared link efficiency rules', () => {
     expect(getActiveIndicators().attackEfficiency(stats)).toBeCloseTo((3 - 1 - 1) / 10, 10);
   });
 });
+
+describe('shared links made before filters took several values', () => {
+  it('open with the single set, phase, rotation and score situation read as lists', () => {
+    const legacy = { ...createDefaultAdvancedFilters(), set: 2, rallyPhase: 'break_point', rotation: 3, scoreRange: 'clutch' } as unknown as ReturnType<typeof createDefaultAdvancedFilters>;
+    const opened = decodeSharedStats(encodeSharedStats({
+      version: 3,
+      tabId: 'report',
+      title: 'Report',
+      matchLabel: 'A - B',
+      expiresAt: Date.UTC(2099, 0, 1),
+      snapshot: { report: { homeTabellino: {}, awayTabellino: {}, setSummaries: [], bottomSummaryBlocks: [] } as never, filters: legacy, selectedPlayerIds: [] },
+    }));
+    expect(opened?.version === 3 && opened.snapshot.filters).toMatchObject({ set: [2], rallyPhase: ['break_point'], rotation: [3], scoreRange: ['clutch'] });
+    const all = { ...createDefaultAdvancedFilters(), set: 'all', rallyPhase: 'all', rotation: 'all', scoreRange: 'all' } as unknown as ReturnType<typeof createDefaultAdvancedFilters>;
+    const openedAll = decodeSharedStats(encodeSharedStats({
+      version: 3,
+      tabId: 'report',
+      title: 'Report',
+      matchLabel: 'A - B',
+      expiresAt: Date.UTC(2099, 0, 1),
+      snapshot: { report: { homeTabellino: {}, awayTabellino: {}, setSummaries: [], bottomSummaryBlocks: [] } as never, filters: all, selectedPlayerIds: [] },
+    }));
+    expect(openedAll?.version === 3 && openedAll.snapshot.filters).toMatchObject({ set: [], rallyPhase: [], rotation: [], scoreRange: [] });
+  });
+});

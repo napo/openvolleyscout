@@ -51,7 +51,7 @@ describe('Filter Store', () => {
       updateFilter('team', 'home');
       expect(useFilterStore.getState().filterCount).toBe(1);
 
-      updateFilter('set', 1);
+      updateFilter('set', [1]);
       expect(useFilterStore.getState().filterCount).toBe(2);
 
       updateFilter('player', '5');
@@ -65,13 +65,13 @@ describe('Filter Store', () => {
 
       batchUpdateFilters({
         team: 'home',
-        set: 1,
+        set: [1],
         tacticalSituation: 'break_point',
       });
 
       const state = useFilterStore.getState();
       expect(state.filters.team).toBe('home');
-      expect(state.filters.set).toBe(1);
+      expect(state.filters.set).toEqual([1]);
       expect(state.filters.tacticalSituation).toBe('break_point');
       expect(state.filterCount).toBe(3);
     });
@@ -82,12 +82,12 @@ describe('Filter Store', () => {
       updateFilter('player', '10');
       expect(useFilterStore.getState().filterCount).toBe(1);
 
-      batchUpdateFilters({ team: 'away', set: 2 });
+      batchUpdateFilters({ team: 'away', set: [2] });
 
       const state = useFilterStore.getState();
       expect(state.filters.player).toBe('10'); // Should still be set
       expect(state.filters.team).toBe('away');
-      expect(state.filters.set).toBe(2);
+      expect(state.filters.set).toEqual([2]);
       expect(state.filterCount).toBe(3);
     });
   });
@@ -124,7 +124,7 @@ describe('Filter Store', () => {
       const { updateFilter, resetFilters } = useFilterStore.getState();
 
       updateFilter('team', 'home');
-      updateFilter('set', 1);
+      updateFilter('set', [1]);
       updateFilter('tacticalSituation', 'side_out');
 
       expect(useFilterStore.getState().filterCount).toBe(3);
@@ -133,7 +133,7 @@ describe('Filter Store', () => {
 
       const state = useFilterStore.getState();
       expect(state.filters.team).toBe('all');
-      expect(state.filters.set).toBe('all');
+      expect(state.filters.set).toEqual([]);
       expect(state.filters.tacticalSituation).toBe('none');
       expect(state.filterCount).toBe(0);
       expect(state.isDefault()).toBe(true);
@@ -145,11 +145,11 @@ describe('Filter Store', () => {
       const newFilters: AdvancedFilters = {
         ...createDefaultAdvancedFilters(),
         team: 'away',
-        set: 2,
+        set: [2],
         player: 'all',
         role: 'all',
         source: 'explicit',
-        rallyPhase: 'all',
+        rallyPhase: [],
         tacticalSituation: 'counterattack',
         scoreState: 'leading',
         rotationIndex: 3,
