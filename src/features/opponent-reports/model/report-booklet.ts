@@ -163,7 +163,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
 
   const keys = catalog.get(PIECE_KEYS_MAIN);
   const legacyItems = report.pieceEdits?.[PIECE_KEYS_MAIN]?.items;
-  const printable = legacyItems ? legacyItems.slice(0, 5).map((body, index) => ({ body, index })) : view.keys.slice(0, 5).flatMap((key, index) => index < 3 || key.includeInPrint !== false ? [{ body: key.text + (key.sample !== undefined ? ` (${t('opponentReportKeySample', { n: key.sample })})` : ''), index }] : []);
+  const printable = legacyItems ? legacyItems.slice(0, 5).map((body, index) => ({ body, index })) : view.keys.slice(0, 5).flatMap((key, index) => index < 3 || key.includeInPrint !== false ? [{ body: key.text + (key.sample !== undefined ? ` (${key.sampleText ?? t('opponentReportKeySample', { n: key.sample })})` : ''), index }] : []);
   // Reaction after a conceded break: a short block under the priorities in every layout.
   const breakReaction = catalog.get(PIECE_OVERVIEW_BREAK_REACTION);
   const breakTable = breakReaction?.table ?? view.overview.breakReaction;
@@ -566,17 +566,19 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   let qrPage: Page | undefined, qrY = TOP;
   const qrExpiry = videoPieces.length ? new Date(Math.min(...videoPieces.map((piece) => piece.videoLink!.expiresAt))).toLocaleDateString() : '';
   const qrHelp = `${t('bookletVideoHelp')} ${t('opponentReportVideoLink', { date: qrExpiry })}`;
+  // The grid position follows the printed cells only: a chart whose link is too long for a QR code
+  // still gets its cell (caption and a note), so rows never overlap and cells are never left empty.
   videoPieces.forEach((piece, index) => {
     const link = piece.videoLink!;
     const qr = buildQrSvg(link.url);
-    if (!qr) return;
-    if (!qrPage || index % qrColumns === 0 && qrY + qrRowHeight > BOTTOM) { qrPage = add(t('bookletVideoTitle')); const help = lines(M, TOP + 6, qrHelp, WIDTH, 6.5); qrPage.elements.push(...help); qrY = TOP + 8 + help.length * 9; }
-    const x = M + (index % qrColumns) * qrCell;
-    qrPage.elements.push(fitBookletCourt(qr, x, qrY, qrSize, qrSize, `qr${index}`));
-    const caption = [piece.title, t(videoLinkWatchKey(link)), t('tacticalVideoCoverage', { available: link.actions ?? link.clips, total: link.totalActions ?? link.clips })];
+    const column = index % qrColumns;
+    if (!qrPage || column === 0 && qrY + qrRowHeight > BOTTOM) { qrPage = add(t('bookletVideoTitle')); const help = lines(M, TOP + 6, qrHelp, WIDTH, 6.5); qrPage.elements.push(...help); qrY = TOP + 8 + help.length * 9; }
+    const x = M + column * qrCell;
+    if (qr) qrPage.elements.push(fitBookletCourt(qr, x, qrY, qrSize, qrSize, `qr${index}`));
+    const caption = [piece.title, qr ? t(videoLinkWatchKey(link)) : t('opponentReportVideoQrUnavailable'), t('tacticalVideoCoverage', { available: link.actions ?? link.clips, total: link.totalActions ?? link.clips })];
     caption.flatMap((line) => wrapBookletText(line, qrCell - 8, 6.5)).slice(0, 4)
-      .forEach((line, j) => qrPage!.elements.push(text(x, qrY + qrSize + 9 + j * 8.5, line, 6.5, j === 0)));
-    if (index % qrColumns === qrColumns - 1) qrY += qrRowHeight;
+      .forEach((line, j) => qrPage!.elements.push(text(x, qrY + (qr ? qrSize : 0) + 9 + j * 8.5, line, 6.5, j === 0)));
+    if (column === qrColumns - 1) qrY += qrRowHeight;
   });
   if (annotations.length) prose(t('bookletNotes'), annotations);
   const order = reportComponentOrder(report);

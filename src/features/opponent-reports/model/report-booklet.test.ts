@@ -52,6 +52,22 @@ describe('booklet planning and printing',()=>{
     expect(videoPage).toContain(t('tacticalWatchSet'));
     expect(videoPage.match(/shape-rendering="crispEdges"/g)).toHaveLength(2);
   });
+  it('keeps the video grid aligned when a link is too long for a QR code',()=>{
+    const {report,view}=fixture();
+    const link=(url:string)=>({url,expiresAt:new Date(2026,10,20).getTime(),clips:3,actions:3,totalActions:4,skill:'attack' as const});
+    const tooLong=`https://example.org/ovs/#/player/${'x'.repeat(3100)}`;
+    // A4 has four columns: the too-long link sits in the last column of the first row.
+    view.attackers=view.attackers.slice(0,6);
+    view.attackers.forEach((a,i)=>{a.videoLink=link(i===3?tooLong:`https://example.org/ovs/#/player/${i}`);});
+    const pages=buildReportBooklet(report,view,t,'',{a4:true}).pages;
+    const videoPage=pages.find(page=>page.includes(`>${t('bookletVideoTitle')}<`))!;
+    expect(videoPage.match(/shape-rendering="crispEdges"/g)).toHaveLength(5);
+    // The cell of the link without a code says so, and the next row starts below the first one.
+    expect(videoPage).toContain(t('opponentReportVideoQrUnavailable').slice(0,20));
+    const spots=[...videoPage.matchAll(/<g transform="translate\(([\d.]+) ([\d.]+)\) scale\([\d.]+\)"><svg[^>]*shape-rendering="crispEdges"/g)].map(m=>`${m[1]},${m[2]}`);
+    expect(spots).toHaveLength(5);
+    expect(new Set(spots).size).toBe(5); // No code drawn on top of another one.
+  });
   it('keeps both bands and all original courts, and ranks setters by actual usage',()=>{
     const {report,view,player}=fixture();
     const secondary={...view.setter.groups[0],player:player('5'),attempts:20};
