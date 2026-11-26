@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { createDefaultAdvancedFilters } from '../filters/advanced-filters';
+import {
+  getActiveIndicators,
+  isEfficiencyCustomized,
+  reloadIndicatorSettings,
+  resetEfficiencyDefinitions,
+  setEfficiencyDefinition,
+  setEfficiencyOverride,
+} from '@src/features/scouting/model/indicator-settings';
 import {
   buildSharedStatsUrl,
   decodeSharedStats,
@@ -83,5 +92,40 @@ describe('stats-share-link', () => {
       blocks: [{ kind: 'image' as const, dataUrl: 'javascript:alert(1)' }],
     });
     expect(decodeSharedStats(badImg)).toBeNull();
+  });
+});
+
+describe('shared link efficiency rules', () => {
+  afterEach(() => { resetEfficiencyDefinitions(); reloadIndicatorSettings(); });
+
+  const share = () => decodeSharedStats(encodeSharedStats({
+    version: 3,
+    tabId: 'report',
+    title: 'Report',
+    matchLabel: 'A - B',
+    expiresAt: Date.UTC(2099, 0, 1),
+    snapshot: {
+      report: { homeTabellino: {}, awayTabellino: {}, setSummaries: [], bottomSummaryBlocks: [] } as never,
+      filters: createDefaultAdvancedFilters(),
+      selectedPlayerIds: [],
+    },
+  }));
+
+  it('carries the rules the sender changed, and nothing when none were changed', () => {
+    const plain = share();
+    expect(plain?.version === 3 && plain.snapshot.efficiencyRules).toEqual({});
+    setEfficiencyDefinition('attack', { positive: ['#', '+'], negative: ['='] });
+    const custom = share();
+    expect(custom?.version === 3 && custom.snapshot.efficiencyRules).toEqual({ attack: { positive: ['#', '+'], negative: ['='] } });
+  });
+
+  it('are applied while the link is open without touching the viewer own saved rules', () => {
+    const stats = { total: 10, hash: 3, plus: 2, exclamation: 0, minus: 0, slash: 1, equal: 1, positive: 0, perfect: 3, errors: 1, points: 3, neutral: 0 };
+    expect(getActiveIndicators().attackEfficiency(stats)).toBeCloseTo((3 - 1 - 1) / 10, 10);
+    setEfficiencyOverride({ attack: { positive: ['#', '+'], negative: ['='] } });
+    expect(getActiveIndicators().attackEfficiency(stats)).toBeCloseTo((5 - 1) / 10, 10);
+    expect(isEfficiencyCustomized()).toBe(false);
+    setEfficiencyOverride(null);
+    expect(getActiveIndicators().attackEfficiency(stats)).toBeCloseTo((3 - 1 - 1) / 10, 10);
   });
 });

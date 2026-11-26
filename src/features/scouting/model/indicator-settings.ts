@@ -28,6 +28,8 @@ const STORAGE_KEY = 'openvolleyscout.efficiencyDefinitions';
 type SavedDefinitions = Partial<Record<EditableEfficiencySkill, EfficiencyDefinition>>;
 
 let saved: SavedDefinitions | null = null;
+/** Rules of a shared link in force while it is on screen: never saved, the viewer's own choice stays. */
+let override: SavedDefinitions | null = null;
 let cachedConfig: IndicatorConfig | null = null;
 let settingsVersion = 0;
 const listeners = new Set<() => void>();
@@ -85,7 +87,7 @@ export function getActiveIndicatorConfig(): IndicatorConfig {
   if (cachedConfig) return cachedConfig;
   cachedConfig = {
     ...DATAVOLLEY_OV1_INDICATORS,
-    efficiency: { ...DATAVOLLEY_OV1_INDICATORS.efficiency, ...readSaved() },
+    efficiency: { ...DATAVOLLEY_OV1_INDICATORS.efficiency, ...(override ?? readSaved()) },
   };
   return cachedConfig;
 }
@@ -114,6 +116,34 @@ export function setEfficiencyDefinition(skill: EditableEfficiencySkill, definiti
   return true;
 }
 
+/** The rules the user changed from the defaults (what a shared link must carry). */
+export function getCustomEfficiencyRules(): SavedDefinitions {
+  return { ...readSaved() };
+}
+
+/** Reads rules from a shared link, dropping anything that is not a usable definition. */
+export function sanitizeEfficiencyRules(value: unknown): SavedDefinitions | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const rules: SavedDefinitions = {};
+  for (const skill of EDITABLE_EFFICIENCY_SKILLS) {
+    const definition = sanitizeEfficiencyDefinition((value as Record<string, unknown>)[skill]);
+    if (definition) rules[skill] = definition;
+  }
+  return rules;
+}
+
+/**
+ * Applies the rules of a shared link on top of the defaults while the link is open, without saving
+ * them. `null` goes back to the viewer's own rules. `silent` skips the notification, for use before
+ * the first render.
+ */
+export function setEfficiencyOverride(rules: SavedDefinitions | null, options: { silent?: boolean } = {}): void {
+  override = rules;
+  cachedConfig = null;
+  settingsVersion += 1;
+  if (!options.silent) listeners.forEach((listener) => listener());
+}
+
 export function resetEfficiencyDefinitions(): void {
   persist({});
 }
@@ -135,6 +165,7 @@ export function getIndicatorSettingsVersion(): number {
 /** Forgets what was read from storage (tests, and after the storage was changed from outside). */
 export function reloadIndicatorSettings(): void {
   saved = null;
+  override = null;
   cachedConfig = null;
   settingsVersion += 1;
   listeners.forEach((listener) => listener());

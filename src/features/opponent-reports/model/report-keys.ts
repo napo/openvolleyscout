@@ -106,7 +106,8 @@ export function buildKeySuggestions(
     const eff=all.efficiency ?? 0;
     if(share>=0.15 && eff>0) add('mainAttacker',row.player.key,{player:playerLabel(row.player),share:percent(share),rate:percent(all.kill.rate),eff:percent(eff),n:all.attacks},all.attacks,share,eff);
     const formed=all.blockers.filter(b=>b.blockers>=2), other=all.blockers.filter(b=>b.blockers<2);
-    const aggregate=(rows:typeof formed)=>rows.reduce((a,b)=>({n:a.n+b.attacks,net:a.net+b.kill.count-b.errors.count}),{n:0,net:0});
+    // Efficiency is linear in the counts, so efficiency x attacks adds up across the blocker rows.
+    const aggregate=(rows:typeof formed)=>rows.reduce((a,b)=>({n:a.n+b.attacks,net:a.net+(b.efficiency??0)*b.attacks}),{n:0,net:0});
     const f=aggregate(formed),o=aggregate(other);
     if(f.n>=min&&o.n>=min){
       const gap=o.net/o.n-f.net/f.n;
@@ -118,7 +119,7 @@ export function buildKeySuggestions(
     }
   }
   if (!attacking) for(const row of metrics.attackers){
-    const share=row.attacks/Math.max(1,totalAttacks),eff=(row.kill.count-row.errors.count)/Math.max(1,row.attacks);
+    const share=row.attacks/Math.max(1,totalAttacks),eff=row.efficiency??0;
     if(share>=0.15&&eff>0) add('mainAttacker',row.player.key,{player:playerLabel(row.player),share:percent(share),rate:percent(row.kill.rate),eff:percent(eff),n:row.attacks},row.attacks,share,eff);
   }
   const setterTotal=attacking?.setters.reduce((a,s)=>a+s.rotations.reduce((b,r)=>b+r.positive.attempts+r.negative.attempts,0),0)??0;

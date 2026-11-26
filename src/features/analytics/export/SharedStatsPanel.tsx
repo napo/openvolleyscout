@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { TeamPerformanceDashboard } from '../dashboard/TeamPerformanceDashboard';
 import { PlayerPerformanceDashboard } from '../dashboard/PlayerPerformanceDashboard';
 import { SideOutStudyPanel } from '../sideout/SideOutStudyPanel';
@@ -13,6 +13,7 @@ import { TrendsPanel } from '../trends/TrendsPanel';
 import { createSnapshotTrendsSource, TrendsSourceContext, useTrendsViewStore } from '../trends/trends-data-source';
 import { useFilterStore } from '../stores/filter-store';
 import { getAdvancedFilterCount } from '../filters/advanced-filters';
+import { sanitizeEfficiencyRules, setEfficiencyOverride } from '@src/features/scouting/model/indicator-settings';
 import type { SharedStatsSnapshot } from './shared-stats-snapshot';
 import type { SharedStatsTabId } from './stats-share-link';
 
@@ -34,6 +35,21 @@ export const SNAPSHOT_TABS: readonly SharedStatsTabId[] = [
  * filter that is still meaningful keeps working.
  */
 export function SharedStatsPanel({ tabId, snapshot }: { tabId: SharedStatsTabId; snapshot: SharedStatsSnapshot }) {
+  // The efficiencies follow the rules of the sender while the link is open, never the viewer's own
+  // saved ones, and they are not saved. Older links carry none: the viewer's rules apply.
+  const senderRules = useMemo(
+    () => (snapshot.efficiencyRules ? sanitizeEfficiencyRules(snapshot.efficiencyRules) : null),
+    [snapshot.efficiencyRules],
+  );
+  useState(() => {
+    if (senderRules) setEfficiencyOverride(senderRules, { silent: true });
+    return null;
+  });
+  useEffect(() => {
+    if (!senderRules) return undefined;
+    setEfficiencyOverride(senderRules);
+    return () => setEfficiencyOverride(null);
+  }, [senderRules]);
   useState(() => {
     useFilterStore.setState({
       filters: snapshot.filters,

@@ -15,6 +15,7 @@
 import type { SkillEvaluation, TeamSide } from '../../../domain/common/enums';
 import type { BallTouch } from '../../../domain/touch/types';
 import { hasPlaceholderZones } from '../../../domain/touch/types';
+import { getActiveIndicators } from '../../scouting/model/indicator-settings';
 import type { DataVolleyCodeTables } from '../../../domain/match/code-tables';
 import { findAttackCombination } from '../../../domain/match/code-tables';
 import type { MatchStats, RallyStats, RotationNumber } from '../../scouting/model/match-stats';
@@ -194,6 +195,22 @@ function computeValues(attacks: readonly ZoneAnalysisAttack[], grandTotal: numbe
   const kills = count('#');
   const errors = count('=');
   const blocked = count('/');
+  // The efficiency follows the winning and losing effects chosen in Settings > Analysis
+  // (by default kills minus errors and blocked attacks, over the attacks).
+  const efficiency = getActiveIndicators().attackEfficiency({
+    total,
+    positive: 0,
+    perfect: kills,
+    errors,
+    points: kills,
+    neutral: attacks.filter((a) => !a.touch.evaluation).length,
+    slash: blocked,
+    exclamation: count('!'),
+    minus: count('-'),
+    plus: count('+'),
+    hash: kills,
+    equal: errors,
+  });
   return {
     total,
     totalPct: grandTotal === 0 ? null : total / grandTotal,
@@ -201,7 +218,7 @@ function computeValues(attacks: readonly ZoneAnalysisAttack[], grandTotal: numbe
     killPct: total === 0 ? null : kills / total,
     errors,
     blocked,
-    efficiency: total === 0 ? null : (kills - errors - blocked) / total,
+    efficiency,
     pointsWon: attacks.filter((a) => a.rallyWon === true).length,
     pointsLost: attacks.filter((a) => a.rallyWon === false).length,
   };

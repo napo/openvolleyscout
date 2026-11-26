@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { reloadIndicatorSettings, resetEfficiencyDefinitions, setEfficiencyDefinition } from '../../scouting/model/indicator-settings';
 import type { SkillEvaluation, SkillType, TeamSide } from '../../../domain/common/enums';
 import type { BallTouch } from '../../../domain/touch/types';
 import type { RallyStats } from '../../scouting/model/match-stats';
@@ -118,5 +119,24 @@ describe('zone analysis', () => {
     ], tables);
     const result = computeZoneAnalysis(attacks, 'classic');
     expect(zoneAnalysisExtremes(result, 'total')).toEqual({ low: '2', high: '4' });
+  });
+});
+
+describe('zone analysis efficiency follows Settings > Analysis', () => {
+  afterEach(() => { resetEfficiencyDefinitions(); reloadIndicatorSettings(); });
+
+  const efficiencyOfZone4 = () => {
+    const evaluations: SkillEvaluation[] = ['#', '+', '=', '/', '!'];
+    const attacks = extractZoneAnalysisAttacks(evaluations.map((evaluation) => sideOut({ startZoneCode: '4', evaluation })), tables);
+    return computeZoneAnalysis(attacks, 'classic').boxes['4'].values.efficiency;
+  };
+
+  it('is kills minus errors and blocked attacks over the attacks by default', () => {
+    expect(efficiencyOfZone4()).toBeCloseTo((1 - 1 - 1) / 5, 10);
+  });
+
+  it('uses the effects chosen by the user', () => {
+    setEfficiencyDefinition('attack', { positive: ['#', '+'], negative: ['='] });
+    expect(efficiencyOfZone4()).toBeCloseTo((2 - 1) / 5, 10);
   });
 });

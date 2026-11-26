@@ -5,6 +5,12 @@ import type { MatchTabellinoReport } from '@src/features/scouting/model/match-re
 import { isTrendsSnapshot, type TrendsSnapshot, type TrendsViewSubTab } from '../trends/trends-data-source';
 import type { RadarAxisId } from '../radar/model/radar-metrics';
 import type { PlayByPlayShare } from '../play-by-play/PlayByPlayPanel';
+import type { EfficiencyDefinition } from '@src/features/scouting/model/indicators';
+import {
+  getCustomEfficiencyRules,
+  sanitizeEfficiencyRules,
+  type EditableEfficiencySkill,
+} from '@src/features/scouting/model/indicator-settings';
 
 /** Trends tab: precomputed results for the selected team, plus the choices on screen. */
 export interface SharedTrendsSnapshot extends TrendsSnapshot {
@@ -31,6 +37,11 @@ export interface SharedStatsSnapshot {
   selectedPlayerIds: string[];
   /** Team data study: the page shows one team only (the studied one, as home). */
   lockedTeam?: 'home' | 'away';
+  /**
+   * The efficiency rules of the sender (Settings > Analysis), only the ones changed from the DataVolley
+   * defaults. The viewer applies them so every efficiency follows one rule. Absent in older links.
+   */
+  efficiencyRules?: Partial<Record<EditableEfficiencySkill, EfficiencyDefinition>>;
 }
 
 /** Wire form: each set's rallies are rebuilt from `rallyStats`, so they are not sent twice. */
@@ -46,6 +57,7 @@ export interface WireSnapshot {
   filters: AdvancedFilters;
   selectedPlayerIds: string[];
   lockedTeam?: 'home' | 'away';
+  efficiencyRules?: Partial<Record<EditableEfficiencySkill, EfficiencyDefinition>>;
 }
 
 function rallyHasPlayer(rally: RallyStats, playerIds: ReadonlySet<string>): boolean {
@@ -85,9 +97,12 @@ export function buildStatsSnapshot(
 }
 
 export function toWireSnapshot(snapshot: SharedStatsSnapshot): WireSnapshot {
-  if (!snapshot.stats) return { ...snapshot, stats: undefined };
+  // The link always carries the sender's rules, so the viewer never mixes them with their own.
+  const efficiencyRules = snapshot.efficiencyRules ?? getCustomEfficiencyRules();
+  if (!snapshot.stats) return { ...snapshot, efficiencyRules, stats: undefined };
   return {
     ...snapshot,
+    efficiencyRules,
     stats: {
       ...snapshot.stats,
       setStats: snapshot.stats.setStats.map(({ rallies: _rallies, ...set }) => set),
@@ -114,7 +129,8 @@ export function fromWireSnapshot(wire: WireSnapshot): SharedStatsSnapshot {
 
 export function isWireSnapshot(value: unknown): value is WireSnapshot {
   if (!value || typeof value !== 'object') return false;
-  const { stats, report, trends, playByPlay, filters, selectedPlayerIds, lockedTeam } = value as Partial<WireSnapshot>;
+  const { stats, report, trends, playByPlay, filters, selectedPlayerIds, lockedTeam, efficiencyRules } = value as Partial<WireSnapshot>;
+  if (efficiencyRules !== undefined && sanitizeEfficiencyRules(efficiencyRules) === null) return false;
   const validPlayByPlay = playByPlay === undefined || Boolean(
     playByPlay && typeof playByPlay === 'object' && Array.isArray(playByPlay.sets)
     && playByPlay.sets.every((set) => set && Array.isArray(set.rows))

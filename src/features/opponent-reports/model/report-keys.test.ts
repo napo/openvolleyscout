@@ -51,8 +51,8 @@ function metrics(): OpponentReportMetrics {
       frontRowReceiverOtherAttacks: outcome(3, 10),
     },
     attackers: [
-      { player: player('10', 'Bianchi'), attacks: 60, kill: ratio(30, 60), errors: ratio(5, 60) },
-      { player: player('4', 'Neri'), attacks: 30, kill: ratio(9, 30), errors: ratio(4, 30) },
+      { player: player('10', 'Bianchi'), attacks: 60, kill: ratio(30, 60), errors: ratio(5, 60), efficiency: 25 / 60 },
+      { player: player('4', 'Neri'), attacks: 30, kill: ratio(9, 30), errors: ratio(4, 30), efficiency: 5 / 30 },
     ],
     errors: [{ player: player('3', 'Gialli'), serve: ratio(8, 30), attack: ratio(0, 0) }],
     teamErrors: { serve: ratio(20, 150), attack: ratio(15, 120) },

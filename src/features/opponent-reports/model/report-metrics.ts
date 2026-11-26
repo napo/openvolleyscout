@@ -9,7 +9,8 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchRosterPlayer } from '@src/domain/match/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchVideoAnalysis } from '@src/domain/video/types';
-import type { RallyStats, RotationStats } from '@src/features/scouting/model/match-stats';
+import { createEmptySkillStats, updateSkillStats, type RallyStats, type RotationStats, type SkillStats } from '@src/features/scouting/model/match-stats';
+import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import { extractSideOutSequences } from '../../analytics/sideout/sideout-distribution';
 import { computeSituationMetrics } from '../../analytics/dashboard/situation/situation-metrics';
 import { computeRallyExchangeStats } from '../../analytics/dashboard/situation/rally-exchange-metrics';
@@ -96,6 +97,8 @@ export interface AttackerMetrics {
   attacks: number;
   kill: Ratio;
   errors: Ratio;
+  /** Attack efficiency with the winning and losing effects chosen in Settings > Analysis. */
+  efficiency: number | null;
 }
 
 export interface ServeTarget {
@@ -384,7 +387,7 @@ export function computeOpponentReportMetrics(
     frontRowReceiverAttacks: new OutcomeCounter(),
     frontRowReceiverOtherAttacks: new OutcomeCounter(),
   };
-  const attackers = mapOf<string, { kill: Counter; errors: Counter }>(() => ({ kill: new Counter(), errors: new Counter() }));
+  const attackers = mapOf<string, { kill: Counter; errors: Counter; skillStats: SkillStats }>(() => ({ kill: new Counter(), errors: new Counter(), skillStats: createEmptySkillStats() }));
   const errors = mapOf<string, { serve: Counter; attack: Counter }>(() => ({ serve: new Counter(), attack: new Counter() }));
   const teamErrors = { serve: new Counter(), attack: new Counter() };
   // rotation -> player -> reception counters and zones
@@ -476,6 +479,7 @@ export function computeOpponentReportMetrics(
             errors.get(key).attack.add(touch.evaluation === '=');
             attackers.get(key).kill.add(touch.evaluation === '#');
             attackers.get(key).errors.add(touch.evaluation === '=');
+            updateSkillStats(attackers.get(key).skillStats, touch);
           }
         }
       }
@@ -651,6 +655,7 @@ export function computeOpponentReportMetrics(
       attacks: counters.kill.total,
       kill: counters.kill.value,
       errors: counters.errors.value,
+      efficiency: getActiveIndicators().attackEfficiency(counters.skillStats),
     })).sort((left, right) => right.attacks - left.attacks),
     errors: [...errors.map.entries()].map(([key, counters]) => ({
       player: player(key),
