@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useTranslation } from '@src/i18n';
@@ -49,8 +50,7 @@ export function ImageTutorialSlideShow({ tutorial, onClose }: ImageTutorialSlide
     if (!tutorial) return;
     const slides = IMAGE_TUTORIALS[tutorial].slides;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-      else if (event.key === 'ArrowRight') setIndex((current) => Math.min(slides.length - 1, current + 1));
+      if (event.key === 'ArrowRight') setIndex((current) => Math.min(slides.length - 1, current + 1));
       else if (event.key === 'ArrowLeft') setIndex((current) => Math.max(0, current - 1));
     };
     window.addEventListener('keydown', onKeyDown);
@@ -64,7 +64,7 @@ export function ImageTutorialSlideShow({ tutorial, onClose }: ImageTutorialSlide
   const isLast = index === slides.length - 1;
 
   return (
-    <div className="scouting-tutorial" role="dialog" aria-modal="true" aria-labelledby="image-tutorial-title">
+    <Modal className="scouting-tutorial" labelledBy="image-tutorial-title" onClose={onClose} closeOnBackdrop={false}>
       <div className="scouting-tutorial__panel">
         <header className="scouting-tutorial__header">
           <div>
@@ -134,6 +134,6 @@ export function ImageTutorialSlideShow({ tutorial, onClose }: ImageTutorialSlide
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

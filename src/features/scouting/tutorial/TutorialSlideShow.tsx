@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { ScoutingCourt } from '../components/ScoutingCourt';
@@ -136,7 +137,7 @@ export function TutorialSlideShow({ open, onClose }: TutorialSlideShowProps) {
   const overlayActionLabel = slide.overlayActionLabelKey ? t(slide.overlayActionLabelKey) : null;
 
   return (
-    <div className={`scouting-tutorial${isUprightPhone ? ' scouting-tutorial--upright' : ''}`} role="dialog" aria-modal="true" aria-labelledby="scouting-tutorial-title">
+    <Modal className={`scouting-tutorial${isUprightPhone ? ' scouting-tutorial--upright' : ''}`} labelledBy="scouting-tutorial-title" onClose={onClose} closeOnBackdrop={false}>
       <div className="scouting-tutorial__panel">
         <header className="scouting-tutorial__header">
           <div>
@@ -222,6 +223,6 @@ export function TutorialSlideShow({ open, onClose }: TutorialSlideShowProps) {
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

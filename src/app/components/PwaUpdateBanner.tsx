@@ -1,4 +1,4 @@
-import { useEscapeKey } from '@src/lib/hooks/useEscapeKey';
+import { Modal } from '@src/components/Modal';
 import { useEffect, useState } from 'react';
 import { registerSW } from 'virtual:pwa-register';
 import { useTranslation } from '@src/i18n';
@@ -36,21 +36,13 @@ export function PwaUpdateBanner() {
     };
   }, []);
 
-  useEscapeKey(() => setVisible(false), visible);
-
   if (!visible || !updateServiceWorker) {
     return null;
   }
 
   return (
-    <div className="pwa-update-backdrop" role="presentation" onClick={() => setVisible(false)}>
-      <div
-        className="pwa-update-banner"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('pwaUpdateAvailable')}
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Modal className="pwa-update-backdrop" ariaLabel={t('pwaUpdateAvailable')} onClose={() => setVisible(false)}>
+      <div className="pwa-update-banner">
         <p className="pwa-update-banner__message">{t('pwaUpdateAvailable')}</p>
         <div className="pwa-update-banner__actions">
           <ExternalLink href={APP_METADATA.urls.donation} className="pwa-update-banner__later">
@@ -64,6 +56,6 @@ export function PwaUpdateBanner() {
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -1,4 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Modal } from '@src/components/Modal';
+import { useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import './item-picker-dialog.css';
 
@@ -44,15 +45,10 @@ export function ItemPickerDialog<T>({ title, description, items, columns, getId,
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
 
-  useEffect(() => {
-    searchRef.current?.focus();
-  }, []);
-
   const rows = useMemo(() => filterPickerItems(items, columns, getId, suggestedId, query), [items, columns, getId, suggestedId, query]);
 
   return (
-    <div className="item-picker" role="dialog" aria-modal="true" aria-labelledby={titleId} onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}>
-      <div className="item-picker__backdrop" onClick={onClose} />
+    <Modal className="item-picker" backdropClassName="item-picker__backdrop" labelledBy={titleId} initialFocus={searchRef} onClose={onClose}>
       <section className="item-picker__panel">
         <header className="item-picker__header">
           <div>
@@ -101,6 +97,6 @@ export function ItemPickerDialog<T>({ title, description, items, columns, getId,
           {rows.length === 0 ? <p className="item-picker__empty">{items.length ? t('pickerNoResults') : emptyText}</p> : null}
         </div>
       </section>
-    </div>
+    </Modal>
   );
 }

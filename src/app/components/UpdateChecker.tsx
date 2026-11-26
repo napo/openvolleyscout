@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 import { useEffect, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import type { Update } from '@tauri-apps/plugin-updater';
@@ -55,15 +56,6 @@ export function UpdateChecker() {
       {t('updateDonate')}
     </ExternalLink>
   );
-
-  useEffect(() => {
-    if (!justUpdated) return undefined;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setJustUpdated(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [justUpdated]);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -125,14 +117,8 @@ export function UpdateChecker() {
 
   if (justUpdated) {
     return (
-      <div className="update-modal-backdrop" role="presentation" onClick={() => setJustUpdated(false)}>
-        <div
-          className="update-toast update-toast--modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('updateInstalled', { version: APP_VERSION })}
-          onClick={(event) => event.stopPropagation()}
-        >
+      <Modal className="update-modal-backdrop" ariaLabel={t('updateInstalled', { version: APP_VERSION })} onClose={() => setJustUpdated(false)}>
+        <div className="update-toast update-toast--modal">
           <p className="update-toast__message">
             <strong>{t('updateInstalled', { version: APP_VERSION })}</strong> {t('updateSupportInvite')}
           </p>
@@ -148,20 +134,14 @@ export function UpdateChecker() {
             </button>
           </div>
         </div>
-      </div>
+      </Modal>
     );
   }
 
   if (state.phase === 'available') {
     return (
-      <div className="update-modal-backdrop" role="presentation" onClick={() => setState({ phase: 'dismissed' })}>
-        <div
-          className="update-toast update-toast--modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('updateAvailable', { version: state.update.version })}
-          onClick={(event) => event.stopPropagation()}
-        >
+      <Modal className="update-modal-backdrop" ariaLabel={t('updateAvailable', { version: state.update.version })} onClose={() => setState({ phase: 'dismissed' })}>
+        <div className="update-toast update-toast--modal">
           <p className="update-toast__message">{t('updateAvailable', { version: state.update.version })}</p>
           <div className="update-toast__actions">
             {donateLink}
@@ -182,20 +162,14 @@ export function UpdateChecker() {
             </button>
           </div>
         </div>
-      </div>
+      </Modal>
     );
   }
 
   if (state.phase === 'android-available') {
     return (
-      <div className="update-modal-backdrop" role="presentation" onClick={() => setState({ phase: 'dismissed' })}>
-        <div
-          className="update-toast update-toast--modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('updateAvailable', { version: state.version })}
-          onClick={(event) => event.stopPropagation()}
-        >
+      <Modal className="update-modal-backdrop" ariaLabel={t('updateAvailable', { version: state.version })} onClose={() => setState({ phase: 'dismissed' })}>
+        <div className="update-toast update-toast--modal">
           <p className="update-toast__message">{t('updateAvailable', { version: state.version })}</p>
           <div className="update-toast__actions">
             {donateLink}
@@ -212,7 +186,7 @@ export function UpdateChecker() {
             </ExternalLink>
           </div>
         </div>
-      </div>
+      </Modal>
     );
   }
 

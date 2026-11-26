@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 import { useTranslation } from '@src/i18n';
 
 interface ScoutingOnboardingCardProps {
@@ -14,7 +15,7 @@ export function ScoutingOnboardingCard({ open, onClose, onOpenManual }: Scouting
   }
 
   return (
-    <div className="scouting-help-card" role="dialog" aria-modal="true" aria-labelledby="scouting-onboarding-title">
+    <Modal className="scouting-help-card" labelledBy="scouting-onboarding-title" onClose={onClose} closeOnBackdrop={false}>
       <div className="scouting-help-card__panel">
         <div className="scouting-help-card__content">
           <h2 id="scouting-onboarding-title" className="scouting-help-card__title">
@@ -37,6 +38,6 @@ export function ScoutingOnboardingCard({ open, onClose, onOpenManual }: Scouting
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

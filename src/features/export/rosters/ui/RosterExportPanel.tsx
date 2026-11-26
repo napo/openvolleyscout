@@ -1,4 +1,4 @@
-import { useEscapeKey } from '@src/lib/hooks/useEscapeKey';
+import { Modal } from '@src/components/Modal';
 import { useState } from 'react';
 import type { RosterExportFormat } from '../types';
 import { useTranslation } from '@src/i18n';
@@ -14,7 +14,6 @@ type RosterExportPanelProps = {
 };
 
 export function RosterExportPanel({ teams, defaultTeamId, onClose, onExport }: RosterExportPanelProps) {
-  useEscapeKey(onClose);
   const { t } = useTranslation();
 
   const [format, setFormat] = useState<RosterExportFormat>('json');
@@ -29,8 +28,7 @@ export function RosterExportPanel({ teams, defaultTeamId, onClose, onExport }: R
   };
 
   return (
-    <div className="roster-modal" role="dialog" aria-modal="true" aria-labelledby="roster-export-title">
-      <div className="roster-modal__backdrop" onClick={onClose} />
+    <Modal className="roster-modal" backdropClassName="roster-modal__backdrop" labelledBy="roster-export-title" onClose={onClose}>
       <section className="roster-modal__panel">
         <header className="roster-modal__header">
           <div>
@@ -127,6 +125,6 @@ export function RosterExportPanel({ teams, defaultTeamId, onClose, onExport }: R
           </div>
         </footer>
       </section>
-    </div>
+    </Modal>
   );
 }

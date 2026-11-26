@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 import { useEffect, useState } from 'react';
 import type { CourtPosition } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
@@ -80,7 +81,7 @@ export function OnboardingTutorialSlideShow({ open, onClose }: OnboardingTutoria
   };
 
   return (
-    <div className="scouting-tutorial" role="dialog" aria-modal="true" aria-labelledby="onboarding-tutorial-title">
+    <Modal className="scouting-tutorial" labelledBy="onboarding-tutorial-title" onClose={onClose} closeOnBackdrop={false}>
       <div className="scouting-tutorial__panel">
         <header className="scouting-tutorial__header">
           <div>
@@ -163,6 +164,6 @@ export function OnboardingTutorialSlideShow({ open, onClose }: OnboardingTutoria
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

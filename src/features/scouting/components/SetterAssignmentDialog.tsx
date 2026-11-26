@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useTranslation } from '@src/i18n';
@@ -27,7 +28,8 @@ export function SetterAssignmentDialog({
   if (!open) return null;
 
   return (
-    <div className="scouting-screen__setter-assignment-overlay" role="dialog" aria-modal="true">
+    // A forced choice: the scout must say who the setter is, so Escape and a click outside do nothing.
+    <Modal className="scouting-screen__setter-assignment-overlay">
       <div className="scouting-screen__setter-assignment-dialog">
         <strong>{t('newSetterPromptTitle')}</strong>
         <label className="scouting-screen__correction-field">
@@ -54,6 +56,6 @@ export function SetterAssignmentDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useTranslation } from '@src/i18n';
@@ -24,15 +25,7 @@ export function LiveExitDialog({
   if (!open) return null;
 
   return (
-    <div
-      className="scouting-screen__setter-assignment-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="live-exit-title"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') onClose();
-      }}
-    >
+    <Modal className="scouting-screen__setter-assignment-overlay" labelledBy="live-exit-title" onClose={onClose}>
       <div className="scouting-screen__setter-assignment-dialog live-exit-dialog">
         <strong id="live-exit-title">{t('liveExitTitle')}</strong>
         <p className="live-exit-dialog__note">{t('liveExitSaved')}</p>
@@ -57,6 +50,6 @@ export function LiveExitDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

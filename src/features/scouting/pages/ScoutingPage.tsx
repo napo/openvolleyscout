@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 import { formatPlayerLabel, getPlayerDisplayName } from '@src/domain/roster/helpers';
 import { ScoutingLockGate } from '@src/features/sync/cloud/ScoutingLockGate';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -3400,7 +3401,7 @@ function ScoutingWorkspace({ activeProject }: { activeProject: MatchProject }) {
           onClose={() => setShowExitDialog(false)}
         />
         {pendingEmptyPosition && (
-          <div className="scouting-screen__setter-assignment-overlay" role="dialog" aria-modal="true">
+          <Modal className="scouting-screen__setter-assignment-overlay">
             <form
               className="scouting-screen__setter-assignment-dialog"
               onSubmit={(event) => { event.preventDefault(); void confirmEmptyPosition(); }}
@@ -3442,7 +3443,7 @@ function ScoutingWorkspace({ activeProject }: { activeProject: MatchProject }) {
                 </button>
               </div>
             </form>
-          </div>
+          </Modal>
         )}
         <SetterAssignmentDialog
           open={Boolean(pendingSetterAssignment)}

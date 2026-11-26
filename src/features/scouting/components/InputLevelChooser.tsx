@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import './input-level-chooser.css';
 
@@ -26,8 +27,8 @@ export function InputLevelChooser({ recommended, onChoose, hideDetailed = false 
   const { t } = useTranslation();
 
   return (
-    <div className="input-level-chooser" role="dialog" aria-modal="true" aria-labelledby="input-level-chooser-title">
-      <div className="input-level-chooser__backdrop" />
+    // A forced choice: the level is asked once and has no "cancel".
+    <Modal className="input-level-chooser" backdropClassName="input-level-chooser__backdrop" labelledBy="input-level-chooser-title">
       <section className="input-level-chooser__panel">
         <h2 id="input-level-chooser-title" className="input-level-chooser__title">{t('inputLevelChooserTitle')}</h2>
         <p className="input-level-chooser__description">{t('inputLevelChooserDescription')}</p>
@@ -51,6 +52,6 @@ export function InputLevelChooser({ recommended, onChoose, hideDetailed = false 
           ))}
         </div>
       </section>
-    </div>
+    </Modal>
   );
 }

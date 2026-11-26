@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { CourtPosition, PlayerRole, SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ActiveLineup } from '@src/domain/lineup/types';
@@ -842,22 +843,15 @@ export function TagInputPanel({
   );
 
   const renderLegendDialog = () => (
-    <div className="tag-flow__legend-backdrop" onClick={() => setShowLegend(false)}>
-      <div
-        className="tag-flow__legend-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('tagEvalLegendTitle')}
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => { if (event.key === 'Escape') setShowLegend(false); }}
-      >
+    <Modal className="tag-flow__legend-backdrop" ariaLabel={t('tagEvalLegendTitle')} onClose={() => setShowLegend(false)}>
+      <div className="tag-flow__legend-dialog">
         <div className="tag-flow__legend-dialog-head">
           <strong>{t(getSkillTranslationKey(activeSkill))} · {t('tagEvalLegendTitle')}</strong>
           <button type="button" className="tag-flow__legend-close" onClick={() => setShowLegend(false)} autoFocus>{t('pickerClose')}</button>
         </div>
         <div className="tag-flow__legend-dialog-body">{renderLegend()}</div>
       </div>
-    </div>
+    </Modal>
   );
 
   const renderSkillTabs = () => (

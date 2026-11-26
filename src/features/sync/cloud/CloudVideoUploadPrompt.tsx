@@ -1,4 +1,4 @@
-import { useEscapeKey } from '@src/lib/hooks/useEscapeKey';
+import { Modal } from '@src/components/Modal';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -124,9 +124,6 @@ export function CloudVideoUploadPrompt() {
     force((value) => value + 1);
   }), []);
 
-  // Escape answers "not now", like the other dialogs.
-  useEscapeKey(() => setQuestion(null), question !== null);
-
   if (!question) return null;
   const { video, size, free } = question;
   const service = t(SERVICE_NAME_KEY[status.provider]);
@@ -141,8 +138,7 @@ export function CloudVideoUploadPrompt() {
   };
 
   return (
-    <div className="confirm-dialog" role="alertdialog" aria-modal="true" aria-describedby="cloud-video-upload-message">
-      <div className="confirm-dialog__backdrop" onClick={() => setQuestion(null)} />
+    <Modal className="confirm-dialog" backdropClassName="confirm-dialog__backdrop" role="alertdialog" describedBy="cloud-video-upload-message" onClose={() => setQuestion(null)}>
       <section className="confirm-dialog__panel">
         <p id="cloud-video-upload-message" className="confirm-dialog__message">
           {t('cloudVideoPrompt', {
@@ -207,6 +203,6 @@ export function CloudVideoUploadPrompt() {
           </button>
         </div>
       </section>
-    </div>
+    </Modal>
   );
 }

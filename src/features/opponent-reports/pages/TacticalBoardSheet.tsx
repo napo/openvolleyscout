@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 import { nextChartRotation } from '@src/lib/utils/chart-rotation';
 import { expandAttackerViews, expandSetterViews } from '../model/split-views';
 import { BookletSettings } from './BookletSettings';
@@ -928,13 +929,8 @@ export function TacticalBoardSheet({
         if (!drawing) return null;
         const hasCustomDrawing = editingCourtTarget.kind === 'piece-court' && Boolean(report.pieceEdits?.[piece.id]?.courtDrawings?.[editingCourtTarget.courtKey]);
         return (
-          <div
-            className="opponent-report__editor-modal-backdrop"
-            role="presentation"
-            onClick={(event) => { if (event.target === event.currentTarget) setEditingCourtTarget(null); }}
-            onKeyDown={(event) => { if (event.key === 'Escape') setEditingCourtTarget(null); }}
-          >
-            <div className="opponent-report__editor-modal" role="dialog" aria-modal="true" aria-label={editingCourtTarget.title}>
+          <Modal className="opponent-report__editor-modal-backdrop" ariaLabel={editingCourtTarget.title} onClose={() => setEditingCourtTarget(null)}>
+            <div className="opponent-report__editor-modal">
               <div className="opponent-report__editor-modal-header">
                 <h3>{editingCourtTarget.title}</h3>
                 <button type="button" className="btn-secondary btn-small" onClick={() => setEditingCourtTarget(null)}>
@@ -982,7 +978,7 @@ export function TacticalBoardSheet({
                 />
               </div>
             </div>
-          </div>
+          </Modal>
         );
       })() : null}
       {editingHeatmapPieceId ? (() => {
@@ -999,13 +995,8 @@ export function TacticalBoardSheet({
           })));
         };
         return (
-          <div
-            className="opponent-report__editor-modal-backdrop"
-            role="presentation"
-            onClick={(event) => { if (event.target === event.currentTarget) setEditingHeatmapPieceId(null); }}
-            onKeyDown={(event) => { if (event.key === 'Escape') setEditingHeatmapPieceId(null); }}
-          >
-            <div className="opponent-report__heatmap-modal" role="dialog" aria-modal="true" aria-label={`${piece.title} · ${t('serveHeatmapEdit')}`}>
+          <Modal className="opponent-report__editor-modal-backdrop" ariaLabel={`${piece.title} · ${t('serveHeatmapEdit')}`} onClose={() => setEditingHeatmapPieceId(null)}>
+            <div className="opponent-report__heatmap-modal">
               <div className="opponent-report__editor-modal-header">
                 <h3>{piece.title} · {t('serveHeatmapEdit')}</h3>
                 <div className="opponent-report__heatmap-modal-actions">
@@ -1074,7 +1065,7 @@ export function TacticalBoardSheet({
                 ))}
               </div>
             </div>
-          </div>
+          </Modal>
         );
       })() : null}
     </section>

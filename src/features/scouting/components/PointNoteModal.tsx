@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
 import type { PointNote, PointNoteTag } from '@src/domain/video/types';
@@ -96,14 +97,8 @@ export function PointNoteModal({
   const canSaveManual = selectedTags.length > 0 || selectedKeywords.length > 0 || text.trim().length > 0;
 
   return (
-    <div className="point-note-backdrop" role="presentation" onClick={onClose}>
-      <div
-        className="point-note-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={isEditing ? t('pointNoteEditTitle') : t('pointNoteTitle')}
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Modal className="point-note-backdrop" ariaLabel={isEditing ? t('pointNoteEditTitle') : t('pointNoteTitle')} onClose={onClose}>
+      <div className="point-note-modal">
         <div className="point-note-modal__header">
           <div>
             <h3>{isEditing ? t('pointNoteEditTitle') : t('pointNoteTitle')}</h3>
@@ -208,6 +203,6 @@ export function PointNoteModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

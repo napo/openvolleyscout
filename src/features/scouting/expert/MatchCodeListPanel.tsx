@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchEvent } from '@src/domain/events/types';
@@ -610,14 +611,8 @@ export function MatchCodeListPanel({
       )}
 
       {insertState ? (
-        <div className="match-code-list-panel__insert-backdrop" role="presentation" onClick={() => setInsertState(null)}>
-          <div
-            className="match-code-list-panel__insert-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('codeListInsertTitle')}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal className="match-code-list-panel__insert-backdrop" ariaLabel={t('codeListInsertTitle')} onClose={() => setInsertState(null)}>
+          <div className="match-code-list-panel__insert-dialog">
             <h4>{t('codeListInsertTitle')}</h4>
             <p className="match-code-list-panel__insert-hint">
               {insertState.targetCode
@@ -656,7 +651,7 @@ export function MatchCodeListPanel({
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       ) : null}
     </aside>
   );

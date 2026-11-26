@@ -1,4 +1,4 @@
-import { useEscapeKey } from '@src/lib/hooks/useEscapeKey';
+import { Modal } from '@src/components/Modal';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
@@ -19,7 +19,6 @@ const pad = (value: number) => String(value).padStart(2, '0');
  * number, date, time, venue and notes. The scouting itself is not touched.
  */
 export function MatchDetailsDialog({ project, onCancel, onSave }: MatchDetailsDialogProps) {
-  useEscapeKey(onCancel);
   const { t } = useTranslation();
   const playedAt = parseStoredDateTime(project.metadata.playedAt);
   const hasTime = Boolean(project.metadata.playedAt && project.metadata.playedAt.includes('T'));
@@ -68,7 +67,8 @@ export function MatchDetailsDialog({ project, onCancel, onSave }: MatchDetailsDi
   );
 
   return (
-    <div className="match-details-dialog__overlay" role="dialog" aria-modal="true" aria-labelledby="match-details-title">
+    // A click outside does not close it: the form may hold typed data.
+    <Modal className="match-details-dialog__overlay" labelledBy="match-details-title" onClose={onCancel} closeOnBackdrop={false}>
       <form className="match-details-dialog" onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <h2 id="match-details-title">{t('matchDetailsTitle')}</h2>
         <p className="match-details-dialog__hint">{t('matchDetailsHint')}</p>
@@ -90,6 +90,6 @@ export function MatchDetailsDialog({ project, onCancel, onSave }: MatchDetailsDi
           <button type="submit" className="btn-primary" disabled={saving}>{t('matchDetailsSave')}</button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }

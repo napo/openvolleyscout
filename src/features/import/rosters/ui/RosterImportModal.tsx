@@ -1,4 +1,4 @@
-import { useEscapeKey } from '@src/lib/hooks/useEscapeKey';
+import { Modal } from '@src/components/Modal';
 import { useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { RosterImportFormat, RosterImportPayload } from '../types';
@@ -10,7 +10,6 @@ type RosterImportModalProps = {
 };
 
 export function RosterImportModal({ onClose, onImport }: RosterImportModalProps) {
-  useEscapeKey(onClose);
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -73,8 +72,7 @@ export function RosterImportModal({ onClose, onImport }: RosterImportModalProps)
   const canImport = !!preview && hasTeams && !hasErrors;
 
   return (
-    <div className="roster-modal" role="dialog" aria-modal="true" aria-labelledby="roster-import-title">
-      <div className="roster-modal__backdrop" onClick={onClose} />
+    <Modal className="roster-modal" backdropClassName="roster-modal__backdrop" labelledBy="roster-import-title" onClose={onClose}>
       <section className="roster-modal__panel">
         <header className="roster-modal__header">
           <div>
@@ -183,6 +181,6 @@ export function RosterImportModal({ onClose, onImport }: RosterImportModalProps)
           </div>
         </footer>
       </section>
-    </div>
+    </Modal>
   );
 }

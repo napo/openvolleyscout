@@ -1,3 +1,4 @@
+import { Modal } from '@src/components/Modal';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -72,7 +73,7 @@ export function ScoutingLockGate({ project }: { project: MatchProject }) {
   }
   if (lock.state === 'handed-over' && lock.matchId === matchId) {
     return (
-      <div className="scouting-lock-gate" role="dialog" aria-modal="true" aria-labelledby="scouting-lock-gate-title">
+      <Modal className="scouting-lock-gate" labelledBy="scouting-lock-gate-title">
         <section className="scouting-lock-gate__card">
           <h2 id="scouting-lock-gate-title" className="scouting-lock-gate__title">{t('scoutingHandedOverTitle')}</h2>
           <p className="scouting-lock-gate__text">{t('scoutingHandedOverText')}</p>
@@ -89,7 +90,7 @@ export function ScoutingLockGate({ project }: { project: MatchProject }) {
             </button>
           </div>
         </section>
-      </div>
+      </Modal>
     );
   }
   if (lock.state !== 'other' || lock.matchId !== matchId) return null;
@@ -110,7 +111,7 @@ export function ScoutingLockGate({ project }: { project: MatchProject }) {
   };
 
   return (
-    <div className="scouting-lock-gate" role="dialog" aria-modal="true" aria-labelledby="scouting-lock-gate-title">
+    <Modal className="scouting-lock-gate" labelledBy="scouting-lock-gate-title">
       <section className="scouting-lock-gate__card">
         <h2 id="scouting-lock-gate-title" className="scouting-lock-gate__title">
           {lock.lost
@@ -141,6 +142,6 @@ export function ScoutingLockGate({ project }: { project: MatchProject }) {
           </button>
         </div>
       </section>
-    </div>
+    </Modal>
   );
 }
