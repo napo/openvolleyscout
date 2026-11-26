@@ -320,6 +320,8 @@ describe('attacker half-court direction drawing', () => {
     expect(svg).not.toContain('data-serve-cone');
     expect(svg).toContain('data-serve-start-zone="1"');
     expect(svg).toContain('>57%</text>');
+    // The shares sit above the trajectories: arrows are drawn before the first percentage.
+    expect(svg.indexOf('data-serve-route=')).toBeLessThan(svg.indexOf('>57%</text>'));
     // Arrow on the route with most aces only.
     expect(svg).toContain('data-serve-ace-route="1-&gt;5"');
     expect(svg.match(/data-serve-ace-route/g)).toHaveLength(1);

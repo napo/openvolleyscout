@@ -105,8 +105,13 @@ function drawStrip(
     return [
       `<rect data-serve-target-zone="${zone}" data-heat="${opacity.toFixed(2)}" data-serve-strip="${index}" data-serve-pct="${pct}" x="${position.x.toFixed(1)}" y="${position.y.toFixed(1)}" width="${cellW.toFixed(1)}" height="${cellH.toFixed(1)}" fill="${opacity ? `rgb(${HEAT_RGB})` : 'none'}"${opacity ? ` fill-opacity="${opacity.toFixed(2)}"` : ''} stroke="#cbd5e1" stroke-width="0.6"/>`,
       `<text x="${(position.x + 3).toFixed(1)}" y="${(position.y + 9).toFixed(1)}" font-size="7" fill="#64748b">${zone}</text>`,
-      visible && pct > 0 ? `<text x="${(position.x + cellW / 2).toFixed(1)}" y="${(position.y + cellH / 2 + 4).toFixed(1)}" font-size="10" font-weight="bold" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="middle">${pct}%</text>` : '',
     ].join('');
+  }));
+  // The shares are drawn after the arrows so a trajectory never covers a number.
+  const percentLabels = TARGET_COLUMNS.flatMap((zones) => zones.map((zone) => {
+    const position = cell(zone)!;
+    const { visible, pct } = effectivePercentByZone.get(zone) ?? { visible: true, pct: 0 };
+    return visible && pct > 0 ? `<text x="${(position.x + cellW / 2).toFixed(1)}" y="${(position.y + cellH / 2 + 4).toFixed(1)}" font-size="10" font-weight="bold" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="middle">${pct}%</text>` : '';
   }));
 
   // Main routes as arrows; they stop at the target zone's edge so its share stays readable.
@@ -143,6 +148,7 @@ function drawStrip(
     `<line x1="${netX + cellW}" y1="${courtTop}" x2="${netX + cellW}" y2="${courtTop + COURT_HEIGHT}" stroke="#94a3b8" stroke-dasharray="4 3"/>`,
     `<line x1="${netX}" y1="${courtTop - 4}" x2="${netX}" y2="${courtTop + COURT_HEIGHT + 4}" stroke="#002554" stroke-width="3"/>`,
     ...arrows,
+    ...percentLabels,
     ...startMarks,
     aceArrow,
     routes.length ? '' : `<text data-serve-no-zones="true" x="${MARGIN_X + COURT_WIDTH / 4}" y="${courtTop + COURT_HEIGHT / 2 + 3}" font-size="8" fill="#64748b" text-anchor="middle">${xml(labels.noZones)}</text>`,
