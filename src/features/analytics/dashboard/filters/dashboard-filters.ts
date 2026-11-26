@@ -1,7 +1,7 @@
 import type { PlayerRole, TeamSide, SkillEvaluation } from '@src/domain/common/enums';
 import type { TrackedSkill, RotationNumber } from '@src/features/scouting/model/match-stats';
 import type { TouchPhase } from '../../rally-phase/rally-phase-classifier';
-import { choiceList } from '@src/lib/utils/choice-list';
+import { choiceList } from '../../../../lib/utils/choice-list';
 
 export type DashboardTeamFilter = 'all' | TeamSide;
 /**

@@ -150,6 +150,9 @@ export interface MultiVideoAnalysisPanelProps {
   projects: MatchProject[];
   focusTeamId?: string;
   focusTeamName?: string;
+  /** A touch to play as the panel opens (from another analysis): its match and touch. */
+  playRequest?: { projectId: string; touchId: string } | null;
+  onPlayRequestHandled?: () => void;
 }
 
 /**
@@ -183,7 +186,7 @@ function getCachedTouchClockMap(index: VideoEventIndex): Map<string, number | nu
   return clocks;
 }
 
-export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }: MultiVideoAnalysisPanelProps) {
+export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName, playRequest, onPlayRequestHandled }: MultiVideoAnalysisPanelProps) {
   const { t } = useTranslation();
   const playerRef = useRef<VideoPlayerHandle | null>(null);
   const clipTimerRef = useRef<number | null>(null);
@@ -514,6 +517,21 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   // Keep ref up-to-date for handlePlayable and sequence timer
   playEntryRef.current = playEntry;
+
+  // A touch asked from another analysis: its match is shown and the clip plays once the video is ready.
+  useEffect(() => {
+    if (!playRequest) return;
+    const entry = allEntries.find((item) => item.projectId === playRequest.projectId && item.touchId === playRequest.touchId);
+    if (!entry) return;
+    if (entry.projectId !== activeProjectId || !isPlayable) {
+      pendingPlayRef.current = { entry, advance: false };
+      if (entry.projectId !== activeProjectId) setActiveProjectId(entry.projectId);
+    } else {
+      playEntry(entry, false);
+    }
+    onPlayRequestHandled?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playRequest, allEntries, isPlayable]);
 
   const playFilteredSequence = () => {
     const first = filteredEntries.find((e) => getEntryVideoSeconds(e) !== null);

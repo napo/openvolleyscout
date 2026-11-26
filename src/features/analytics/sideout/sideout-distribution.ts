@@ -1,5 +1,5 @@
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
-import { matchesChoice } from '@src/lib/utils/choice-list';
+import { matchesChoice } from '../../../lib/utils/choice-list';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
 // Value imports must be relative (ts-node/esm cannot resolve @src/ at runtime)

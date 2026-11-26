@@ -32,6 +32,7 @@ import { hasSideOutStudyData } from '@src/features/analytics/sideout/sideout-dis
 import { ZoneAnalysisPanel } from '@src/features/analytics/zone-analysis/ZoneAnalysisPanel';
 import { hasZoneAnalysisData } from '@src/features/analytics/zone-analysis/zone-analysis';
 import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
+import { createProjectsTouchVideoLocator } from '@src/features/analysis/video/video-event-index';
 import { StatsTabBar, type StatsTabId } from '@src/features/analytics/stats-tabs/StatsTabBar';
 import { MultiVideoAnalysisPanel } from '@src/features/analysis/video/MultiVideoAnalysisPanel';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
@@ -78,6 +79,8 @@ export function TeamAnalysisPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
   const [activeTab, setActiveTab] = useState<AnalysisTab>('team-performance');
+  // A touch of the zone analysis to play in Video analysis (its match and touch).
+  const [videoPlayRequest, setVideoPlayRequest] = useState<{ projectId: string; touchId: string } | null>(null);
   const [isExportingTab, setIsExportingTab] = useState(false);
   const exportPanelRef = useRef<HTMLDivElement>(null);
   // The play by play on screen, for its share link.
@@ -298,6 +301,9 @@ export function TeamAnalysisPage() {
     return { teamIds, playerIds };
   }, [aggregatedStats, teamId]);
 
+  // Where each touch of the matches studied is on video (only matches with a video).
+  const touchVideoLocator = useMemo(() => createProjectsTouchVideoLocator(selectedMatches), [selectedMatches]);
+
   const analysisPhase = aggregatedStats ? (
     <AppPageLayout
       className="app-page-card team-analysis-page__layout"
@@ -436,7 +442,18 @@ export function TeamAnalysisPage() {
         </div>
       ) : activeTab === 'zone-analysis' && hasZoneAnalysis && zoneCodeTables ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-          <ZoneAnalysisPanel stats={aggregatedStats} codeTables={zoneCodeTables} lockedTeam="home" />
+          <ZoneAnalysisPanel
+            stats={aggregatedStats}
+            codeTables={zoneCodeTables}
+            lockedTeam="home"
+            videoSecondsOf={(touch) => touchVideoLocator(touch)?.seconds ?? null}
+            onPlayVideo={(_seconds, touch) => {
+              const located = touchVideoLocator(touch);
+              if (!located) return;
+              setVideoPlayRequest({ projectId: located.projectId, touchId: touch.id });
+              setActiveTab('video-analysis');
+            }}
+          />
         </div>
       ) : activeTab === 'cross-rotation' ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
@@ -462,6 +479,8 @@ export function TeamAnalysisPage() {
             projects={selectedMatches}
             focusTeamId={teamId}
             focusTeamName={teamName}
+            playRequest={videoPlayRequest}
+            onPlayRequestHandled={() => setVideoPlayRequest(null)}
           />
         </div>
       ) : activeTab === 'review' ? (

@@ -12,7 +12,7 @@
  *
  * Runs under ts-node too: relative and type-only imports only.
  */
-import { matchesChoice } from '@src/lib/utils/choice-list';
+import { matchesChoice } from '../../../lib/utils/choice-list';
 import type { SkillEvaluation, TeamSide } from '../../../domain/common/enums';
 import type { BallTouch } from '../../../domain/touch/types';
 import { hasPlaceholderZones } from '../../../domain/touch/types';

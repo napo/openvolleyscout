@@ -23,6 +23,7 @@ import {
   buildTouchClockMap,
   buildVideoEventIndex,
   createApproximateTimeCheck,
+  createProjectsTouchVideoLocator,
   createTouchVideoSecondsResolver,
   resolveIndexSyncPoints,
 } from './video-event-index';
@@ -746,6 +747,24 @@ describe('matches not scouted in real time', () => {
     // Same result for exports and links built outside the tab.
     const resolve = createTouchVideoSecondsResolver(events, { syncPoints: [anchor], rallyTimingMode: 'realistic' });
     assert.strictEqual(resolve(moved.touch), 500);
+  });
+
+  it('finds the match and the video second of a touch among several matches', () => {
+    const events = buildMatch(40);
+    const index = buildVideoEventIndex(events, { rallyTimingMode: 'recorded' });
+    const attack = index.entries[3];
+    const anchor: VideoSyncPoint = {
+      id: 'a', touchId: attack.touchId, eventClockSeconds: attack.eventClockSeconds as number, videoSeconds: 500, createdAt: 1,
+    };
+    const withVideo = {
+      metadata: { id: 'with-video' },
+      events,
+      videoAnalysis: { source: { kind: 'file', path: 'x.mp4' }, syncPoints: [anchor], rallyTimingMode: 'recorded' },
+    } as unknown as Parameters<typeof createProjectsTouchVideoLocator>[0][number];
+    const withoutVideo = { metadata: { id: 'no-video' }, events: [] } as Parameters<typeof createProjectsTouchVideoLocator>[0][number];
+    const locate = createProjectsTouchVideoLocator([withoutVideo, withVideo]);
+    assert.deepStrictEqual(locate(attack.touch), { projectId: 'with-video', seconds: 500 });
+    assert.strictEqual(locate({ ...attack.touch, id: 'unknown' }), null);
   });
 });
 

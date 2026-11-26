@@ -648,3 +648,27 @@ export function createTouchVideoSecondsResolver(
     analysis.skillOffsets,
   );
 }
+
+/**
+ * Where a touch of several matches is on video: the match it belongs to and the second of its
+ * video, or null when that match has no video or the touch is not timed. For lists built over
+ * more matches (the team data study) that open the video of the right match.
+ */
+export function createProjectsTouchVideoLocator(
+  projects: ReadonlyArray<{ metadata: { id: string }; events: readonly MatchEvent[]; videoAnalysis?: MatchVideoAnalysis }>,
+): (touch: BallTouch) => { projectId: string; seconds: number } | null {
+  const owners = new Map<string, { projectId: string; seconds: (touch: BallTouch) => number | null }>();
+  for (const project of projects) {
+    const analysis = project.videoAnalysis;
+    if (!analysis?.source) continue;
+    const seconds = createTouchVideoSecondsResolver(project.events, analysis);
+    const index = buildVideoEventIndex(project.events, { rallyTimingMode: analysis.rallyTimingMode });
+    index.entries.forEach((entry) => owners.set(entry.touchId, { projectId: project.metadata.id, seconds }));
+  }
+  return (touch) => {
+    const owner = owners.get(touch.id);
+    if (!owner) return null;
+    const seconds = owner.seconds(touch);
+    return seconds === null || !Number.isFinite(seconds) ? null : { projectId: owner.projectId, seconds };
+  };
+}

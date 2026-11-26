@@ -39,7 +39,7 @@ interface ZoneAnalysisPanelProps {
   /** Video position of an attack, as Video analysis plays it; absent when the match has no video. */
   videoSecondsOf?: (touch: BallTouch) => number | null;
   /** Opens Video analysis at that position. */
-  onPlayVideo?: (seconds: number) => void;
+  onPlayVideo?: (seconds: number, touch: BallTouch) => void;
 }
 
 const VALUE_KEYS: Record<ZoneAnalysisValue, TranslationKey> = {
@@ -206,7 +206,7 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
         <span>{t('filterSet')} {attack.setNumber}</span>
         {attack.rotation ? <span>P{attack.rotation}</span> : null}
         {onPlayVideo && seconds !== null && Number.isFinite(seconds) ? (
-          <button type="button" className="zone-analysis__play" onClick={() => onPlayVideo(seconds)} title={t('zoneAnalysisPlayVideo')}>
+          <button type="button" className="zone-analysis__play" onClick={() => onPlayVideo(seconds, attack.touch)} title={t('zoneAnalysisPlayVideo')}>
             ▶ {t('zoneAnalysisPlayVideo')}
           </button>
         ) : null}
