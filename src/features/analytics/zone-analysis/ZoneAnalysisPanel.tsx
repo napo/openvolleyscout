@@ -1,7 +1,7 @@
 import { EmptyState } from '@src/components/EmptyState';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { choiceList } from '@src/lib/utils/choice-list';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
@@ -111,13 +111,32 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
     return ROLE_GROUPS.filter((role) => present.has(role));
   }, [attacks, team, roleOf]);
   const update = (patch: Partial<ZoneAnalysisFilters>) => { setFilters({ ...filters, ...patch }); setSelectedZone(null); };
-  const stepRotation = (step: 1 | -1) => {
-    // The two buttons walk the rotations one at a time, from the last one chosen.
-    const current = filters.rotations.at(-1);
-    const index = current === undefined ? (step === 1 ? -1 : 0) : ROTATION_ORDER.indexOf(current);
-    const next = ROTATION_ORDER[(index + step + ROTATION_ORDER.length) % ROTATION_ORDER.length];
-    update({ rotations: [next] });
+  // As in the DataVolley zone analysis: with one rotation chosen, "Rotation -" and "Rotation +" move
+  // to the neighbouring ones in the order of service (P1, P6, P5, P4, P3, P2): "-" to the next
+  // server's rotation, "+" back. The buttons name the rotation they lead to.
+  const currentRotation = filters.rotations.length === 1 ? filters.rotations[0] : undefined;
+  const rotationAfter = (step: 1 | -1) => {
+    if (currentRotation === undefined) return undefined;
+    const index = ROTATION_ORDER.indexOf(currentRotation);
+    return ROTATION_ORDER[(index + step + ROTATION_ORDER.length) % ROTATION_ORDER.length];
   };
+  const rotationMinus = rotationAfter(1);
+  const rotationPlus = rotationAfter(-1);
+  const goToRotation = (rotation: RotationNumber | undefined) => {
+    if (rotation !== undefined) update({ rotations: [rotation] });
+  };
+  useEffect(() => {
+    // Ctrl+PageUp is Rotation +, Ctrl+PageDown Rotation - (the shortcuts of DataVolley).
+    const onKey = (event: KeyboardEvent) => {
+      if (!event.ctrlKey || (event.key !== 'PageUp' && event.key !== 'PageDown')) return;
+      const target = event.key === 'PageUp' ? rotationPlus : rotationMinus;
+      if (target === undefined) return;
+      event.preventDefault();
+      goToRotation(target);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
   const all = t('setterViewReceptionAll');
   const teamName = (side: TeamSide) => stats.teamStats[side].teamName || t(side === 'home' ? 'homeTeam' : 'awayTeam');
 
@@ -301,13 +320,23 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
       </section>
 
       <div className="zone-analysis__rotation-bar">
-        <button type="button" className="btn-secondary" onClick={() => stepRotation(-1)}>{t('zoneAnalysisPrevRotation')}</button>
-        <strong>
-          {filters.rotations.length === 0
-            ? t('zoneAnalysisAllRotations')
-            : ROTATION_ORDER.filter((rotation) => filters.rotations.includes(rotation)).map((rotation) => `P${rotation}`).join(' · ')}
-        </strong>
-        <button type="button" className="btn-secondary" onClick={() => stepRotation(1)}>{t('zoneAnalysisNextRotation')}</button>
+        {currentRotation !== undefined ? (
+          <>
+            <button type="button" className="btn-secondary" onClick={() => goToRotation(rotationMinus)} title="Ctrl+PageDown">
+              {t('zoneAnalysisPrevRotation')} (P{rotationMinus})
+            </button>
+            <strong>P{currentRotation}</strong>
+            <button type="button" className="btn-secondary" onClick={() => goToRotation(rotationPlus)} title="Ctrl+PageUp">
+              {t('zoneAnalysisNextRotation')} (P{rotationPlus})
+            </button>
+          </>
+        ) : (
+          <strong>
+            {filters.rotations.length === 0
+              ? t('zoneAnalysisAllRotations')
+              : ROTATION_ORDER.filter((rotation) => filters.rotations.includes(rotation)).map((rotation) => `P${rotation}`).join(' · ')}
+          </strong>
+        )}
         <span className="zone-analysis__total">{t('zoneAnalysisTotal', { count: String(result.total) })}</span>
       </div>
 
