@@ -5,6 +5,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nProvider } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
+import { clearRememberedState } from '@src/lib/hooks/useRememberedState';
 import { SideOutStudyPanel } from './SideOutStudyPanel';
 
 let n = 0;
@@ -37,7 +38,8 @@ const groupOf = (text: string) => screen.getByText(text, { selector: '.filter-ch
 const labels = (group: HTMLElement) => within(group).getAllByRole('button').map((btn) => btn.textContent);
 
 describe('SideOutStudyPanel serve filters', () => {
-  afterEach(() => { cleanup(); });
+  // Each test opens the panel as for a first visit: nothing remembered from the previous one.
+  afterEach(() => { cleanup(); clearRememberedState(); });
 
   it('shows the serve start zone, serve type, direction and receiver filters', () => {
     render(<I18nProvider><SideOutStudyPanel stats={stats} lockedTeam="away" /></I18nProvider>);

@@ -887,18 +887,7 @@ export function buildCrossRotationStats(input: {
       const receivingRotation = currentRotations[receivingTeam];
       const cell = cellsBySide[servingTeam][servingRotation][receivingRotation];
 
-      cell.attempts += 1;
-      if (pointWinner === servingTeam) {
-        cell.breakPointWins += 1;
-        if (isReceptionErrorTerminalReason(rally.terminalReason)) {
-          cell.receptionErrorLosses += 1;
-        }
-      } else {
-        cell.sideOutWins += 1;
-        if (isServiceErrorTerminalReason(rally.terminalReason)) {
-          cell.serviceErrorLosses += 1;
-        }
-      }
+      countRallyInCrossRotationCell(cell, rally, servingTeam, pointWinner);
 
       const pointEvent = pointEventByRallyKey.get(createRallyKey(rally.setNumber, rally.rallyNumber));
       if (pointWinner === receivingTeam && !pointEvent?.skipRotation) {
@@ -906,6 +895,50 @@ export function buildCrossRotationStats(input: {
       }
     });
 
+  return {
+    bySide: {
+      away: buildCrossRotationMatrix('away', cellsBySide.away),
+      home: buildCrossRotationMatrix('home', cellsBySide.home),
+    },
+  };
+}
+
+function countRallyInCrossRotationCell(
+  cell: CrossRotationCell,
+  rally: Pick<RallyStats, 'terminalReason'>,
+  servingTeam: TeamSide,
+  pointWinner: TeamSide,
+): void {
+  cell.attempts += 1;
+  if (pointWinner === servingTeam) {
+    cell.breakPointWins += 1;
+    if (isReceptionErrorTerminalReason(rally.terminalReason)) {
+      cell.receptionErrorLosses += 1;
+    }
+  } else {
+    cell.sideOutWins += 1;
+    if (isServiceErrorTerminalReason(rally.terminalReason)) {
+      cell.serviceErrorLosses += 1;
+    }
+  }
+}
+
+/**
+ * The cross-rotation table of any selection of rallies (one set, say), from the rotations each
+ * rally carries. Same cells and rules as the table of the whole match.
+ */
+export function buildCrossRotationStatsFromRallies(rallies: readonly RallyStats[]): CrossRotationStats {
+  const cellsBySide: Record<TeamSide, Record<RotationNumber, Record<RotationNumber, CrossRotationCell>>> = {
+    away: createEmptyCrossRotationCellsByRotation(),
+    home: createEmptyCrossRotationCellsByRotation(),
+  };
+  for (const rally of rallies) {
+    if (!rally.servingTeam || !rally.pointWinner || !rally.rotations) continue;
+    const receivingTeam = getOppositeTeamSide(rally.servingTeam);
+    const cell = cellsBySide[rally.servingTeam][rally.rotations[rally.servingTeam]]?.[rally.rotations[receivingTeam]];
+    if (!cell) continue;
+    countRallyInCrossRotationCell(cell, rally, rally.servingTeam, rally.pointWinner);
+  }
   return {
     bySide: {
       away: buildCrossRotationMatrix('away', cellsBySide.away),

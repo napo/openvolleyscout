@@ -7,6 +7,7 @@ import {
   getEvaluationScale,
   getEvaluationTint,
 } from '@src/domain/touch/evaluation-scale';
+import { useTranslation } from '@src/i18n';
 import './filter-chips.css';
 
 /**
@@ -15,6 +16,17 @@ import './filter-chips.css';
  * evaluation chips in each skill's order and colours. Each screen composes only
  * the groups that make sense in its context.
  */
+
+/** "Reset filters (n)": shown by every analysis tab with filters, only while some filter is set. */
+export function ResetFiltersButton({ count, onReset }: { count: number; onReset: () => void }) {
+  const { t } = useTranslation();
+  if (count <= 0) return null;
+  return (
+    <button type="button" className="filter-chips__reset" onClick={onReset} aria-label={t('resetFilters')}>
+      {t('resetFilters')} ({count})
+    </button>
+  );
+}
 
 export function FilterGroups({ children }: { children: ReactNode }) {
   return <div className="filter-chips__groups">{children}</div>;

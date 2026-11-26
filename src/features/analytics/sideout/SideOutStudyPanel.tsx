@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { TeamSide } from '@src/domain/common/enums';
-import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
+import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
 import type { SetterDistributionServeType } from '@src/domain/opponent-report/types';
 import { SERVE_START_ZONES, SERVE_TARGET_ZONES, SERVE_TYPE_GROUPS } from '@src/features/analytics/serve-attributes';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
@@ -24,6 +24,8 @@ import {
 } from './sideout-distribution';
 import './sideout-study.css';
 import { formatPercent } from '@src/lib/utils/format-percent';
+import { useRememberedState } from '@src/lib/hooks/useRememberedState';
+import { countChangedFilters, statsScopeKey } from '@src/lib/utils/stats-scope';
 
 interface SideOutStudyPanelProps {
   stats: MatchStats;
@@ -93,11 +95,14 @@ const TARGET_AREAS: TargetArea[] = [
 
 export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps) {
   const { t } = useTranslation();
-  const [filters, setFilters] = useState<SideOutStudyFilters>(() => ({
+  // The filters are still there when the user comes back from another tab.
+  const scope = `${statsScopeKey(stats)}|${lockedTeam ?? ''}`;
+  const defaultFilters = (): SideOutStudyFilters => ({
     ...createDefaultSideOutStudyFilters(),
     ...(lockedTeam ? { team: lockedTeam } : {}),
-  }));
-  const [viewMode, setViewMode] = useState<ViewMode>('zone');
+  });
+  const [filters, setFilters, resetFilters] = useRememberedState('side-out-study', scope, defaultFilters);
+  const [viewMode, setViewMode] = useRememberedState<ViewMode>('side-out-study-view', scope, () => 'zone');
 
   const setterPlayerIds = useMemo(() => {
     const byTeam: Record<TeamSide, Set<string>> = { home: new Set(), away: new Set() };
@@ -312,6 +317,10 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           />
         </FilterGroup>
       </FilterGroups>
+      <ResetFiltersButton
+        count={countChangedFilters(filters, defaultFilters(), ['team', 'setterPosition'])}
+        onReset={resetFilters}
+      />
     </section>
   );
 

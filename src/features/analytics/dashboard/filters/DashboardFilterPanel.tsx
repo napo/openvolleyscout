@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useSyncExternalStore, type ReactNode, useMemo } from 'react';
 import type { SkillEvaluation } from '@src/domain/common/enums';
-import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
+import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { SkillIcon } from '@src/components/skill-icons/SkillIcon';
 import { rallyBaseCodes, sortBaseCodes } from '../selectors/base-code';
@@ -280,16 +280,7 @@ export function DashboardFilterPanel({
         ) : null}
       </FilterGroups>
 
-      {activeCount > 0 ? (
-        <button
-          type="button"
-          className="perf-dashboard__filter-reset"
-          onClick={() => resetFilters()}
-          aria-label={t('resetFilters')}
-        >
-          {t('resetFilters')} ({activeCount})
-        </button>
-      ) : null}
+      <ResetFiltersButton count={activeCount} onReset={resetFilters} />
     </div>
   );
 }

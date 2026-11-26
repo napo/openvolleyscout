@@ -74,25 +74,6 @@
     text-overflow: ellipsis;
 }
 
-.perf-dashboard__filter-reset {
-    margin-left: auto;
-    min-height: 1.85rem;
-    padding: 0.15rem 0.7rem;
-    border: 1px solid rgba(220, 38, 38, 0.28);
-    border-radius: 999px;
-    background: rgba(254, 242, 242, 0.95);
-    color: #dc2626;
-    font: inherit;
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-semibold);
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.perf-dashboard__filter-reset:hover {
-    background: rgba(254, 202, 202, 0.95);
-}
-
 /* ---- Section ---- */
 
 .perf-dashboard__section {
@@ -1280,7 +1261,7 @@
         font-size: 0.85rem;
     }
 
-    .perf-dashboard__filter-reset {
+    .filter-chips__reset {
         min-height: 40px;
         width: 100%;
         margin-left: 0;
@@ -1362,7 +1343,7 @@
     max-width: 14rem;
 }
 
-.dashboard-filter-panel > .perf-dashboard__filter-reset {
+.dashboard-filter-panel > .filter-chips__reset {
     align-self: flex-end;
 }
 

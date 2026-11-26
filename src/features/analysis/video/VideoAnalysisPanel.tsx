@@ -51,6 +51,7 @@ import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
 import { canExportLocalClips, runClipExport, type ClipExportBackend } from './clip-export-runner';
 import { applyParsedCodeToTouch, replaceTouchInProject } from './apply-code-edit';
+import { useRememberedState } from '@src/lib/hooks/useRememberedState';
 import { useVideoSource } from './useVideoSource';
 import { RemoteVideoForm, VideoCloudStatus, VideoFileInput, VideoMissingResource, VideoSourceSetup } from './VideoSourcePanels';
 import { canUploadVideos } from '@src/features/sync/cloud/video-upload';
@@ -117,7 +118,8 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
 
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibrationTarget, setCalibrationTarget] = useState<VideoEventEntry | null>(null);
-  const [filters, setFilters] = useState<VideoChainFilters>(createDefaultVideoChainFilters);
+  // The filters are still there when the user comes back from another tab.
+  const [filters, setFilters] = useRememberedState<VideoChainFilters>('video-analysis', project.metadata.id, createDefaultVideoChainFilters);
   const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [sortKey, setSortKey] = useState<VideoEventSortKey>('time');
   const [selectedTouchId, setSelectedTouchId] = useState<string | null>(null);

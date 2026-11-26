@@ -34,9 +34,10 @@ interface FilterBarProps {
   showRole?: boolean;
   showSource?: boolean;
   showPlayer?: boolean;
+  showSkill?: boolean;
 }
 
-function FilterBar({ filters, stats, showTeam = true, showRole = true, showSource = true, showPlayer = true }: FilterBarProps) {
+function FilterBar({ filters, stats, showTeam = true, showRole = true, showSource = true, showPlayer = true, showSkill = false }: FilterBarProps) {
   const { updateFilter } = useFilterActions();
   const players = getAvailablePlayers(stats);
   return (
@@ -46,6 +47,7 @@ function FilterBar({ filters, stats, showTeam = true, showRole = true, showSourc
       showTeam={showTeam}
       showRole={showRole}
       showSource={showSource}
+      showSkill={showSkill}
       showEvaluations
       playerPicker={showPlayer ? (
         <PlayerAutocomplete
@@ -142,6 +144,7 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
             showRole={false}
             showSource={false}
             showPlayer={true}
+            showSkill
           />
 
           {!selectedPlayer ? (

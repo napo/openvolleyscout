@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { AttackerDirectionPhase, SetterDistributionServeType } from '@src/domain/opponent-report/types';
-import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
+import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
+import { countChangedFilters } from '@src/lib/utils/stats-scope';
 import { TOUCH_PHASES, type TouchPhase } from '@src/features/analytics/rally-phase/rally-phase-classifier';
 import type { ScoreSituation } from '@src/features/analytics/dashboard/selectors/rally-context-filters';
 import { useTranslation, type TranslationKey } from '@src/i18n';
@@ -12,6 +13,7 @@ import {
   orderVideoChain,
   pruneVideoChainPlayers,
   shownVideoSkill,
+  createDefaultVideoChainFilters,
   isDefaultVideoChainFilters,
   type VideoChainFilters,
   type VideoSkillAttributes,
@@ -96,6 +98,9 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
     return !current;
   });
   const filtering = !isDefaultVideoChainFilters(filters);
+  const filterCount = filtering
+    ? countChangedFilters(filters, createDefaultVideoChainFilters(), ['attributes', 'shown']) + (Object.values(filters.attributes).some((attributes) => Object.values(attributes ?? {}).some((value) => Array.isArray(value) && value.length > 0)) ? 1 : 0)
+    : 0;
 
   const patchAttributes = (key: SkillType | 'any', next: Partial<VideoSkillAttributes>) => {
     onChange({ ...filters, attributes: { ...filters.attributes, [key]: { ...filters.attributes[key], ...next } } });
@@ -198,6 +203,10 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
         <span className={`video-chain-filters__state${filtering ? ' is-filtering' : ''}`}>
           {filtering ? t('videoFiltersActive') : t('videoFiltersNone')}
         </span>
+        <ResetFiltersButton
+          count={filterCount}
+          onReset={() => onChange({ ...createDefaultVideoChainFilters(), shown: filters.shown })}
+        />
       </div>
       {open ? (
       <FilterGroups>

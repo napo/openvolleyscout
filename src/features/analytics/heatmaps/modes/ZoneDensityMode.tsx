@@ -17,7 +17,7 @@ import { ALL_EVALUATIONS } from '../../dashboard/filters/dashboard-filters';
 import { getTeamsToShow } from '../../dashboard/selectors/dashboard-selectors';
 import { useFilterActions } from '../../stores/filter-selectors';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
-import { classifyRallyTouchPhases, TOUCH_PHASES, classifyAttackPrecedingContext } from '../../rally-phase/rally-phase-classifier';
+import { classifyRallyTouchPhases, classifyAttackPrecedingContext } from '../../rally-phase/rally-phase-classifier';
 import type { TouchPhase, AttackPrecedingContext } from '../../rally-phase/rally-phase-classifier';
 import { extractHeatmapEvents, type HeatmapEvent } from '../aggregation/heatmap-aggregation';
 import { resolveSubzoneOffset, jitterOffsetForId } from '../aggregation/subzone-offset';
@@ -47,13 +47,6 @@ function buildHeatEventMap(rallies: readonly RallyStats[]): Map<string, HeatmapE
   }
   return map;
 }
-
-const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
-  break_point: 'rallyPhaseBreakPoint',
-  point: 'rallyPhasePoint',
-  transition_break_point: 'rallyPhaseTransitionBreakPoint',
-  transition_point: 'rallyPhaseTransitionPoint',
-};
 
 const ATTACK_CONTEXT_OPTIONS: readonly AttackPrecedingContext[] = ['receive', 'dig'];
 
@@ -1411,23 +1404,16 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   const { t } = useTranslation();
   const [showArrows, setShowArrows] = useState(true);
   const [rotation, setRotation] = useState<ChartRotation>(0);
-  const [skill, setSkill] = useState<HeatmapSkillFilter>(initialSkill || 'all');
+  // The skill and the rally phase are the ones of the dashboard filters above: one choice, not two.
+  const skill: HeatmapSkillFilter = filters?.skill ?? initialSkill ?? 'all';
+  const rallyPhaseFilter: 'all' | TouchPhase = filters?.rallyPhase ?? 'all';
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>('density');
   const [startZoneFilter, setStartZoneFilter] = useState<string>('all');
-  const [rallyPhaseFilter, setRallyPhaseFilter] = useState<'all' | TouchPhase>(filters?.rallyPhase ?? 'all');
   const [attackContextFilter, setAttackContextFilter] = useState<'all' | AttackPrecedingContext>('all');
   const [attackFilters, setAttackFilters] = useState<HeatmapAttackFilters>(EMPTY_HEATMAP_ATTACK_FILTERS);
   const [showAttackFilters, setShowAttackFilters] = useState(false);
   const { updateFilter } = useFilterActions();
   const showDebugSubzones = useAppStore((state) => state.showDebugSubzones);
-
-  useEffect(() => {
-    setSkill(initialSkill || 'all');
-  }, [initialSkill]);
-
-  useEffect(() => {
-    setRallyPhaseFilter(filters?.rallyPhase ?? 'all');
-  }, [filters?.rallyPhase]);
 
   const teamsToShow = useMemo(() => getTeamsToShow(stats, filters || {} as DashboardFilters), [stats, filters]);
   const teamSide = teamsToShow[0] || 'home';
@@ -1604,33 +1590,6 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
           </select>
         </div>
 
-        {/* Skill filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>
-            {t('skill')}:
-          </label>
-          <select
-            value={skill}
-            onChange={(e) => setSkill(e.target.value as HeatmapSkillFilter)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '4px',
-              border: '1px solid #999',
-              backgroundColor: '#fff',
-              fontSize: '13px',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="all">{t('allSkills')}</option>
-            <option value="serve">{t('skillServe')}</option>
-            <option value="receive">{t('skillReceive')}</option>
-            <option value="set">{t('skillSet')}</option>
-            <option value="attack">{t('skillAttack')}</option>
-            <option value="block">{t('skillBlock')}</option>
-            <option value="dig">{t('skillDig')}</option>
-          </select>
-        </div>
-
         {/* Start zone filter */}
         {availableStartZones.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1678,32 +1637,6 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
             {t('attackerViewsConfigure')}{activeAttackFilterCount > 0 ? ` (${activeAttackFilterCount})` : ''}
           </button>
         ) : null}
-
-        {/* Rally phase filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>
-            {t('filterRallyPhase')}:
-          </label>
-          <select
-            value={rallyPhaseFilter}
-            onChange={(e) => setRallyPhaseFilter(e.target.value as 'all' | TouchPhase)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '4px',
-              border: '1px solid #999',
-              backgroundColor: '#fff',
-              fontSize: '13px',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="all">{t('allPhases')}</option>
-            {TOUCH_PHASES.map((phase) => (
-              <option key={phase} value={phase}>
-                {t(PHASE_I18N_KEYS[phase] as Parameters<typeof t>[0])}
-              </option>
-            ))}
-          </select>
-        </div>
 
         {/* Attack preceding-context filter (receive vs dig) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

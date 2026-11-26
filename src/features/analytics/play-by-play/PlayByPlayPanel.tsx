@@ -1,4 +1,7 @@
 import { useMemo, useState, type MutableRefObject } from 'react';
+import { ChipSelect, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
+import { useRememberedState } from '@src/lib/hooks/useRememberedState';
+import { statsScopeKey } from '@src/lib/utils/stats-scope';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { Team } from '@src/domain/roster/types';
 import type { MatchEvent } from '@src/domain/events/types';
@@ -29,8 +32,10 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
   shareRef?: MutableRefObject<PlayByPlayShare | null>;
 }) {
   const { t } = useTranslation();
-  const [reference, setReference] = useState<TeamSide>(initialReference);
-  const [setNumber, setSetNumber] = useState(initialSet ?? 0);
+  // The choices are still there when the user comes back from another tab; a shared link opens as sent.
+  const scope = precomputedSets ? `shared|${initialReference}|${initialSet ?? 0}` : `${metadata?.id ?? ''}|${stats ? statsScopeKey(stats) : ''}`;
+  const [choice, setChoice, resetChoice] = useRememberedState('play-by-play', scope, () => ({ reference: initialReference, setNumber: initialSet ?? 0 }));
+  const { reference, setNumber } = choice;
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
   const sets = useMemo(() => {
@@ -54,11 +59,29 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
   };
   return <section className="play-by-play" aria-label={t('pbpTitle')}>
     <h3>{t('pbpTitle')}</h3><p className="play-by-play__intro">{t('pbpDescription')}</p>
+    <FilterGroups>
+      <FilterGroup title={t('pbpReference')}>
+        <ChipSelect
+          single
+          options={(['home', 'away'] as const).map((side) => ({ value: side, label: teams[side].name }))}
+          selected={[reference]}
+          onChange={(next) => setChoice({ ...choice, reference: next[0] ?? reference })}
+        />
+      </FilterGroup>
+      {sets.length > 1 ? (
+        <FilterGroup title={t('pbpSets')} active={setNumber !== 0}>
+          <ChipSelect
+            single
+            allLabel={t('allSets')}
+            options={sets.map((set) => ({ value: set.setNumber, label: String(set.setNumber) }))}
+            selected={setNumber === 0 ? [] : [setNumber]}
+            onChange={(next) => setChoice({ ...choice, setNumber: next[0] ?? 0 })}
+          />
+        </FilterGroup>
+      ) : null}
+    </FilterGroups>
     <div className="play-by-play__controls">
-      <div className="play-by-play__team-switch" role="group" aria-label={t('pbpReference')}>
-        {(['home', 'away'] as const).map((side) => <button key={side} type="button" className="btn-secondary" aria-pressed={reference === side} onClick={() => setReference(side)}>{teams[side].name}</button>)}
-      </div>
-      <label>{t('pbpSets')}<select value={setNumber} onChange={(event) => setSetNumber(Number(event.target.value))}><option value={0}>{t('allSets')}</option>{sets.map((set) => <option key={set.setNumber} value={set.setNumber}>{t('setLabel', { setNumber: set.setNumber })}</option>)}</select></label>
+      <ResetFiltersButton count={setNumber !== 0 ? 1 : 0} onReset={resetChoice} />
       <button type="button" className="btn-secondary" disabled={exporting || !visibleSets.some((set) => set.rows.length)} aria-busy={exporting} onClick={() => void exportPdf()}><ActionIcon name="pdf" />{t(exporting ? 'exportPdfGenerating' : 'pbpExport')}</button>
     </div>
     {exportError ? <p role="alert">{t('exportPdfFailed')}</p> : null}

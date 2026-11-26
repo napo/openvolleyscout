@@ -4,7 +4,7 @@ import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { DataVolleyCodeTables } from '@src/domain/match/code-tables';
-import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
+import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import type { MatchStats, PlayerStats, RotationNumber } from '@src/features/scouting/model/match-stats';
 import {
@@ -24,6 +24,8 @@ import {
   type ZoneAnalysisZone,
 } from './zone-analysis';
 import { ROLE_GROUPS, ROLE_GROUP_NAME_KEYS, ROLE_GROUP_SHORT_KEYS, resolveRoleGroup } from '@src/components/player-role/player-role';
+import { useRememberedState } from '@src/lib/hooks/useRememberedState';
+import { countChangedFilters, statsScopeKey } from '@src/lib/utils/stats-scope';
 import './zone-analysis.css';
 
 interface ZoneAnalysisPanelProps {
@@ -72,8 +74,10 @@ function shortName(player: PlayerStats | undefined): string {
 
 export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsOf, onPlayVideo }: ZoneAnalysisPanelProps) {
   const { t } = useTranslation();
-  const [filters, setFilters] = useState<ZoneAnalysisFilters>(() => createDefaultZoneAnalysisFilters(lockedTeam ?? 'home'));
-  const [values, setValues] = useState<ZoneAnalysisValue[]>([...DEFAULT_ZONE_ANALYSIS_VALUES]);
+  // The filters are still there when the user comes back from another tab.
+  const scope = `${statsScopeKey(stats)}|${lockedTeam ?? ''}`;
+  const [filters, setFilters, resetFilters] = useRememberedState('zone-analysis', scope, () => createDefaultZoneAnalysisFilters(lockedTeam ?? 'home'));
+  const [values, setValues] = useRememberedState<ZoneAnalysisValue[]>('zone-analysis-values', scope, () => [...DEFAULT_ZONE_ANALYSIS_VALUES]);
   const [selectedZone, setSelectedZone] = useState<ZoneAnalysisZone | 'none' | null>(null);
   const team = lockedTeam ?? filters.team;
 
@@ -267,6 +271,10 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
             />
           </FilterGroup>
         </FilterGroups>
+        <ResetFiltersButton
+          count={countChangedFilters(filters, createDefaultZoneAnalysisFilters(filters.team), ['team', 'mode', 'grid'])}
+          onReset={() => { resetFilters(); setSelectedZone(null); }}
+        />
       </section>
 
       <section className="zone-analysis__values-picker" aria-label={t('zoneAnalysisValues')}>

@@ -54,6 +54,7 @@ import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
 import { canExportLocalClips, runClipExport, type ClipExportBackend } from './clip-export-runner';
+import { useRememberedState } from '@src/lib/hooks/useRememberedState';
 import { useVideoSource } from './useVideoSource';
 import { VideoCloudStatus, VideoFileInput, VideoMissingResource, VideoSourceSetup } from './VideoSourcePanels';
 import { buildYouTubePlaylistClips } from './youtube-playlist';
@@ -204,11 +205,16 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   // ── Filters & playback ──────────────────────────────────────────────────────
   // The team studied by default, as before; its opponents are one choice away.
-  const [filters, setFilters] = useState<MultiVideoFilters>(() => ({
-    ...createDefaultVideoChainFilters(),
-    team: 'focus',
-    opponentProjectId: 'all',
-  }));
+  // The filters are still there when the user comes back from another tab.
+  const [filters, setFilters] = useRememberedState<MultiVideoFilters>(
+    'multi-video-analysis',
+    `${projects.map((project) => project.metadata.id).join(',')}|${focusTeamId ?? focusTeamName ?? ''}`,
+    () => ({
+      ...createDefaultVideoChainFilters(),
+      team: 'focus',
+      opponentProjectId: 'all',
+    }),
+  );
   const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [showNotesOnly, setShowNotesOnly] = useState(false);
   const [noteModalState, setNoteModalState] = useState<{ entry: MultiVideoEventEntry; note?: PointNote } | null>(null);

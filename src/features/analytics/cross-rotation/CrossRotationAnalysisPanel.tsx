@@ -1,4 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChipSelect, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
+import { buildCrossRotationStatsFromRallies } from '@src/features/scouting/model/match-stats';
+import { useRememberedState } from '@src/lib/hooks/useRememberedState';
+import { statsScopeKey } from '@src/lib/utils/stats-scope';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { CrossRotationTable } from './CrossRotationTable';
@@ -11,6 +15,15 @@ interface CrossRotationAnalysisPanelProps {
 
 export function CrossRotationAnalysisPanel({ stats }: CrossRotationAnalysisPanelProps) {
   const { t } = useTranslation();
+  const scope = statsScopeKey(stats);
+  const [setNumber, setSetNumber, resetSet] = useRememberedState<number | 'all'>('cross-rotation-set', scope, () => 'all');
+  const setNumbers = useMemo(() => stats.setStats.map((set) => set.setNumber), [stats.setStats]);
+  // One set: the table is counted again from that set's rallies, with the same rules as the whole match.
+  const shown = useMemo(() => (
+    setNumber === 'all' || !setNumbers.includes(setNumber)
+      ? stats
+      : { ...stats, crossRotationStats: buildCrossRotationStatsFromRallies(stats.rallyStats.filter((rally) => rally.setNumber === setNumber)) }
+  ), [stats, setNumber, setNumbers]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeCell, setActiveCell] = useState<CrossRotationActiveCell | null>(null);
   const [pinned, setPinned] = useState(false);
@@ -53,12 +66,28 @@ export function CrossRotationAnalysisPanel({ stats }: CrossRotationAnalysisPanel
     }
   };
 
-  const homeMatrix = stats.crossRotationStats.bySide.home;
-  const awayMatrix = stats.crossRotationStats.bySide.away;
+  const homeMatrix = shown.crossRotationStats.bySide.home;
+  const awayMatrix = shown.crossRotationStats.bySide.away;
   const containerRect = containerRef.current?.getBoundingClientRect();
 
   return (
     <div className="cross-rotation-analysis">
+      {setNumbers.length > 1 ? (
+        <>
+          <FilterGroups>
+            <FilterGroup title={t('filterSet')} active={setNumber !== 'all'}>
+              <ChipSelect
+                single
+                allLabel={t('setterViewReceptionAll')}
+                options={setNumbers.map((value) => ({ value, label: String(value) }))}
+                selected={setNumber === 'all' ? [] : [setNumber]}
+                onChange={(next) => { dismissPinned(); setSetNumber(next[0] ?? 'all'); }}
+              />
+            </FilterGroup>
+          </FilterGroups>
+          <ResetFiltersButton count={setNumber !== 'all' ? 1 : 0} onReset={() => { dismissPinned(); resetSet(); }} />
+        </>
+      ) : null}
       <p className="cross-rotation-analysis__description">{t('crossRotationAnalysisDescription')}</p>
       <div className="cross-rotation-analysis__legend">
         <span className="cross-rotation-analysis__legend-item">
