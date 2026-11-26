@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BallTouch } from '@src/domain/touch/types';
 import { parseSingleCode } from '../expert/code-parser';
-import { buildDataVolleyTouchCode } from './datavolley-code';
+import { buildDataVolleyTouchCode, formatDataVolleyCodeTail, getDataVolleyCodeFields } from './datavolley-code';
 
 function touch(overrides: Partial<BallTouch>): BallTouch {
   return {
@@ -38,8 +38,11 @@ describe('live DataVolley code format', () => {
     });
   });
 
-  it('writes a cover as a dig, since DataVolley has no cover skill', () => {
-    expect(buildDataVolleyTouchCode({ touch: touch({ skill: 'cover', evaluation: '+' }), jerseyNumber: 3 })).toBe('*03D~+');
+  it('writes a cover as a dig of type C, since DataVolley has no cover skill, and reads it back as a cover', () => {
+    const code = buildDataVolleyTouchCode({ touch: touch({ skill: 'cover', evaluation: '+' }), jerseyNumber: 3 });
+    expect(code).toBe('*03D~+~~~~~~C');
+    expect(parseSingleCode(code)).toMatchObject({ valid: true, skill: 'cover', evaluation: '+' });
+    expect(parseSingleCode('*03D~+')).toMatchObject({ valid: true, skill: 'dig' });
   });
 
   it('marks an unknown player with $$', () => {
@@ -53,5 +56,63 @@ describe('live DataVolley code format', () => {
     });
     expect(code).toBe('*09AH+~~~46~T2');
     expect(parseSingleCode(code)).toMatchObject({ skillSubtypeCode: 'T', playersCode: '2' });
+  });
+});
+
+describe('one writer for the on-screen code and the .dvw export', () => {
+  it('reads an older serve type from the advanced details, never its first letter', () => {
+    const serve = touch({ skill: 'serve', evaluation: '-', advancedDetails: { serve: { type: 'jump_float' } } as never });
+    expect(getDataVolleyCodeFields(serve).ballType).toBe('M');
+    // "power" is how the ball was hit, not a ball type: it must not become the ball type P.
+    const attack = touch({ advancedDetails: { attack: { type: 'power' } } as never });
+    expect(getDataVolleyCodeFields(attack)).toMatchObject({ ballType: '', subtype: 'H' });
+  });
+
+  it('keeps the custom characters after the special position, with the evaluation in place', () => {
+    const code = buildDataVolleyTouchCode({ touch: touch({ skill: 'dig', evaluation: '#', customCode: 'XY' }), jerseyNumber: 5 });
+    expect(code).toBe('*05D~#~~~~~~~~~XY');
+    expect(parseSingleCode(code)).toMatchObject({ valid: true, skill: 'dig', evaluation: '#', customCode: 'XY' });
+  });
+
+  it('writes the players at the net on attacks and blocks only', () => {
+    expect(getDataVolleyCodeFields(touch({ skill: 'dig', numBlockers: 2 })).players).toBe('');
+    expect(getDataVolleyCodeFields(touch({ skill: 'block', numBlockers: 2 })).players).toBe('2');
+  });
+
+  it('does not invent an end zone when the touch was recorded without one', () => {
+    const grid = (row: number, column: number) => ({ teamSide: 'home' as const, zoneId: `home-r${row}c${column}`, gridCoordinate: { row, column } });
+    // Recorded live on its own side: start zone from the court, end zone left empty on purpose.
+    const sameSide = touch({ skill: 'dig', startZoneCode: '6D', endZoneCode: '', zone: grid(3, 5) as never, targetZone: grid(3, 5) as never });
+    expect(getDataVolleyCodeFields(sameSide)).toMatchObject({ startZone: '6', endZone: '', endSubzone: '' });
+    // An older touch without any code: the zones come from the court, with the 6x6 grid mapping.
+    const older = touch({ originZone: grid(5, 1) as never, targetZone: grid(1, 6) as never });
+    const fields = getDataVolleyCodeFields(older);
+    expect(`${fields.startZone}${fields.endZone}${fields.endSubzone}`).toMatch(/^[1-9][1-9][A-D]$/);
+  });
+
+  it('takes the zone codes kept on the drawn direction when the touch has none', () => {
+    const drawn = touch({ ballDirection: { start: { x: 1, y: 1 }, end: { x: 2, y: 2 }, courtZoneStart: '4', courtZoneEnd: '1D' } as never });
+    expect(getDataVolleyCodeFields(drawn)).toMatchObject({ startZone: '4', endZone: '1', endSubzone: 'D' });
+  });
+
+  it('writes no zone for button input, unless the zones were picked on purpose', () => {
+    const placeholder = touch({ withoutZones: true, startZoneCode: '8', endZoneCode: '8' });
+    expect(getDataVolleyCodeFields(placeholder)).toMatchObject({ startZone: '', endZone: '' });
+    expect(getDataVolleyCodeFields({ ...placeholder, zonesPicked: true })).toMatchObject({ startZone: '8', endZone: '8' });
+  });
+
+  it('the exported row is the on-screen code at fixed width', () => {
+    const touches = [
+      touch({ skillTypeCode: 'Q', combinationCode: 'X5', startZoneCode: '4', endZoneCode: '8B', numBlockers: 2, attackSubtype: 'T' }),
+      touch({ skill: 'set', setterCallCode: 'K1', setType: 'F', evaluation: '#' }),
+      touch({ skill: 'cover', evaluation: '+' }),
+      touch({ skill: 'serve', skillTypeCode: 'M', evaluation: '-', startZoneCode: '1', endZoneCode: '5' }),
+    ];
+    for (const item of touches) {
+      const onScreen = buildDataVolleyTouchCode({ touch: item, jerseyNumber: 7 });
+      const exported = `*07${onScreen.charAt(3)}${formatDataVolleyCodeTail(getDataVolleyCodeFields(item), item.evaluation)}`;
+      expect(exported.replace(/~+$/, '')).toBe(onScreen.replace(/~+$/, ''));
+      expect(exported.length).toBeGreaterThanOrEqual(15);
+    }
   });
 });

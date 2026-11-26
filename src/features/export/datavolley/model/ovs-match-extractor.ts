@@ -1,9 +1,9 @@
-import { getAttackSubtypeOrDefault } from '../../../../domain/touch/types';
+import { DATA_VOLLEY_SKILL_CODE, formatDataVolleyCodeTail, getDataVolleyCodeFields } from '../../../scouting/model/datavolley-code';
 import { createCourtOpsReader } from '../../../../domain/events/court-ops';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
-import { getMatchCodeTables, getMatchRoster, getMatchTeamSnapshot, isSetterCallCode } from '../../../../domain/match';
+import { getMatchCodeTables, getMatchRoster, getMatchTeamSnapshot } from '../../../../domain/match';
 import { parseStoredDateTime } from '../../../../lib/utils/local-date';
 import { createTouchVideoSecondsResolver } from '../../../analysis/video/video-event-index';
 import type { MatchVideoAnalysis, VideoRallyTimingMode, VideoSyncInterpolation, VideoSyncPoint } from '@src/domain/video/types';
@@ -42,17 +42,7 @@ const TEAM_MARKER: Record<TeamSide, '*' | 'a'> = {
   away: 'a',
 };
 
-const SKILL_CODE: Partial<Record<BallTouch['skill'], string>> = {
-  serve: 'S',
-  receive: 'R',
-  set: 'E',
-  attack: 'A',
-  block: 'B',
-  dig: 'D',
-  freeball: 'F',
-  // DataVolley has no cover skill: a cover is recorded as a dig.
-  cover: 'D',
-};
+const SKILL_CODE = DATA_VOLLEY_SKILL_CODE;
 
 const ROLE_CODE: Record<string, string> = {
   libero: '1',
@@ -433,89 +423,6 @@ function applyLineupReplacement(lineup: LineupState | null, side: TeamSide, outN
   return next;
 }
 
-function getZoneFromReference(input: {
-  zoneCode?: string;
-  courtZone?: string;
-  gridCoordinate?: { row: number; column: number };
-}): { zone?: string; subzone?: string } {
-  const knownCode = cleanField(input.zoneCode);
-  if (/^[1-9][a-dA-D]?$/.test(knownCode)) {
-    return {
-      zone: knownCode.charAt(0),
-      subzone: knownCode.charAt(1)?.toUpperCase() || undefined,
-    };
-  }
-
-  const courtZone = cleanField(input.courtZone);
-  if (/^[1-9][a-dA-D]?$/.test(courtZone)) {
-    return {
-      zone: courtZone.charAt(0),
-      subzone: courtZone.charAt(1)?.toUpperCase() || undefined,
-    };
-  }
-
-  const grid = input.gridCoordinate;
-  if (!grid) {
-    return {};
-  }
-
-  const column = grid.column <= 2 ? 1 : grid.column <= 4 ? 2 : 3;
-  const row = grid.row <= 2 ? 1 : grid.row <= 4 ? 2 : 3;
-  const zoneMap: Record<number, Record<number, string>> = {
-    1: { 1: '5', 2: '6', 3: '1' },
-    2: { 1: '4', 2: '3', 3: '2' },
-    3: { 1: '4', 2: '3', 3: '2' },
-  };
-
-  return {
-    zone: zoneMap[row]?.[column],
-  };
-}
-
-function getTouchStartEndZones(touch: BallTouch): { startZone?: string; endZone?: string; endSubzone?: string } {
-  // Button input: the touch only has a placeholder zone, export none.
-  // Button input: only zones picked on purpose (Tags zone picker), never the placeholder.
-  if (touch.withoutZones) {
-    if (!touch.zonesPicked) return {};
-    const start = getZoneFromReference({ zoneCode: touch.startZoneCode });
-    const end = getZoneFromReference({ zoneCode: touch.endZoneCode });
-    return { startZone: start.zone, endZone: end.zone, endSubzone: end.subzone };
-  }
-  const serveDetails = touch.advancedDetails?.serve;
-  const attackDetails = touch.advancedDetails?.attack;
-  const setDetails = touch.advancedDetails?.set;
-  const freeballDetails = touch.advancedDetails?.freeball;
-  const coverDetails = touch.advancedDetails?.cover;
-  const start = getZoneFromReference({
-    zoneCode: touch.startZoneCode ?? serveDetails?.startZone ?? attackDetails?.startZone,
-    courtZone: touch.ballDirection?.courtZoneStart,
-    gridCoordinate: touch.originZone?.gridCoordinate ?? touch.direction?.start?.gridCoordinate,
-  });
-  const end = getZoneFromReference({
-    zoneCode: touch.endZoneCode
-      ?? serveDetails?.targetZone
-      ?? attackDetails?.targetZone
-      ?? setDetails?.targetZone
-      ?? freeballDetails?.targetZone
-      ?? coverDetails?.targetZone,
-    courtZone: touch.ballDirection?.courtZoneEnd,
-    gridCoordinate: touch.targetZone?.gridCoordinate ?? touch.zone?.gridCoordinate ?? touch.direction?.end?.gridCoordinate,
-  });
-
-  return {
-    startZone: start.zone,
-    endZone: end.zone,
-    endSubzone: end.subzone,
-  };
-}
-
-function sanitizeCodeSegment(value: string | undefined, length: number): string {
-  const cleaned = cleanField(value)
-    .replace(/[^A-Za-z0-9#=+\-/!]+/g, '')
-    .toUpperCase();
-  return cleaned.slice(0, length).padEnd(length, '~') || '~'.repeat(length);
-}
-
 function createTouchCode(input: {
   project: MatchProject;
   touch: BallTouch;
@@ -566,45 +473,9 @@ function createTouchCode(input: {
     }));
   }
 
-  const zones = getTouchStartEndZones(touch);
-  const serveDetails = touch.advancedDetails?.serve;
-  const attackDetails = touch.advancedDetails?.attack;
-  const setDetails = touch.advancedDetails?.set;
-  const skillType = sanitizeCodeSegment(
-    touch.skillTypeCode
-      ?? (touch.skill === 'serve'
-      ? touch.serveType ?? serveDetails?.type
-      : touch.skill === 'attack'
-        ? touch.attackType ?? attackDetails?.type
-        : undefined),
-    1,
-  );
-  const attackCombination = touch.skill === 'attack'
-    ? touch.combinationCode ?? attackDetails?.combination
-    : undefined;
-  const actionCode = sanitizeCodeSegment(
-    touch.skill === 'attack'
-      // Older OVS versions wrote setter calls (K1...) on attacks; DataVolley
-      // only accepts attack combinations there.
-      ? (isSetterCallCode(attackCombination) ? undefined : attackCombination)
-      : touch.skill === 'set'
-        ? touch.setterCallCode
-        : undefined,
-    2,
-  );
-  const setType = sanitizeCodeSegment(touch.skill === 'set' ? touch.setType ?? setDetails?.type : undefined, 1);
-  const startZone = sanitizeCodeSegment(zones.startZone, 1);
-  const endZone = sanitizeCodeSegment(zones.endZone, 1);
-  const endSubzone = sanitizeCodeSegment(zones.endSubzone, 1);
-  const customCode = cleanField(touch.customCode).replace(/[;\r\n]+/g, '').slice(0, 12);
-  // Extended code: skill subtype, players at the net (blockers), special.
-  const players = (touch.skill === 'attack' || touch.skill === 'block') && touch.numBlockers !== undefined
-    ? String(touch.numBlockers)
-    : '~';
-
-  // A cover goes out as a dig of type C ("spike cover"), so DataVolley and OVS read it back as a cover.
-  const subtype = touch.skill === 'cover' ? 'C' : getAttackSubtypeOrDefault(touch) ?? '~';
-  return `${marker}${jersey}${skillCode}${skillType}${evaluation}${actionCode}${setType}${startZone}${endZone}${endSubzone}${subtype}${players}~${customCode}`;
+  // Every field of the code comes from the same builder as the on-screen code, so a touch
+  // reads the same in the code list and in the exported file.
+  return `${marker}${jersey}${skillCode}${formatDataVolleyCodeTail(getDataVolleyCodeFields(touch), evaluation)}`;
 }
 
 function createSyntheticTouch(base: BallTouch, input: {

@@ -301,8 +301,8 @@ function parsePlayerSkillCode(rawCode: string, originalCode = rawCode): ParsedTo
   }
 
   const skillCode = rawCode.charAt(cursor);
-  const skill = SKILL_MAP[skillCode];
-  if (!skill) {
+  const codedSkill = SKILL_MAP[skillCode];
+  if (!codedSkill) {
     return createInvalidCode(originalCode, `Unsupported skill code: ${skillCode || '(missing)'}`, rawCode.length < 4);
   }
   cursor += 1;
@@ -311,7 +311,10 @@ function parsePlayerSkillCode(rawCode: string, originalCode = rawCode): ParsedTo
   const hasFullDataVolleyShape = tail.includes('~') || tail.length >= 8;
   const parsedTail = hasFullDataVolleyShape
     ? parseFullDataVolleyTail(tail)
-    : parseCompactTail(tail, skill);
+    : parseCompactTail(tail, codedSkill);
+  // DataVolley has no cover skill: a cover is written as a dig of type C ("spike cover").
+  const subtypeCode = 'skillSubtypeCode' in parsedTail ? String(parsedTail.skillSubtypeCode ?? '').toUpperCase() : '';
+  const skill: SkillType = codedSkill === 'dig' && subtypeCode === 'C' ? 'cover' : codedSkill;
 
   return {
     valid: true,
