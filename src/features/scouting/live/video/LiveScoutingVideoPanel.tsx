@@ -17,12 +17,21 @@ import type { MatchProject } from '@src/domain/match/types';
 import type { MatchVideoAnalysis, MatchVideoSource } from '@src/domain/video/types';
 import { createDefaultMatchVideoAnalysis, getFilePath, getVideoSourceKey } from '@src/domain/video/types';
 import { VideoPlayerView, resolveLocalVideoUrl, type VideoPlayerHandle } from '@src/features/analysis/video/VideoPlayerView';
-import { getSessionVideoFile, loadVideoFileHandle, rememberSessionVideoFile, saveVideoFileHandle, supportsFileSystemAccess } from '@src/features/analysis/video/file-handle-store';
+import { rememberSessionVideoFile } from '@src/features/analysis/video/file-handle-store';
+import {
+  cloudVideoStreamUrl,
+  localVideoSourcePatch,
+  MAX_CLOUD_STREAM_RENEWALS,
+  pickBrowserVideoFile,
+  rememberVideoFileHandle,
+  remoteVideoSourcePatch,
+  reopenStoredVideoFile,
+  restoreLocalVideoFile,
+} from '@src/features/analysis/video/video-source-lifecycle';
 import { cloudSyncController } from '@src/features/sync/cloud/archive-adapter';
-import { canUploadVideos, checkReplacedVideo, findCloudVideo } from '@src/features/sync/cloud/video-upload';
+import { canUploadVideos, checkReplacedVideo } from '@src/features/sync/cloud/video-upload';
 import { askToUploadMatchVideo } from '@src/features/sync/cloud/CloudVideoUploadPrompt';
 import { YouTubeFramePlayer } from '@src/features/analysis/video/YouTubeFramePlayer';
-import { parseYouTubeVideoId } from '@src/features/analysis/video/youtube';
 import { useTranslation } from '@src/i18n';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { useTauriCapability } from '@src/lib/hooks/useTauriCapability';
@@ -375,7 +384,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
 
     const handlePlayable = useCallback((playable: boolean) => {
       // A cloud link expires (about an hour on Drive and OneDrive): get a fresh one, keep the position.
-      if (!playable && streamingFromCloudRef.current && cloudRenewalsRef.current < 3) {
+      if (!playable && streamingFromCloudRef.current && cloudRenewalsRef.current < MAX_CLOUD_STREAM_RENEWALS) {
         cloudRenewalsRef.current += 1;
         renewCloudStreamRef.current();
         return;
@@ -465,32 +474,18 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       streamingFromCloudRef.current = false;
       cloudRenewalsRef.current = 0;
       if (source?.kind !== 'file' || resolveLocalVideoUrl(source.path, fileObjectUrl)) return undefined;
-      const sessionFile = getSessionVideoFile(project.metadata.id, source.fileName);
-      if (sessionFile) {
-        setFileObjectUrl(URL.createObjectURL(sessionFile));
-        return undefined;
-      }
       let cancelled = false;
       void (async () => {
-        const handle = await loadVideoFileHandle(project.metadata.id).catch(() => null);
+        // The file chosen earlier in this session, or the one remembered from a previous session.
+        const restored = await restoreLocalVideoFile(project.metadata.id, source.fileName).catch(() => null);
         if (cancelled) return;
-        if (handle) {
-          const permission = await handle.queryPermission?.({ mode: 'read' }) ?? 'prompt';
-          if (cancelled) return;
-          if (permission === 'granted') {
-            const file = await handle.getFile().catch(() => null);
-            if (file && !cancelled) {
-              setFileObjectUrl(URL.createObjectURL(file));
-              return;
-            }
-          } else {
-            setStoredHandle(handle);
-          }
+        if (restored?.kind === 'file') {
+          setFileObjectUrl(URL.createObjectURL(restored.file));
+          return;
         }
+        if (restored?.kind === 'needs-permission') setStoredHandle(restored.handle);
         if (cloudSyncController.status.state === 'off') return;
-        const found = await findCloudVideo(project.metadata.id).catch(() => null);
-        if (!found || cancelled || !found.storage.canStream) return;
-        const url = await found.storage.videoStreamUrl(found.file).catch(() => null);
+        const url = await cloudVideoStreamUrl(project.metadata.id).catch(() => null);
         if (url && !cancelled) {
           streamingFromCloudRef.current = true;
           setFileObjectUrl(url);
@@ -502,8 +497,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
 
     renewCloudStreamRef.current = () => {
       const resumeAt = playerRef.current?.getCurrentTime() ?? null;
-      void findCloudVideo(project.metadata.id)
-        .then((found) => (found ? found.storage.videoStreamUrl(found.file) : null))
+      void cloudVideoStreamUrl(project.metadata.id)
         .then((url) => {
           if (!url) {
             streamingFromCloudRef.current = false;
@@ -521,11 +515,13 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
 
     const reopenStoredVideo = async () => {
       if (!storedHandle) return;
-      const permission = await storedHandle.requestPermission?.({ mode: 'read' }) ?? 'denied';
-      if (permission !== 'granted') return;
-      const file = await storedHandle.getFile().catch(() => null);
+      const file = await reopenStoredVideoFile(project.metadata.id, storedHandle);
+      if (file === 'denied') return;
       setStoredHandle(null);
-      if (file) setFileObjectUrl(URL.createObjectURL(file));
+      // null: the file moved or was deleted; the remembered handle is forgotten.
+      if (!file) return;
+      rememberSessionVideoFile(project.metadata.id, file);
+      setFileObjectUrl(URL.createObjectURL(file));
     };
 
     /** The same match video found again on this device: the sync points stay. */
@@ -536,39 +532,30 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       setStoredHandle(null);
       streamingFromCloudRef.current = false;
       rememberSessionVideoFile(project.metadata.id, file);
-      if (handle) void saveVideoFileHandle(project.metadata.id, handle).catch(() => undefined);
-      if (source?.kind === 'file' && source.fileName === file.name) return;
-      void persistVideoAnalysis({ source: { kind: 'file', path: getFilePath(file), fileName: file.name } })
-        .then(() => checkReplacedVideo(project.metadata.id, file.size));
+      if (handle) rememberVideoFileHandle(project.metadata.id, handle);
+      const patch = localVideoSourcePatch(videoAnalysis, { path: getFilePath(file), fileName: file.name }, { matchByName: true, betweenFiles: 'keep-sync' });
+      if (!patch) return;
+      void persistVideoAnalysis(patch).then(() => checkReplacedVideo(project.metadata.id, file.size));
     };
 
     const pickRelinkFile = async () => {
-      if (supportsFileSystemAccess() && window.showOpenFilePicker) {
-        try {
-          const [handle] = await window.showOpenFilePicker({
-            multiple: false,
-            types: [{ description: 'Video', accept: { 'video/*': ['.mp4', '.webm', '.mkv', '.mov', '.avi', '.m4v', '.ogv'] } }],
-          });
-          relinkFile(await handle.getFile(), handle);
-        } catch {
-          // Picker dismissed.
-        }
+      const picked = await pickBrowserVideoFile();
+      if (picked === 'unsupported') {
+        relinkInputRef.current?.click();
         return;
       }
-      relinkInputRef.current?.click();
+      if (picked) relinkFile(picked.file, picked.handle);
     };
 
     const handleFileSelected = (file: File | null) => {
       if (!file) return;
       if (fileObjectUrl) URL.revokeObjectURL(fileObjectUrl);
       setFileObjectUrl(URL.createObjectURL(file));
-      const candidatePath = getFilePath(file);
-      void persistVideoAnalysis({
-        source: { kind: 'file', path: candidatePath, fileName: file.name },
-        syncPoints: [],
-        lastPlaybackPositionSeconds: undefined,
-        lastPlaybackAtIso: undefined,
-      }).then(() => checkReplacedVideo(project.metadata.id, file.size));
+      rememberSessionVideoFile(project.metadata.id, file);
+      // Another video starts from scratch; the file already linked keeps its sync points.
+      const patch = localVideoSourcePatch(videoAnalysis, { path: getFilePath(file), fileName: file.name }, { matchByName: true, betweenFiles: 'reset' });
+      if (!patch) return;
+      void persistVideoAnalysis(patch).then(() => checkReplacedVideo(project.metadata.id, file.size));
     };
 
     // Desktop only: a real absolute path from the native dialog, not a File
@@ -581,28 +568,21 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
         URL.revokeObjectURL(fileObjectUrl);
         setFileObjectUrl(null);
       }
-      const fileName = path.split(/[\\/]/).pop() ?? path;
-      void persistVideoAnalysis({
-        source: { kind: 'file', path, fileName },
-        syncPoints: [],
-        lastPlaybackPositionSeconds: undefined,
-        lastPlaybackAtIso: undefined,
-      }).then(() => checkReplacedVideo(project.metadata.id, null, path));
+      const patch = localVideoSourcePatch(videoAnalysis, { path }, { betweenFiles: 'reset' });
+      if (!patch) return;
+      void persistVideoAnalysis(patch).then(() => checkReplacedVideo(project.metadata.id, null, path));
     };
 
     const handleLoadYoutube = () => {
-      const videoId = parseYouTubeVideoId(youtubeUrlDraft);
-      if (!videoId) {
+      // The same rules as Video analysis: loading the same video again keeps its sync points.
+      const result = remoteVideoSourcePatch(videoAnalysis, youtubeUrlDraft);
+      // Only YouTube here: the floating panel has no player for other links.
+      if (!result.ok || result.patch.source?.kind !== 'youtube') {
         setYoutubeUrlError(true);
         return;
       }
       setYoutubeUrlError(false);
-      persistVideoAnalysis({
-        source: { kind: 'youtube', url: youtubeUrlDraft, videoId },
-        syncPoints: [],
-        lastPlaybackPositionSeconds: undefined,
-        lastPlaybackAtIso: undefined,
-      });
+      void persistVideoAnalysis(result.patch);
       setYoutubeUrlDraft('');
       setActiveSourceMenu(null);
     };

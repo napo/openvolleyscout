@@ -9,19 +9,14 @@ import {
   useRef,
   useState,
 } from 'react';
-import { isTauri } from '@tauri-apps/api/core';
-import { Link } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { matchRepository } from '@src/infrastructure/repositories';
-import { pickFilePath, VIDEO_FILE_DIALOG_FILTERS } from '../../../lib/utils/pick-file';
 import type { MatchProject } from '@src/domain/match/types';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { SkillType, TeamSide } from '@src/domain/common/enums';
 import {
   createDefaultMatchVideoAnalysis,
-  getFilePath,
-  getVideoSourceKey,
   toggleStarredTouchId,
   type MatchVideoAnalysis,
   type PointNote,
@@ -59,13 +54,8 @@ import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
 import { canExportLocalClips, runClipExport, type ClipExportBackend } from './clip-export-runner';
-import {
-  deleteVideoFileHandle,
-  loadVideoFileHandle,
-  saveVideoFileHandle,
-  supportsFileSystemAccess,
-} from './file-handle-store';
-import { resolveRemoteVideoSource, remoteVideoUrlErrorKey, type RemoteVideoUrlError } from './remote-video-url';
+import { useVideoSource } from './useVideoSource';
+import { VideoCloudStatus, VideoFileInput, VideoMissingResource, VideoSourceSetup } from './VideoSourcePanels';
 import { buildYouTubePlaylistClips } from './youtube-playlist';
 import {
   useYouTubeSourceNotice,
@@ -74,10 +64,9 @@ import {
   YouTubeSourceNotice,
 } from './YouTubePlaylistTools';
 import { useVideoPlaybackShortcut } from '@src/features/scouting/live/video/use-video-playback-shortcut';
-import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
+import { VideoPlayerView, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
-import { confirmAction } from '@src/components/confirm-dialog';
 import {
   annotateVideoEntries,
   availableBaseCodes,
@@ -196,11 +185,8 @@ function getCachedTouchClockMap(index: VideoEventIndex): Map<string, number | nu
 export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }: MultiVideoAnalysisPanelProps) {
   const { t } = useTranslation();
   const playerRef = useRef<VideoPlayerHandle | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const clipTimerRef = useRef<number | null>(null);
   const pendingPlayRef = useRef<{ entry: MultiVideoEventEntry; advance: boolean } | null>(null);
-  // Session cache: projectId → objectURL so switching back doesn't require re-picking the file
-  const fileUrlCacheRef = useRef<Map<string, string>>(new Map());
 
   // ── Active project ──────────────────────────────────────────────────────────
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
@@ -210,17 +196,6 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   // ── Per-project video analysis overrides (calibration changes) ──────────────
   const [vaOverrides, setVaOverrides] = useState<Map<string, MatchVideoAnalysis>>(() => new Map());
-
-  // ── Active-project player state ─────────────────────────────────────────────
-  const [fileObjectUrl, setFileObjectUrl] = useState<string | null>(null);
-  const [storedHandle, setStoredHandle] = useState<FileSystemFileHandle | null>(null);
-  const [isPlayable, setIsPlayable] = useState(false);
-  const isPlayableRef = useRef(false);
-  const [videoError, setVideoError] = useState(false);
-  useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
-  const [filePathDraft, setFilePathDraft] = useState('');
-  const [youtubeUrlDraft, setYoutubeUrlDraft] = useState('');
-  const [youtubeUrlError, setYoutubeUrlError] = useState<RemoteVideoUrlError | null>(null);
 
   // ── Calibration ─────────────────────────────────────────────────────────────
   const [isCalibrating, setIsCalibrating] = useState(false);
@@ -289,7 +264,6 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     [activeProjectId, getProjectVideoAnalysis],
   );
   const activeSource = activeVideoAnalysis.source;
-  const activeSourceKey = getVideoSourceKey(activeSource);
 
   // ── Derived: merged entries ────────────────────────────────────────────────
 
@@ -407,198 +381,33 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     void matchRepository.update({ ...proj, videoAnalysis: next, updatedAt: Date.now() });
   }, [getProjectVideoAnalysis, projects]);
 
-  // ── Active project switch effect ────────────────────────────────────────────
-  // Saves the current file URL to the session cache, then restores the new project's URL.
+  // ── Video source of the active match ────────────────────────────────────────
+  // The same life cycle as the single-match panel (local file found again on this device, copy in
+  // the cloud, link): see useVideoSource. It follows the active match.
 
-  const prevActiveIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const prevId = prevActiveIdRef.current;
-    prevActiveIdRef.current = activeProjectId;
-
-    if (prevId !== null) {
-      setFileObjectUrl((currentUrl) => {
-        if (currentUrl) fileUrlCacheRef.current.set(prevId, currentUrl);
-        return currentUrl;
-      });
-    }
-
-    setIsPlayable(false);
-    isPlayableRef.current = false;
-    setVideoError(false);
-    setStoredHandle(null);
-    setIsCalibrating(false);
-    setCalibrationTarget(null);
-
-    if (!activeProjectId) {
-      setFileObjectUrl(null);
-      return undefined;
-    }
-
-    const cachedUrl = fileUrlCacheRef.current.get(activeProjectId) ?? null;
-    setFileObjectUrl(cachedUrl);
-    if (cachedUrl) return undefined;
-
-    // Try stored file handle for file sources that aren't directly resolvable
-    const va = getProjectVideoAnalysis(activeProjectId);
-    const src = va.source;
-    if (!src || src.kind !== 'file' || resolveLocalVideoUrl(src.path, null)) return undefined;
-
-    let cancelled = false;
-    void loadVideoFileHandle(activeProjectId).then(async (handle) => {
-      if (cancelled || !handle) return;
-      const permission = await handle.queryPermission?.({ mode: 'read' }) ?? 'prompt';
-      if (cancelled) return;
-      if (permission === 'granted') {
-        const file = await handle.getFile();
-        if (cancelled) return;
-        const url = URL.createObjectURL(file);
-        fileUrlCacheRef.current.set(activeProjectId, url);
-        setFileObjectUrl(url);
-      } else {
-        setStoredHandle(handle);
-      }
-    }).catch(() => {});
-
-    return () => { cancelled = true; };
-  }, [activeProjectId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const prevActiveSourceKeyRef = useRef(activeSourceKey);
-  if (prevActiveSourceKeyRef.current !== activeSourceKey) {
-    prevActiveSourceKeyRef.current = activeSourceKey;
-    setIsPlayable(false);
-    isPlayableRef.current = false;
-    setVideoError(false);
-  }
-
-  // ── Player event handlers ───────────────────────────────────────────────────
-
-  // playEntryRef keeps the latest playEntry to break dependency cycles in handlePlayable
+  // playEntryRef keeps the latest playEntry for the play requested before the video was ready.
   const playEntryRef = useRef<((entry: MultiVideoEventEntry, advance: boolean) => void) | null>(null);
 
-  const handlePlayable = useCallback((playable: boolean) => {
-    setIsPlayable(playable);
-    isPlayableRef.current = playable;
-    if (!playable) { setVideoError(true); return; }
-
-    if (pendingPlayRef.current) {
+  const video = useVideoSource({
+    projectId: activeProjectId,
+    videoAnalysis: activeVideoAnalysis,
+    persist: (patch) => { if (activeProjectId) persistVideoAnalysis(activeProjectId, patch); },
+    playerRef,
+    onPlayable: (playable) => {
+      if (!playable || !pendingPlayRef.current) return;
       const pending = pendingPlayRef.current;
       pendingPlayRef.current = null;
       window.setTimeout(() => { playEntryRef.current?.(pending.entry, pending.advance); }, 100);
-    }
-  }, []);
+    },
+  });
+  const { fileObjectUrl, isPlayable, isPlayableRef, showMissingResource } = video;
+  useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
 
-  // ── File source management ──────────────────────────────────────────────────
-
-  const handleFileSelected = useCallback((file: File | null) => {
-    if (!file || !activeProjectId) return;
-    const url = URL.createObjectURL(file);
-    fileUrlCacheRef.current.set(activeProjectId, url);
-    setFileObjectUrl(url);
-    setIsPlayable(true);
-    isPlayableRef.current = true;
-    setVideoError(false);
-
-    const candidatePath = getFilePath(file);
-    const va = getProjectVideoAnalysis(activeProjectId);
-    const src = va.source;
-    if (src?.kind === 'file' && (src.fileName === file.name || src.path === candidatePath)) return;
-    persistVideoAnalysis(activeProjectId, {
-      source: { kind: 'file', path: candidatePath, fileName: file.name },
-      syncPoints: src?.kind === 'file' ? va.syncPoints : [],
-    });
-  }, [activeProjectId, getProjectVideoAnalysis, persistVideoAnalysis]);
-
-  // Desktop only: a real absolute path from the native dialog, not a File
-  // object - sidesteps the browser <input>/blob-URL path entirely, which
-  // never carries a resolvable filesystem path under Tauri.
-  const handleFilePathSelected = (path: string) => {
-    if (!activeProjectId) return;
-    setIsPlayable(true);
-    isPlayableRef.current = true;
-    setVideoError(false);
-
-    const fileName = path.split(/[\\/]/).pop() ?? path;
-    const va = getProjectVideoAnalysis(activeProjectId);
-    const src = va.source;
-    if (src?.kind === 'file' && src.path === path) return;
-    persistVideoAnalysis(activeProjectId, {
-      source: { kind: 'file', path, fileName },
-      syncPoints: src?.kind === 'file' ? va.syncPoints : [],
-    });
-  };
-
-  const openVideoFilePicker = async () => {
-    if (!activeProjectId) return;
-    if (isTauri()) {
-      const path = await pickFilePath(VIDEO_FILE_DIALOG_FILTERS);
-      if (!path) return; // user cancelled
-      handleFilePathSelected(path);
-      return;
-    }
-    if (!supportsFileSystemAccess() || !window.showOpenFilePicker) {
-      fileInputRef.current?.click();
-      return;
-    }
-    let handle: FileSystemFileHandle;
-    try {
-      [handle] = await window.showOpenFilePicker({
-        multiple: false,
-        types: [{ description: 'Video', accept: { 'video/*': ['.mp4', '.webm', '.mkv', '.mov', '.avi', '.m4v', '.ogv'] } }],
-      });
-    } catch { return; }
-    const file = await handle.getFile();
-    void saveVideoFileHandle(activeProjectId, handle).catch(() => {});
-    setStoredHandle(null);
-    handleFileSelected(file);
-  };
-
-  const reopenStoredVideo = async () => {
-    if (!storedHandle || !activeProjectId) return;
-    const permission = await storedHandle.requestPermission?.({ mode: 'read' }) ?? 'denied';
-    if (permission !== 'granted') return;
-    try {
-      const file = await storedHandle.getFile();
-      setStoredHandle(null);
-      handleFileSelected(file);
-    } catch {
-      setStoredHandle(null);
-      void deleteVideoFileHandle(activeProjectId).catch(() => {});
-    }
-  };
-
-  const handleLoadFromPath = () => {
-    if (!activeProjectId) return;
-    const path = filePathDraft.trim();
-    if (!path) return;
-    const fileName = path.split(/[\\/]/).pop();
-    persistVideoAnalysis(activeProjectId, { source: { kind: 'file', path, fileName }, syncPoints: [] });
-    setFilePathDraft('');
-  };
-
-  const handleLoadYoutube = () => {
-    if (!activeProjectId) return;
-    const resolved = resolveRemoteVideoSource(youtubeUrlDraft);
-    if (!resolved.ok) { setYoutubeUrlError(resolved.reason); return; }
-    setYoutubeUrlError(null);
-    persistVideoAnalysis(activeProjectId, {
-      source: resolved.source,
-      syncPoints: [],
-    });
-    setYoutubeUrlDraft('');
-  };
-
-  const handleRemoveSource = async () => {
-    if (!activeProjectId || !(await confirmAction(t('videoRemoveSourceConfirm')))) return;
-    const cached = fileUrlCacheRef.current.get(activeProjectId);
-    if (cached) { URL.revokeObjectURL(cached); fileUrlCacheRef.current.delete(activeProjectId); }
-    setFileObjectUrl(null);
-    setIsPlayable(false);
-    isPlayableRef.current = false;
-    setStoredHandle(null);
-    void deleteVideoFileHandle(activeProjectId).catch(() => {});
-    persistVideoAnalysis(activeProjectId, { source: undefined, syncPoints: [] });
-  };
+  // Another match on screen: a calibration under way belonged to the previous one.
+  useEffect(() => {
+    setIsCalibrating(false);
+    setCalibrationTarget(null);
+  }, [activeProjectId]);
 
   // ── Calibration ─────────────────────────────────────────────────────────────
 
@@ -795,7 +604,6 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   useEffect(() => () => {
     if (clipTimerRef.current !== null) window.clearTimeout(clipTimerRef.current);
-    fileUrlCacheRef.current.forEach((url) => URL.revokeObjectURL(url));
   }, []);
 
   // ── Derived display values ──────────────────────────────────────────────────
@@ -803,7 +611,6 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   const activeRecord = projectRecords.find((r) => r.project.metadata.id === activeProjectId) ?? null;
   const needsCalibration = activeVideoAnalysis.syncPoints.length === 0 && (activeRecord?.index.clockDomain ?? 'none') !== 'video';
 
-  const showMissingResource = isVideoResourceMissing(activeSource, fileObjectUrl, videoError);
 
   const hasSyncedFilteredEntries = filteredEntries.some((e) => getEntryVideoSeconds(e) !== null);
   const hasSyncedStarredEntries = starredEntries.some((e) => getEntryVideoSeconds(e) !== null);
@@ -820,77 +627,17 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   // ── Render helpers ──────────────────────────────────────────────────────────
 
   const renderSourceSetup = () => (
-    <div className="video-analysis__setup">
-      {activeRecord && (
+    <VideoSourceSetup
+      video={video}
+      heading={activeRecord ? (
         <p className="video-analysis__notice">
           <strong>{activeRecord.matchLabel}</strong>
         </p>
-      )}
-      <p className="video-analysis__notice">{t('videoSourceNotice')}</p>
-      <p className="video-analysis__notice">
-        <Link to="/player">{t('videoSharedPlayerEntry')}</Link>
-      </p>
-      <div className="video-analysis__setup-grid">
-        <section className="video-analysis__setup-card">
-          <h3>{t('videoSourceLocalFile')}</h3>
-          <button type="button" className="btn-secondary" onClick={() => void openVideoFilePicker()}>
-            {t('videoChooseFile')}
-          </button>
-          <div className="video-analysis__inline-form">
-            <input
-              type="text"
-              value={filePathDraft}
-              onChange={(e) => setFilePathDraft(e.target.value)}
-              placeholder={t('videoFilePathPlaceholder')}
-            />
-            <button type="button" className="btn-secondary" onClick={handleLoadFromPath} disabled={!filePathDraft.trim()}>
-              {t('videoLoadFromPath')}
-            </button>
-          </div>
-        </section>
-        <section className="video-analysis__setup-card">
-          <h3>{t('videoSourceYoutube')}</h3>
-          <div className="video-analysis__inline-form">
-            <input
-              type="text"
-              value={youtubeUrlDraft}
-              onChange={(e) => { setYoutubeUrlDraft(e.target.value); setYoutubeUrlError(null); }}
-              placeholder={t('videoYoutubeUrlPlaceholder')}
-            />
-            <button type="button" className="btn-secondary" onClick={handleLoadYoutube} disabled={!youtubeUrlDraft.trim()}>
-              {t('videoLoadYoutube')}
-            </button>
-          </div>
-          {youtubeUrlError && (
-            <p className="video-analysis__error">
-              {t(remoteVideoUrlErrorKey(youtubeUrlError))}
-            </p>
-          )}
-        </section>
-      </div>
-    </div>
+      ) : null}
+    />
   );
 
-  const renderMissingResource = () => (
-    <div className="video-analysis__missing">
-      <h3>{t('videoMissingTitle')}</h3>
-      <p>{t('videoMissingDescription', { path: activeSource?.kind === 'file' ? activeSource.path : activeSource?.kind === 'webcam' ? (activeSource.recordingPath ?? '') : activeSource?.kind === 'rtsp' ? activeSource.url : '' })}</p>
-      <div className="video-analysis__missing-actions">
-        {storedHandle && (
-          <button type="button" className="btn-primary" onClick={() => void reopenStoredVideo()}>
-            {t('videoReopenStored')}
-          </button>
-        )}
-        <button type="button" className="btn-secondary" onClick={() => void openVideoFilePicker()}>
-          {t('videoRelink')}
-        </button>
-        <button type="button" className="btn-secondary" onClick={handleRemoveSource}>
-          {t('videoRemoveSource')}
-        </button>
-      </div>
-      {storedHandle && <p className="video-analysis__hint">{t('videoReopenStoredHint')}</p>}
-    </div>
-  );
+  const renderMissingResource = () => <VideoMissingResource video={video} />;
 
   const renderProjectSwitcher = () => (
     <div className="multi-video__project-switcher">
@@ -1184,11 +931,17 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     const entryVa = getProjectVideoAnalysis(entry.projectId);
     const isStarred = entryVa.starredTouchIds.includes(entry.touchId);
     const entryNotes = (entryVa.notes ?? []).filter((n) => n.touchId === entry.touchId);
+    // An action used to synchronise the video is marked, as in the single-match panel.
+    const syncPoint = entryVa.syncPoints.find((point) => point.touchId === entry.touchId);
+    const syncPointTitle = syncPoint
+      ? t(syncPoint.scope !== 'single' ? 'videoRowHasAnchor' : 'videoRowHasCorrection')
+      : undefined;
 
     return (
       <li
         key={`${entry.projectId}:${entry.touchId}`}
-        className={`video-analysis__event${isSelected ? ' video-analysis__event--selected' : ''}`}
+        className={`video-analysis__event${isSelected ? ' video-analysis__event--selected' : ''}${syncPoint ? ' video-analysis__event--sync-point' : ''}`}
+        title={syncPointTitle}
       >
         {filters.opponentProjectId === 'all' && (
           <span className="multi-video__match-badge" title={entry.matchLabel}>
@@ -1280,13 +1033,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   return (
     <div className="video-analysis">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="video/*"
-        className="video-analysis__file-input"
-        onChange={(e) => { handleFileSelected(e.target.files?.[0] ?? null); e.target.value = ''; }}
-      />
+      <VideoFileInput video={video} />
 
       <div className="video-analysis__workspace">
         <div className="video-analysis__player-column">
@@ -1294,6 +1041,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
           {/* The setup form sits outside the black 16:9 player, as in the single-match panel:
               inside it, dark text on black was unreadable and tall content was clipped. */}
+          {activeSource ? <VideoCloudStatus video={video} /> : null}
           {!activeSource ? renderSourceSetup() : (
             <div className="video-analysis__player">
               {showMissingResource ? renderMissingResource() : (
@@ -1301,7 +1049,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
                   ref={playerRef}
                   source={activeSource}
                   fileObjectUrl={fileObjectUrl}
-                  onPlayable={handlePlayable}
+                  onPlayable={video.handlePlayable}
                 />
               )}
             </div>
@@ -1356,7 +1104,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
               {activeSource.kind === 'youtube' && (
                 <YouTubeSourceHelpButton open={youtubeNotice.open} onToggle={youtubeNotice.toggle} />
               )}
-              <button type="button" className="btn-secondary" onClick={handleRemoveSource}>
+              <button type="button" className="btn-secondary" onClick={() => void video.removeSource()}>
                 {t('videoRemoveSource')}
               </button>
             </div>

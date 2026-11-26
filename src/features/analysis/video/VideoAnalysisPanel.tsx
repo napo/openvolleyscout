@@ -7,7 +7,6 @@ import { VideoFilterPresets } from './VideoFilterPresets';
 import { nudgeActionSyncPoint } from './video-fine-tuning';
 import { FineTuningBar } from './FineTuningBar';
 import { SyncPointsTable } from './SyncPointsTable';
-import { Link } from 'react-router-dom';
 import { addRapidSyncPoint, buildRapidSyncQueue, compensateRapidSyncVideoSeconds, getRallyScopeEndClock, getRapidSyncStartIndex } from './rapid-sync';
 import {
   useCallback,
@@ -16,10 +15,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import { isTauri } from '@tauri-apps/api/core';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
-import { pickFilePath, VIDEO_FILE_DIALOG_FILTERS } from '../../../lib/utils/pick-file';
 import { useAppStore } from '@src/app/store/app-store';
 import { matchRepository } from '@src/infrastructure/repositories';
 import type { MatchProject } from '@src/domain/match/types';
@@ -27,8 +24,6 @@ import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { SkillType, TeamSide } from '@src/domain/common/enums';
 import {
   createDefaultMatchVideoAnalysis,
-  getFilePath,
-  getVideoSourceKey,
   toggleStarredTouchId,
   type MatchVideoAnalysis,
   type PointNote,
@@ -56,19 +51,10 @@ import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
 import { canExportLocalClips, runClipExport, type ClipExportBackend } from './clip-export-runner';
 import { applyParsedCodeToTouch, replaceTouchInProject } from './apply-code-edit';
-import {
-  deleteVideoFileHandle,
-  loadVideoFileHandle,
-  saveVideoFileHandle,
-  getSessionVideoFile,
-  rememberSessionVideoFile,
-  supportsFileSystemAccess,
-} from './file-handle-store';
-import { resolveRemoteVideoSource, remoteVideoUrlErrorKey, type RemoteVideoUrlError } from './remote-video-url';
-import { canUploadVideos, checkReplacedVideo, findCloudVideo } from '@src/features/sync/cloud/video-upload';
+import { useVideoSource } from './useVideoSource';
+import { RemoteVideoForm, VideoCloudStatus, VideoFileInput, VideoMissingResource, VideoSourceSetup } from './VideoSourcePanels';
+import { canUploadVideos } from '@src/features/sync/cloud/video-upload';
 import { askToUploadMatchVideo } from '@src/features/sync/cloud/CloudVideoUploadPrompt';
-import { downloadCloudVideo } from '@src/features/sync/cloud/video-download';
-import { formatBytes } from '@src/features/sync/cloud/video-sync';
 import { cloudSyncController } from '@src/features/sync/cloud/archive-adapter';
 import { buildYouTubePlaylistClips } from './youtube-playlist';
 import { buildLocalPlaylistClips } from './playlist-file';
@@ -80,9 +66,8 @@ import {
   YouTubeSourceNotice,
 } from './YouTubePlaylistTools';
 import { useVideoPlaybackShortcut } from '@src/features/scouting/live/video/use-video-playback-shortcut';
-import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
+import { VideoPlayerView, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
-import { confirmAction } from '@src/components/confirm-dialog';
 import {
   annotateVideoEntries,
   availableBaseCodes,
@@ -125,27 +110,11 @@ function sanitizeFileNamePart(value: string): string {
 }
 
 export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekHandled }: VideoAnalysisPanelProps) {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const playerRef = useRef<VideoPlayerHandle | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const clipTimerRef = useRef<number | null>(null);
 
-  const [fileObjectUrl, setFileObjectUrl] = useState<string | null>(null);
-  const [filePathDraft, setFilePathDraft] = useState('');
-  const [youtubeUrlDraft, setYoutubeUrlDraft] = useState('');
-  const [youtubeUrlError, setYoutubeUrlError] = useState<RemoteVideoUrlError | null>(null);
-  const [isPlayable, setIsPlayable] = useState(false);
-  const [videoError, setVideoError] = useState(false);
-  useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
-  const [storedHandle, setStoredHandle] = useState<FileSystemFileHandle | null>(null);
-  const [cloudCopy, setCloudCopy] = useState<'none' | 'available' | 'download-only' | 'opening' | 'streaming' | 'failed'>('none');
-  const [cloudDownload, setCloudDownload] = useState<{ received: number; size: number } | null>(null);
-  const [cloudDownloadMessage, setCloudDownloadMessage] = useState<'browser' | 'failed' | null>(null);
-  const streamingFromCloudRef = useRef(false);
-  const cloudRenewalsRef = useRef(0);
-  const cloudAutoTriedRef = useRef<string | null>(null);
-  const renewCloudStreamRef = useRef<() => void>(() => undefined);
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibrationTarget, setCalibrationTarget] = useState<VideoEventEntry | null>(null);
   const [filters, setFilters] = useState<VideoChainFilters>(createDefaultVideoChainFilters);
@@ -172,7 +141,6 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const [calibrationVideoError, setCalibrationVideoError] = useState(false);
   const youtubeNotice = useYouTubeSourceNotice();
   // Swapping YouTube <-> local file of the same match video keeps the sync.
-  const keepSyncOnNextFileRef = useRef(false);
   const [isReplacingWithYoutube, setIsReplacingWithYoutube] = useState(false);
   const [isAligning, setIsAligning] = useState(false);
   const [isRapidSync, setIsRapidSync] = useState(false);
@@ -196,29 +164,27 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     }
     return map;
   }, [notes]);
-  const source = videoAnalysis.source;
-  const sourceKey = getVideoSourceKey(source);
+  const persistVideoAnalysis = useCallback((patch: Partial<MatchVideoAnalysis>) => {
+    const current = project.videoAnalysis ?? createDefaultMatchVideoAnalysis();
+    const nextProject: MatchProject = {
+      ...project,
+      videoAnalysis: { ...current, ...patch, updatedAt: Date.now() },
+      updatedAt: Date.now(),
+    };
+    return matchRepository.update(nextProject).then(setActiveProject);
+  }, [project, setActiveProject]);
 
-  const prevSourceKeyRef = useRef(sourceKey);
-  if (prevSourceKeyRef.current !== sourceKey) {
-    prevSourceKeyRef.current = sourceKey;
-    setIsPlayable(false);
-    setVideoError(false);
-  }
-
-  const [youtubeErrorCode, setYoutubeErrorCode] = useState<number | null>(null);
-  const handlePlayable = useCallback((playable: boolean, errorCode?: number) => {
-    // A cloud link expires (about an hour on Drive and OneDrive): ask for a fresh one and carry on.
-    if (!playable && streamingFromCloudRef.current && cloudRenewalsRef.current < 3) {
-      cloudRenewalsRef.current += 1;
-      renewCloudStreamRef.current();
-      return;
-    }
-    if (playable && streamingFromCloudRef.current) cloudRenewalsRef.current = 0;
-    setIsPlayable(playable);
-    setVideoError(!playable);
-    setYoutubeErrorCode(playable ? null : errorCode ?? null);
-  }, []);
+  // The video source of the match on this device (local file, cloud copy, link): shared with
+  // the several-matches panel, see useVideoSource.
+  const video = useVideoSource({
+    projectId: project.metadata.id,
+    videoAnalysis,
+    persist: persistVideoAnalysis,
+    playerRef,
+    onSyncKept: () => startAligning(),
+  });
+  const { source, fileObjectUrl, isPlayable, videoError, youtubeErrorCode, cloudCopy, showMissingResource } = video;
+  useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
 
   useEffect(() => {
     if (!isPlayable || initialSeekSeconds === null || initialSeekSeconds === undefined) return;
@@ -297,16 +263,6 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     filteredEntriesRef.current = filteredEntries;
   }, [filteredEntries]);
 
-  const persistVideoAnalysis = useCallback((patch: Partial<MatchVideoAnalysis>) => {
-    const current = project.videoAnalysis ?? createDefaultMatchVideoAnalysis();
-    const nextProject: MatchProject = {
-      ...project,
-      videoAnalysis: { ...current, ...patch, updatedAt: Date.now() },
-      updatedAt: Date.now(),
-    };
-    return matchRepository.update(nextProject).then(setActiveProject);
-  }, [project, setActiveProject]);
-
   const persistProject = useCallback((nextProject: MatchProject) => {
     void matchRepository.update(nextProject).then(setActiveProject);
   }, [setActiveProject]);
@@ -315,279 +271,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     if (clipTimerRef.current !== null) {
       window.clearTimeout(clipTimerRef.current);
     }
-    if (fileObjectUrl) {
-      URL.revokeObjectURL(fileObjectUrl);
-    }
-  }, [fileObjectUrl]);
-
-  const handleFileSelected = (file: File | null) => {
-    if (!file) return;
-    rememberSessionVideoFile(project.metadata.id, file);
-    if (fileObjectUrl) {
-      URL.revokeObjectURL(fileObjectUrl);
-    }
-    const objectUrl = URL.createObjectURL(file);
-    setFileObjectUrl(objectUrl);
-    setIsPlayable(true);
-    setVideoError(false);
-
-    const keepSync = keepSyncOnNextFileRef.current;
-    keepSyncOnNextFileRef.current = false;
-    const candidatePath = getFilePath(file);
-    if (source?.kind === 'file' && (source.fileName === file.name || source.path === candidatePath)) {
-      // Re-linking the same video: keep existing sync points.
-      return;
-    }
-    void persistVideoAnalysis({
-      source: { kind: 'file', path: candidatePath, fileName: file.name },
-      syncPoints: source?.kind === 'file' || keepSync ? videoAnalysis.syncPoints : [],
-    }).then(() => checkReplacedVideo(project.metadata.id, file.size));
-    if (keepSync) startAligning();
-  };
-
-  // Desktop only: a real absolute path from the native dialog, not a File
-  // object - sidesteps the browser <input>/blob-URL path entirely, which
-  // never carries a resolvable filesystem path under Tauri.
-  const handleFilePathSelected = (path: string) => {
-    if (fileObjectUrl) {
-      URL.revokeObjectURL(fileObjectUrl);
-      setFileObjectUrl(null);
-    }
-    setIsPlayable(true);
-    setVideoError(false);
-
-    const keepSync = keepSyncOnNextFileRef.current;
-    keepSyncOnNextFileRef.current = false;
-    const fileName = path.split(/[\\/]/).pop() ?? path;
-    if (source?.kind === 'file' && source.path === path) {
-      // Re-linking the same video: keep existing sync points.
-      return;
-    }
-    void persistVideoAnalysis({
-      source: { kind: 'file', path, fileName },
-      syncPoints: source?.kind === 'file' || keepSync ? videoAnalysis.syncPoints : [],
-    }).then(() => checkReplacedVideo(project.metadata.id, null, path));
-    if (keepSync) startAligning();
-  };
-
-  /** keepSync: the file replaces another source of the same match video (e.g. its YouTube upload). */
-  const openVideoFilePicker = async (keepSync = false) => {
-    keepSyncOnNextFileRef.current = keepSync;
-    if (isTauri()) {
-      const path = await pickFilePath(VIDEO_FILE_DIALOG_FILTERS);
-      if (!path) return; // user cancelled
-      handleFilePathSelected(path);
-      return;
-    }
-
-    if (!supportsFileSystemAccess() || !window.showOpenFilePicker) {
-      fileInputRef.current?.click();
-      return;
-    }
-
-    let handle: FileSystemFileHandle;
-    try {
-      [handle] = await window.showOpenFilePicker({
-        multiple: false,
-        types: [{
-          description: 'Video',
-          accept: { 'video/*': ['.mp4', '.webm', '.mkv', '.mov', '.avi', '.m4v', '.ogv'] },
-        }],
-      });
-    } catch {
-      // User dismissed the picker.
-      return;
-    }
-
-    const file = await handle.getFile();
-    // Remember the handle so future sessions can reopen the same file after a
-    // single browser permission prompt instead of a manual re-link.
-    void saveVideoFileHandle(project.metadata.id, handle).catch(() => {});
-    setStoredHandle(null);
-    handleFileSelected(file);
-  };
-
-  // A local file missing here may be in the user's cloud, sent from another device.
-  useEffect(() => {
-    setCloudCopy('none');
-    streamingFromCloudRef.current = false;
-    cloudRenewalsRef.current = 0;
-    setCloudDownloadMessage(null);
-    if (source?.kind !== 'file' || cloudSyncController.status.state === 'off') return undefined;
-    let cancelled = false;
-    void findCloudVideo(project.metadata.id)
-      .then((found) => {
-        if (cancelled || !found) return;
-        setCloudCopy(found.storage.canStream ? 'available' : 'download-only');
-      })
-      .catch(() => undefined);
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceKey, project.metadata.id]);
-
-  /** Streams the cloud copy; `resumeAt` keeps the position when a link is renewed. */
-  const openCloudCopy = async (resumeAt?: number | null) => {
-    setCloudCopy('opening');
-    try {
-      const found = await findCloudVideo(project.metadata.id);
-      if (!found) throw new Error('no cloud video');
-      const url = await found.storage.videoStreamUrl(found.file);
-      streamingFromCloudRef.current = true;
-      setFileObjectUrl((previousUrl) => {
-        if (previousUrl?.startsWith('blob:')) URL.revokeObjectURL(previousUrl);
-        return url;
-      });
-      setIsPlayable(true);
-      setVideoError(false);
-      setCloudCopy('streaming');
-      if (typeof resumeAt === 'number') {
-        window.setTimeout(() => playerRef.current?.seekTo(resumeAt, true), 800);
-      }
-    } catch {
-      streamingFromCloudRef.current = false;
-      setCloudCopy('failed');
-    }
-  };
-  renewCloudStreamRef.current = () => {
-    void openCloudCopy(playerRef.current?.getCurrentTime() ?? null);
-  };
-
-  const downloadCloudCopy = async () => {
-    setCloudDownloadMessage(null);
-    try {
-      const found = await findCloudVideo(project.metadata.id);
-      if (!found) throw new Error('no cloud video');
-      const size = found.file.size;
-      if (!(await confirmAction(t('videoDownloadFromCloudConfirm', { size: formatBytes(size, locale) })))) return;
-      const fileName = (source?.kind === 'file' && source.fileName) || found.file.name.replace(/^[^_]*__/, '');
-      const request = await found.storage.videoDownloadRequest(found.file);
-      setCloudDownload({ received: 0, size });
-      const result = await downloadCloudVideo(request, fileName, (received) => setCloudDownload({ received, size }));
-      setCloudDownload(null);
-      if (result.kind === 'path') {
-        streamingFromCloudRef.current = false;
-        setCloudCopy('available');
-        handleFilePathSelected(result.path);
-      } else if (result.kind === 'handle') {
-        streamingFromCloudRef.current = false;
-        setCloudCopy('available');
-        void saveVideoFileHandle(project.metadata.id, result.handle).catch(() => {});
-        handleFileSelected(await result.handle.getFile());
-      } else if (result.kind === 'browser') {
-        setCloudDownloadMessage('browser');
-      }
-    } catch {
-      setCloudDownload(null);
-      setCloudDownloadMessage('failed');
-    }
-  };
-
-  const reopenStoredVideo = async () => {
-    if (!storedHandle) return;
-    const permission = await storedHandle.requestPermission?.({ mode: 'read' }) ?? 'denied';
-    if (permission !== 'granted') return;
-    try {
-      const file = await storedHandle.getFile();
-      setStoredHandle(null);
-      handleFileSelected(file);
-    } catch {
-      // The file moved or was deleted: fall back to the manual re-link flow.
-      setStoredHandle(null);
-      void deleteVideoFileHandle(project.metadata.id).catch(() => {});
-    }
-  };
-
-  // When the stored path is not directly resolvable (plain browser), try the
-  // persisted file handle: reopen silently if permission is still granted,
-  // otherwise surface a one-click reopen button in the missing-video banner.
-  useEffect(() => {
-    if (source?.kind !== 'file' || resolveLocalVideoUrl(source.path, null)) {
-      setStoredHandle(null);
-      return undefined;
-    }
-
-    const sessionFile = getSessionVideoFile(project.metadata.id, source.fileName);
-    if (sessionFile) {
-      setFileObjectUrl((previousUrl) => {
-        if (previousUrl?.startsWith('blob:')) URL.revokeObjectURL(previousUrl);
-        return URL.createObjectURL(sessionFile);
-      });
-      setIsPlayable(true);
-      setVideoError(false);
-      return undefined;
-    }
-
-    let cancelled = false;
-    void loadVideoFileHandle(project.metadata.id).then(async (handle) => {
-      if (cancelled || !handle) return;
-      const permission = await handle.queryPermission?.({ mode: 'read' }) ?? 'prompt';
-      if (cancelled) return;
-      if (permission === 'granted') {
-        const file = await handle.getFile();
-        if (cancelled) return;
-        setFileObjectUrl((previousUrl) => {
-          if (previousUrl) URL.revokeObjectURL(previousUrl);
-          return URL.createObjectURL(file);
-        });
-        setIsPlayable(true);
-        setVideoError(false);
-      } else {
-        setStoredHandle(handle);
-      }
-    }).catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceKey, project.metadata.id]);
-
-  const handleLoadFromPath = () => {
-    const path = filePathDraft.trim();
-    if (!path) return;
-    const fileName = path.split(/[\\/]/).pop();
-    persistVideoAnalysis({
-      source: { kind: 'file', path, fileName },
-      // Re-loading the same video keeps its sync points.
-      syncPoints: source?.kind === 'file' && source.path === path ? videoAnalysis.syncPoints : [],
-    });
-    setFilePathDraft('');
-  };
-
-  /** keepSync: the remote video replaces a local file of the same match video. */
-  const handleLoadYoutube = (keepSync = false) => {
-    const resolved = resolveRemoteVideoSource(youtubeUrlDraft);
-    if (!resolved.ok) {
-      setYoutubeUrlError(resolved.reason);
-      return;
-    }
-    setYoutubeUrlError(null);
-    const nextSource = resolved.source;
-    const sameRemote = (
-      (nextSource.kind === 'youtube' && source?.kind === 'youtube' && source.videoId === nextSource.videoId)
-      || (nextSource.kind === 'url' && source?.kind === 'url' && source.url === nextSource.url)
-    );
-    persistVideoAnalysis({
-      source: nextSource,
-      // Re-loading the same video (e.g. a share link with another ?t=) keeps its sync points.
-      syncPoints: keepSync || sameRemote ? videoAnalysis.syncPoints : [],
-    });
-    setYoutubeUrlDraft('');
-    setIsReplacingWithYoutube(false);
-    if (keepSync) startAligning();
-  };
-
-  const handleRemoveSource = async () => {
-    if (!(await confirmAction(t('videoRemoveSourceConfirm')))) return;
-    if (fileObjectUrl) {
-      URL.revokeObjectURL(fileObjectUrl);
-      setFileObjectUrl(null);
-    }
-    setIsPlayable(false);
-    setStoredHandle(null);
-    void deleteVideoFileHandle(project.metadata.id).catch(() => {});
-    persistVideoAnalysis({ source: undefined, syncPoints: [] });
-  };
+  }, []);
 
   const getEntryCode = useCallback((entry: VideoEventEntry) => buildDataVolleyTouchCode({
     touch: entry.touch,
@@ -936,16 +620,6 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     setEditingCodeError(false);
   };
 
-  const showMissingResource = isVideoResourceMissing(source, fileObjectUrl, videoError);
-
-  // The local file is not here but the cloud has the video: stream it at once (once per video).
-  useEffect(() => {
-    if (!showMissingResource || cloudCopy !== 'available' || cloudAutoTriedRef.current === sourceKey) return;
-    cloudAutoTriedRef.current = sourceKey;
-    void openCloudCopy();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showMissingResource, cloudCopy, sourceKey]);
-
   const hasSyncedFilteredEntries = filteredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
   const hasSyncedStarredEntries = starredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
   const exportUnavailableReason = source?.kind === 'youtube' || source?.kind === 'url'
@@ -991,92 +665,10 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   );
 
   const renderSourceSetup = () => (
-    <div className="video-analysis__setup">
-      <p className="video-analysis__notice">{t('videoSourceNotice')}</p>
-      <p className="video-analysis__notice">
-        <Link to="/player">{t('videoSharedPlayerEntry')}</Link>
-      </p>
-      <div className="video-analysis__setup-grid">
-        <section className="video-analysis__setup-card">
-          <h3>{t('videoSourceLocalFile')}</h3>
-          <button type="button" className="btn-secondary" onClick={() => void openVideoFilePicker()}>
-            {t('videoChooseFile')}
-          </button>
-          <div className="video-analysis__inline-form">
-            <input
-              type="text"
-              value={filePathDraft}
-              onChange={(event) => setFilePathDraft(event.target.value)}
-              placeholder={t('videoFilePathPlaceholder')}
-            />
-            <button type="button" className="btn-secondary" onClick={handleLoadFromPath} disabled={!filePathDraft.trim()}>
-              {t('videoLoadFromPath')}
-            </button>
-          </div>
-        </section>
-        <section className="video-analysis__setup-card">
-          <h3>{t('videoSourceYoutube')}</h3>
-          <div className="video-analysis__inline-form">
-            <input
-              type="text"
-              value={youtubeUrlDraft}
-              onChange={(event) => {
-                setYoutubeUrlDraft(event.target.value);
-                setYoutubeUrlError(null);
-              }}
-              placeholder={t('videoYoutubeUrlPlaceholder')}
-            />
-            <button type="button" className="btn-secondary" onClick={() => handleLoadYoutube()} disabled={!youtubeUrlDraft.trim()}>
-              {t('videoLoadYoutube')}
-            </button>
-          </div>
-          {youtubeUrlError ? (
-            <p className="video-analysis__error">
-              {t(remoteVideoUrlErrorKey(youtubeUrlError))}
-            </p>
-          ) : null}
-        </section>
-      </div>
-      {playlistArchive.length > 0 ? renderPlaylistActions(true) : null}
-    </div>
+    <VideoSourceSetup video={video} footer={playlistArchive.length > 0 ? renderPlaylistActions(true) : null} />
   );
 
-  const renderMissingResource = () => (
-    <div className="video-analysis__missing">
-      <h3>{t('videoMissingTitle')}</h3>
-      <p>{t('videoMissingDescription', { path: source?.kind === 'file' ? source.path : source?.kind === 'webcam' ? (source.recordingPath ?? '') : source?.kind === 'rtsp' ? source.url : '' })}</p>
-      <div className="video-analysis__missing-actions">
-        {cloudCopy !== 'none' ? (
-          <>
-            {cloudCopy !== 'download-only' ? (
-              <button type="button" className="btn-primary" disabled={cloudCopy === 'opening'} onClick={() => void openCloudCopy()}>
-                {t('videoOpenFromCloud')}
-              </button>
-            ) : null}
-            <button type="button" className="btn-secondary" disabled={cloudDownload !== null} onClick={() => void downloadCloudCopy()}>
-              {t('videoDownloadFromCloud')}
-            </button>
-          </>
-        ) : null}
-        {storedHandle ? (
-          <button type="button" className="btn-primary" onClick={() => void reopenStoredVideo()}>
-            {t('videoReopenStored')}
-          </button>
-        ) : null}
-        <button type="button" className="btn-secondary" onClick={() => void openVideoFilePicker()}>
-          {t('videoRelink')}
-        </button>
-        <button type="button" className="btn-secondary" onClick={handleRemoveSource}>
-          {t('videoRemoveSource')}
-        </button>
-      </div>
-      {storedHandle ? <p className="video-analysis__hint">{t('videoReopenStoredHint')}</p> : null}
-      {cloudCopy === 'available' ? <p className="video-analysis__hint">{t('videoOpenFromCloudHint')}</p> : null}
-      {cloudCopy === 'download-only' ? <p className="video-analysis__hint">{t('videoCloudDownloadOnlyHint')}</p> : null}
-      {cloudCopy === 'failed' ? <p className="video-analysis__error">{t('videoOpenFromCloudError')}</p> : null}
-      <p className="video-analysis__notice">{t('videoSourceNotice')}</p>
-    </div>
-  );
+  const renderMissingResource = () => <VideoMissingResource video={video} />;
 
   // ── Fine tuning: nudge the selected action, step frames, save a frame ──────
   // Roles from the base system in the starting lineups, for athletes with none in the team list.
@@ -1527,48 +1119,19 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
 
   return (
     <div className="video-analysis">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="video/*"
-        className="video-analysis__file-input"
-        onChange={(event) => {
-          handleFileSelected(event.target.files?.[0] ?? null);
-          event.target.value = '';
-        }}
-      />
+      <VideoFileInput video={video} />
 
       {!source ? renderSourceSetup() : (
         <div className="video-analysis__workspace">
           <div className="video-analysis__player-column">
-            {cloudCopy === 'streaming' && !showMissingResource ? (
-              <div className="video-analysis__hint video-analysis__cloud-stream">
-                <span>{t('videoStreamingFromCloud')}</span>{' '}
-                <button type="button" className="btn-secondary btn-small" disabled={cloudDownload !== null} onClick={() => void downloadCloudCopy()}>
-                  {t('videoDownloadFromCloud')}
-                </button>
-              </div>
-            ) : null}
-            {cloudDownload ? (
-              <p className="video-analysis__hint">
-                {t('videoDownloadingFromCloud', {
-                  received: formatBytes(cloudDownload.received, locale),
-                  size: formatBytes(cloudDownload.size, locale),
-                })}
-              </p>
-            ) : null}
-            {cloudDownloadMessage ? (
-              <p className={cloudDownloadMessage === 'failed' ? 'video-analysis__error' : 'video-analysis__hint'}>
-                {t(cloudDownloadMessage === 'failed' ? 'videoDownloadFromCloudError' : 'videoDownloadFromCloudBrowser')}
-              </p>
-            ) : null}
+            <VideoCloudStatus video={video} />
             <div className="video-analysis__player">
               {showMissingResource ? renderMissingResource() : (
                 <VideoPlayerView
                   ref={playerRef}
                   source={source}
                   fileObjectUrl={fileObjectUrl}
-                  onPlayable={handlePlayable}
+                  onPlayable={video.handlePlayable}
                 />
               )}
             </div>
@@ -1614,7 +1177,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
                 <YouTubeSourceHelpButton open={youtubeNotice.open} onToggle={youtubeNotice.toggle} />
               ) : null}
               {source.kind === 'youtube' || source.kind === 'url' ? (
-                <button type="button" className="btn-secondary" onClick={() => void openVideoFilePicker(true)}>
+                <button type="button" className="btn-secondary" onClick={() => void video.openVideoFilePicker(true)}>
                   {t('videoReplaceWithLocal')}
                 </button>
               ) : null}
@@ -1634,32 +1197,20 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
                   {t('videoUploadToCloud')}
                 </button>
               ) : null}
-              <button type="button" className="btn-secondary" onClick={handleRemoveSource}>
+              <button type="button" className="btn-secondary" onClick={() => void video.removeSource()}>
                 {t('videoRemoveSource')}
               </button>
             </div>
             {source.kind === 'file' && isReplacingWithYoutube ? (
               <div className="video-analysis__replace-youtube">
-                <div className="video-analysis__inline-form">
-                  <input
-                    type="text"
-                    value={youtubeUrlDraft}
-                    onChange={(event) => {
-                      setYoutubeUrlDraft(event.target.value);
-                      setYoutubeUrlError(null);
-                    }}
-                    placeholder={t('videoYoutubeUrlPlaceholder')}
-                  />
-                  <button type="button" className="btn-secondary" onClick={() => handleLoadYoutube(true)} disabled={!youtubeUrlDraft.trim()}>
-                    {t('videoLoadYoutube')}
-                  </button>
-                </div>
-                <p className="video-analysis__hint">{t('videoReplaceKeepsSync')}</p>
-                {youtubeUrlError ? (
-                  <p className="video-analysis__error">
-                    {t(remoteVideoUrlErrorKey(youtubeUrlError))}
-                  </p>
-                ) : null}
+                <RemoteVideoForm
+                  onLoad={(url) => {
+                    const reason = video.loadRemote(url, true);
+                    if (!reason) setIsReplacingWithYoutube(false);
+                    return reason;
+                  }}
+                  hint={<p className="video-analysis__hint">{t('videoReplaceKeepsSync')}</p>}
+                />
               </div>
             ) : null}
             {(source.kind === 'youtube' || source.kind === 'url') && youtubeNotice.open ? (
