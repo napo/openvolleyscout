@@ -7,6 +7,7 @@ import type { DataVolleyCodeTables } from '@src/domain/match/code-tables';
 import type { ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { MatchVideoAnalysis } from '@src/domain/video/types';
 import type {
+  AttackSubtype,
   BallTouch,
   NumBlockers,
   TouchInferenceReason,
@@ -80,6 +81,10 @@ export interface OvsTouchRow {
   endZoneCode?: string;
   numBlockers?: NumBlockers;
   withoutZones?: boolean;
+  zonesPicked?: boolean;
+  attackSubtype?: AttackSubtype;
+  homeSetterPlayerId?: string;
+  awaySetterPlayerId?: string;
   source?: TouchSource;
   touchOrigin?: TouchOrigin;
   requiredExplicitInput?: boolean;

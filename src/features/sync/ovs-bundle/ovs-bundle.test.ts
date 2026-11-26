@@ -50,17 +50,38 @@ const richTouchEvent: MatchEvent = {
   location: { teamSide: 'away', zoneId: 'away-r1c1' },
 };
 
+const buttonInputTouchEvent: MatchEvent = {
+  id: 'evt-2b',
+  type: 'touch_recorded',
+  createdAt: 1700000002000,
+  touch: {
+    id: 'touch-2b',
+    setNumber: 1,
+    rallyNumber: 4,
+    sequenceNumber: 1,
+    teamSide: 'home',
+    skill: 'attack',
+    createdAt: 1700000002000,
+    attackSubtype: 'P',
+    withoutZones: true,
+    zonesPicked: true,
+    homeSetterPlayerId: 'player-3',
+    awaySetterPlayerId: 'player-8',
+  },
+};
+
 test('touches round-trip through flatten/unflatten (sparse and rich)', () => {
-  const rows = flattenTouchEvents([sparseTouchEvent, richTouchEvent]);
-  assert.strictEqual(rows.length, 2);
+  const rows = flattenTouchEvents([sparseTouchEvent, richTouchEvent, buttonInputTouchEvent]);
+  assert.strictEqual(rows.length, 3);
 
   const events = unflattenTouchRows(rows).map(({ sequenceIndex: _s, ...event }) => event);
   assert.deepStrictEqual(events[0], sparseTouchEvent);
   assert.deepStrictEqual(events[1], richTouchEvent);
+  assert.deepStrictEqual(events[2], buttonInputTouchEvent);
 });
 
 test('touches round-trip through Arrow encode/decode', () => {
-  const rows = flattenTouchEvents([sparseTouchEvent, richTouchEvent]);
+  const rows = flattenTouchEvents([sparseTouchEvent, richTouchEvent, buttonInputTouchEvent]);
   const bytes = encodeTouchesTable(rows);
   const decoded = decodeTouchesTable(bytes);
   assert.deepStrictEqual(decoded, rows);
