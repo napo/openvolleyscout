@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.51.0 - 2026-11-26
+
+### Added
+- Dark theme and an accessibility panel: choose text size, spacing, an easy-reading font, colour palettes for colour blindness, contrast and reduced motion.
+- Analysis filters: you can pick several sets, rotations, game phases and score situations at once. "All" has its own row, zones are drawn as a court, and the filters work the same way on every analysis tab. Positive and negative reception are coloured green and red (blue and orange in the colour-blind palette).
+- Base and combination filter shown as a table: one row per letter with its codes, and a click on the letter takes the whole row. It is in the tactical report, the Analysis page, the heatmaps and Video analysis.
+- Number of blockers filter: "4 - Open block" is now available in the tactical report (Block and defence), in the heatmaps and in Video analysis.
+- Zone analysis shows one court per rotation with nine zones by default. The rotation buttons name the rotation they lead to, as in the DataVolley manual, and Ctrl+PageUp / Ctrl+PageDown move between rotations. In the team data study each attack opens in the right match of Video analysis.
+- Match statistics and the team data study now share one tab bar, and Zone analysis and Cross rotation are also available for teams.
+- Side-out study: the athlete's role appears in brackets and setters are highlighted in yellow. The setter and receiver filters show how many rallies each setter set and how many receptions each receiver made.
+- Team performance: the athlete filters list only the athletes who touched the ball in the chosen skill, with the number of touches.
+- A DataVolley file that you open and export again now keeps what it contained (skill subtypes, special codes, attack cones, times, video positions and so on) and no longer gets invented values.
+
+### Changed
+- Tactical report: the sentence about where the setter sets now ends with a single line "23 actions out of 34" instead of two different numbers, in every language.
+- Positive reception now counts both # and + in the team dashboard and in the Team review booklet, as the player dashboard and the match report already did. Numbers there can be a little higher than before.
+- Attack efficiency in Zone analysis and in the opponent reports now follows Settings > Analysis, so a customised rule gives the same numbers on every page. A shared link carries the sender's rules and applies them while it is open, without changing the viewer's settings.
+- Side-out and break-point colour limits in Cross rotation and the Priorities tab are the same as in the tactical reports (green from 60%, red up to 50%, before 55% and 45%).
+- Interface polish: Match report and Play-by-play each have one PDF entry ("Export this tab"), a failed export is explained on the page, and the roster, match details, cloud video and update windows close with Escape.
+- Charts show only the values in their tooltips, without the labels.
+
+### Fixed
+- The High ball filter works now: it always came back empty before. It finds the sets and attacks marked H in DataVolley files, and the late-set point of the heatmap follows your Settings.
+- Tactical report, How they serve: the percentages in the target zones are drawn above the arrows, so they can be read.
+- Tactical report, video page: when a video link is too long for a QR code, its place is kept with a short note, so the other codes no longer overlap or leave gaps.
+- Tiebreak Tech import and export: the attack type (hard, placed, tip) is no longer confused with the speed of the set, so hard spikes no longer show up as high balls.
+- Matches saved as a .ovs file, a backup or in the cloud keep tips and placed shots, the chosen zones and the setters, which used to come back as hard spikes.
+- Matches scouted with buttons only no longer put every serve in zone 1 and every attack in a middle-row zone in the zone views and heatmaps.
+- Zone analysis courts are squares with zones of equal size.
+- In the Italian, Slovenian, Turkish and Romanian texts "float" was misspelled.
+
 ## 0.50.0 - 2026-11-26
 
 ### Added
