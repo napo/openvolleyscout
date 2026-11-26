@@ -47,6 +47,7 @@ import { useIsAnyTrendsFeatureEnabled } from '@src/app/store/experimental-featur
 import { filterMatchesForTeam } from '@src/features/teams/model/team-match-filter';
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
 import { PointNotesPanel } from '../video/PointNotesPanel';
+import { StatsTabBar, type StatsTabId } from '@src/features/analytics/stats-tabs/StatsTabBar';
 import '@src/features/scouting/scouting-screen.css';
 
 const statsViewTitles: Record<StatsView, TranslationKey> = {
@@ -56,7 +57,7 @@ const statsViewTitles: Record<StatsView, TranslationKey> = {
   notes: 'pointNoteTab',
 };
 
-type StatsView = 'play-by-play' | 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'zone-analysis' | 'cross-rotation' | 'trends' | 'video-analysis' | 'notes';
+type StatsView = Exclude<StatsTabId, 'review'>;
 
 export function AnalysisPage() {
   const { t } = useTranslation();
@@ -433,102 +434,31 @@ export function AnalysisPage() {
                 </button>
               </div>
 
-              <div className="stats-view-tabs analysis-page__stats-tabs" role="tablist" aria-label={t('matchStatistics')}>
-                <button type="button" role="tab" disabled={isExportingTab} aria-selected={statsView === 'play-by-play'} className={`stats-view-tabs__tab${statsView === 'play-by-play' ? ' stats-view-tabs__tab--active' : ''}`} onClick={() => setStatsView('play-by-play')}>{t('pbpTitle')}</button>
-                <button
-                  type="button"
-                  role="tab" disabled={isExportingTab}
-                  aria-selected={statsView === 'report'}
-                  className={`stats-view-tabs__tab${statsView === 'report' ? ' stats-view-tabs__tab--active' : ''}`}
-                  onClick={() => setStatsView('report')}
-                >
-                  {t('matchReport')}
-                </button>
-                <button
-                  type="button"
-                  role="tab" disabled={isExportingTab}
-                  aria-selected={statsView === 'team-performance'}
-                  className={`stats-view-tabs__tab${statsView === 'team-performance' ? ' stats-view-tabs__tab--active' : ''}`}
-                  onClick={() => setStatsView('team-performance')}
-                >
-                  {t('performanceTeams')}
-                </button>
-                <button
-                  type="button"
-                  role="tab" disabled={isExportingTab}
-                  aria-selected={statsView === 'player-performance'}
-                  className={`stats-view-tabs__tab${statsView === 'player-performance' ? ' stats-view-tabs__tab--active' : ''}`}
-                  onClick={() => setStatsView('player-performance')}
-                >
-                  {t('performancePlayer')}
-                </button>
-                {hasSideOutStudy ? (
-                  <button
-                    type="button"
-                    role="tab" disabled={isExportingTab}
-                    aria-selected={statsView === 'sideout-study'}
-                    className={`stats-view-tabs__tab${statsView === 'sideout-study' ? ' stats-view-tabs__tab--active' : ''}`}
-                    onClick={() => setStatsView('sideout-study')}
-                  >
-                    {t('sideOutStudy')}
-                  </button>
-                ) : null}
-                {hasZoneAnalysis ? (
-                  <button
-                    type="button"
-                    role="tab" disabled={isExportingTab}
-                    aria-selected={statsView === 'zone-analysis'}
-                    className={`stats-view-tabs__tab${statsView === 'zone-analysis' ? ' stats-view-tabs__tab--active' : ''}`}
-                    onClick={() => setStatsView('zone-analysis')}
-                  >
-                    {t('zoneAnalysis')}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  role="tab" disabled={isExportingTab}
-                  aria-selected={statsView === 'cross-rotation'}
-                  className={`stats-view-tabs__tab${statsView === 'cross-rotation' ? ' stats-view-tabs__tab--active' : ''}`}
-                  onClick={() => setStatsView('cross-rotation')}
-                >
-                  {t('crossRotationAnalysis')}
-                </button>
-                {trendsEnabled ? (
-                  <button
-                    type="button"
-                    role="tab" disabled={isExportingTab}
-                    aria-selected={statsView === 'trends'}
-                    className={`stats-view-tabs__tab${statsView === 'trends' ? ' stats-view-tabs__tab--active' : ''}`}
-                    onClick={() => setStatsView('trends')}
-                  >
-                    {t('trendsTitle')}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  role="tab" disabled={isExportingTab}
-                  aria-selected={statsView === 'video-analysis'}
-                  className={`stats-view-tabs__tab${statsView === 'video-analysis' ? ' stats-view-tabs__tab--active' : ''}`}
-                  onClick={() => setStatsView('video-analysis')}
-                  title={activeProject?.videoAnalysis?.source ? t('videoAnalysisLinkedHint') : undefined}
-                >
-                  {t('videoAnalysis')}
-                  {activeProject?.videoAnalysis?.source ? (
-                    <span className="stats-view-tabs__badge" aria-label={t('videoAnalysisLinkedHint')}> ●</span>
-                  ) : null}
-                </button>
-                {hasPointNotes ? (
-                  <button
-                    type="button"
-                    role="tab" disabled={isExportingTab}
-                    aria-selected={statsView === 'notes'}
-                    className={`stats-view-tabs__tab${statsView === 'notes' ? ' stats-view-tabs__tab--active' : ''}`}
-                    onClick={() => setStatsView('notes')}
-                  >
-                    {t('pointNoteTab')}
-                  </button>
-                ) : null}
-              </div>
+              <StatsTabBar
+                ariaLabel={t('matchStatistics')}
+                disabled={isExportingTab}
+                active={statsView}
+                onSelect={setStatsView}
+                tabs={[
+                  { id: 'play-by-play', label: t('pbpTitle') },
+                  { id: 'report', label: t('matchReport') },
+                  { id: 'team-performance', label: t('performanceTeams') },
+                  { id: 'player-performance', label: t('performancePlayer') },
+                  ...(hasSideOutStudy ? [{ id: 'sideout-study' as const, label: t('sideOutStudy') }] : []),
+                  ...(hasZoneAnalysis ? [{ id: 'zone-analysis' as const, label: t('zoneAnalysis') }] : []),
+                  { id: 'cross-rotation', label: t('crossRotationAnalysis') },
+                  ...(trendsEnabled ? [{ id: 'trends' as const, label: t('trendsTitle') }] : []),
+                  {
+                    id: 'video-analysis',
+                    label: t('videoAnalysis'),
+                    title: activeProject?.videoAnalysis?.source ? t('videoAnalysisLinkedHint') : undefined,
+                    badge: activeProject?.videoAnalysis?.source
+                      ? <span className="stats-view-tabs__badge" aria-label={t('videoAnalysisLinkedHint')}> ●</span>
+                      : undefined,
+                  },
+                  ...(hasPointNotes ? [{ id: 'notes' as const, label: t('pointNoteTab') }] : []),
+                ]}
+              />
 
               {statsView !== 'video-analysis' ? <TabExportControl
                 panelRef={exportPanelRef}

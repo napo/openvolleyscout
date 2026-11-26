@@ -12,7 +12,7 @@ import { TeamPlayByPlayPanel } from './TeamPlayByPlayPanel';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation, type TranslationKey } from '@src/i18n';
-import { getMatchTeamSnapshot } from '@src/domain/match';
+import { getMatchCodeTables, getMatchTeamSnapshot } from '@src/domain/match';
 import {
   createDefaultScoutingMatchConfig,
   getCompletedSetsFromEvents,
@@ -29,6 +29,10 @@ import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/Team
 import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
 import { hasSideOutStudyData } from '@src/features/analytics/sideout/sideout-distribution';
+import { ZoneAnalysisPanel } from '@src/features/analytics/zone-analysis/ZoneAnalysisPanel';
+import { hasZoneAnalysisData } from '@src/features/analytics/zone-analysis/zone-analysis';
+import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
+import { StatsTabBar, type StatsTabId } from '@src/features/analytics/stats-tabs/StatsTabBar';
 import { MultiVideoAnalysisPanel } from '@src/features/analysis/video/MultiVideoAnalysisPanel';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { buildAggregatedTeamMatchStats, type MatchEntry } from '../model/aggregated-stats';
@@ -40,7 +44,7 @@ import './team-analysis-page.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 
-type AnalysisTab = 'report' | 'play-by-play' | 'team-performance' | 'player-performance' | 'sideout-study' | 'trends' | 'video-analysis' | 'review';
+type AnalysisTab = StatsTabId;
 
 const teamTabTitles: Record<AnalysisTab, TranslationKey> = {
   report: 'matchReport',
@@ -48,7 +52,10 @@ const teamTabTitles: Record<AnalysisTab, TranslationKey> = {
   'team-performance': 'performanceTeams',
   'player-performance': 'performancePlayer',
   'sideout-study': 'sideOutStudy',
+  'zone-analysis': 'zoneAnalysis',
+  'cross-rotation': 'crossRotationAnalysis',
   trends: 'trendsTitle',
+  notes: 'pointNoteTab',
   'video-analysis': 'videoAnalysis',
   review: 'teamReviewTab',
 };
@@ -197,11 +204,21 @@ export function TeamAnalysisPage() {
     [aggregatedStats],
   );
 
+  // The attack zones are read with the code tables of the first selected match.
+  const zoneCodeTables = useMemo(
+    () => (selectedMatches[0] ? getMatchCodeTables(selectedMatches[0]) : null),
+    [selectedMatches],
+  );
+  const hasZoneAnalysis = useMemo(
+    () => Boolean(aggregatedStats && zoneCodeTables && hasZoneAnalysisData(aggregatedStats, zoneCodeTables)),
+    [aggregatedStats, zoneCodeTables],
+  );
+
   useEffect(() => {
-    if (activeTab === 'sideout-study' && !hasSideOutStudy) {
+    if ((activeTab === 'sideout-study' && !hasSideOutStudy) || (activeTab === 'zone-analysis' && !hasZoneAnalysis)) {
       setActiveTab('team-performance');
     }
-  }, [activeTab, hasSideOutStudy]);
+  }, [activeTab, hasSideOutStudy, hasZoneAnalysis]);
 
   // ── Phase: select ──────────────────────────────────────────
 
@@ -306,32 +323,24 @@ export function TeamAnalysisPage() {
         </div>
       )}
     >
-      <div className="stats-view-tabs analysis-page__stats-tabs" role="tablist">
-        {(
-          [
-            ...(singleMatch ? [['report', t('matchReport')] as [AnalysisTab, string]] : []),
-            ['team-performance', t('performanceTeams')],
-            ['play-by-play', t('pbpTitle')],
-            ['player-performance', t('performancePlayer')],
-            ...(hasSideOutStudy ? [['sideout-study', t('sideOutStudy')] as [AnalysisTab, string]] : []),
-            ...(trendsEnabled ? [['trends', t('trendsTitle')] as [AnalysisTab, string]] : []),
-            ['video-analysis', t('videoAnalysis')],
-            ['review', t('teamReviewTab')],
-          ] as [AnalysisTab, string][]
-        ).map(([tab, label]) => (
-          <button
-            key={tab}
-            type="button"
-            role="tab"
-            disabled={isExportingTab}
-            aria-selected={activeTab === tab}
-            className={`stats-view-tabs__tab${activeTab === tab ? ' stats-view-tabs__tab--active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <StatsTabBar
+        ariaLabel={t('matchStatistics')}
+        disabled={isExportingTab}
+        active={activeTab}
+        onSelect={setActiveTab}
+        tabs={[
+          ...(singleMatch ? [{ id: 'report' as const, label: t('matchReport') }] : []),
+          { id: 'team-performance', label: t('performanceTeams') },
+          { id: 'play-by-play', label: t('pbpTitle') },
+          { id: 'player-performance', label: t('performancePlayer') },
+          ...(hasSideOutStudy ? [{ id: 'sideout-study' as const, label: t('sideOutStudy') }] : []),
+          ...(hasZoneAnalysis ? [{ id: 'zone-analysis' as const, label: t('zoneAnalysis') }] : []),
+          { id: 'cross-rotation', label: t('crossRotationAnalysis') },
+          ...(trendsEnabled ? [{ id: 'trends' as const, label: t('trendsTitle') }] : []),
+          { id: 'video-analysis', label: t('videoAnalysis') },
+          { id: 'review', label: t('teamReviewTab') },
+        ]}
+      />
 
       {activeTab !== 'video-analysis' && activeTab !== 'review' ? (
         <TabExportControl
@@ -360,7 +369,7 @@ export function TeamAnalysisPage() {
           }) : activeTab === 'play-by-play' ? () => {
             if (!playByPlayShareRef.current) throw new Error('No play by play on screen');
             return { playByPlay: playByPlayShareRef.current, filters: useFilterStore.getState().filters, selectedPlayerIds: [] };
-          } : (activeTab === 'team-performance' || activeTab === 'player-performance' || activeTab === 'sideout-study') ? () => {
+          } : (activeTab === 'team-performance' || activeTab === 'player-performance' || activeTab === 'sideout-study' || activeTab === 'zone-analysis' || activeTab === 'cross-rotation') ? () => {
             // The aggregated figures of the selected matches, as the tab shows them.
             const { filters, selectedPlayerIds } = useFilterStore.getState();
             return {
@@ -422,6 +431,14 @@ export function TeamAnalysisPage() {
       ) : activeTab === 'sideout-study' ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
           <SideOutStudyPanel stats={aggregatedStats} lockedTeam="home" />
+        </div>
+      ) : activeTab === 'zone-analysis' && hasZoneAnalysis && zoneCodeTables ? (
+        <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+          <ZoneAnalysisPanel stats={aggregatedStats} codeTables={zoneCodeTables} lockedTeam="home" />
+        </div>
+      ) : activeTab === 'cross-rotation' ? (
+        <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+          <CrossRotationAnalysisPanel stats={aggregatedStats} />
         </div>
       ) : activeTab === 'trends' && trendsEnabled ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">

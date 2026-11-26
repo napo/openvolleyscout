@@ -5,7 +5,7 @@ import {
   createEmptySkillStats,
   createEmptyTeamStats,
   buildMatchStatsQuickStats,
-  buildCrossRotationStats,
+  mergeCrossRotationStats,
   safeDivide,
   type MatchStats,
   type TeamStats,
@@ -185,9 +185,12 @@ export function buildAggregatedTeamMatchStats(
     },
     rotations: { home: [], away: [] },
   };
-  // Rotation semantics don't apply across pooled opponents (see flipSide/normalizeRally above) -
-  // an empty rally list yields a valid, all-zero cross-rotation matrix, matching `rotations: []` above.
-  const crossRotationStats = buildCrossRotationStats({ rallyStats: [], setStartedEvents: [], pointEvents: [] });
+  // The rotation of each rally is tied to its own match (who rotated when), so the pooled table
+  // adds up the cross-rotation table of every match instead of replaying the pooled rallies.
+  const crossRotationStats = mergeCrossRotationStats(entries.map(({ stats, focusTeamSide }) => ({
+    stats: stats.crossRotationStats,
+    studiedSide: focusTeamSide,
+  })));
 
   const teamStats: Record<TeamSide, TeamStats> = { home: focusStats, away: opponentStats };
   const playerStats = [...focusPlayerMap.values(), ...opponentPlayers];

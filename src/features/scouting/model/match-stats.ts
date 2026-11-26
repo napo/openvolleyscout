@@ -914,6 +914,37 @@ export function buildCrossRotationStats(input: {
   };
 }
 
+/**
+ * Pools the cross-rotation tables of several matches. `studiedSide` tells which side of each match
+ * is the studied team: that team becomes `home`, its opponents `away` (cells are counters, so they
+ * add up; the percentages are computed again).
+ */
+export function mergeCrossRotationStats(
+  entries: ReadonlyArray<{ stats: CrossRotationStats; studiedSide: TeamSide }>,
+): CrossRotationStats {
+  const cellsBySide: Record<TeamSide, Record<RotationNumber, Record<RotationNumber, CrossRotationCell>>> = {
+    away: createEmptyCrossRotationCellsByRotation(),
+    home: createEmptyCrossRotationCellsByRotation(),
+  };
+  for (const { stats, studiedSide } of entries) {
+    for (const side of ['home', 'away'] as const) {
+      const sourceSide = side === 'home' ? studiedSide : getOppositeTeamSide(studiedSide);
+      const source = stats.bySide[sourceSide].cells;
+      ROTATION_NUMBERS.forEach((servingRotation) => {
+        ROTATION_NUMBERS.forEach((receivingRotation) => {
+          addCrossRotationAggregate(cellsBySide[side][servingRotation][receivingRotation], source[servingRotation][receivingRotation]);
+        });
+      });
+    }
+  }
+  return {
+    bySide: {
+      away: buildCrossRotationMatrix('away', cellsBySide.away),
+      home: buildCrossRotationMatrix('home', cellsBySide.home),
+    },
+  };
+}
+
 function isSkillPointEvaluation(evaluation: SkillEvaluation | undefined, skill: SkillType): boolean {
   return evaluation === '#' && isTrackedSkill(skill) && isTrueTerminalTouch({
     teamSide: 'home',
