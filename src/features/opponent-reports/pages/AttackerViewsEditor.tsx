@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
-import { useTranslation } from '@src/i18n';
+import { useTranslation, type TranslationKey } from '@src/i18n';
 import { SplitToggle } from './SplitToggle';
 import { attackerViewFilterLabel } from '../model/attacker-view-label';
 import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
@@ -33,7 +33,7 @@ const ATTACK_SUBTYPES: ReadonlyArray<{
   { value: 'P', labelKey: 'attackSubtypePlaced' },
   { value: 'T', labelKey: 'attackSubtypeTip' },
 ];
-const BLOCKER_COUNTS = [0, 1, 2, 3] as const;
+const BLOCKER_COUNTS = [0, 1, 2, 3, 4] as const; // 4 = open block (DataVolley players-at-net value)
 
 interface AttackerViewsEditorProps {
   views: readonly AttackerDirectionViewConfig[] | undefined;
@@ -240,7 +240,7 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
                     <FilterGroup title={t('opponentReportAttackBlockers')} active={Boolean(view.blockers?.length)}>
                       <ChipSelect
                         allLabel={all}
-                        options={BLOCKER_COUNTS.map((count) => ({ value: count, label: String(count) }))}
+                        options={BLOCKER_COUNTS.map((count) => ({ value: count, label: String(count), title: t(`numBlockers${count}` as TranslationKey) }))}
                         selected={view.blockers ?? []}
                         onChange={(next) => setField(index, 'blockers', next)}
                       />

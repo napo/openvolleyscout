@@ -64,7 +64,7 @@ const SCORE_SITUATIONS: ReadonlyArray<{ value: ScoreSituation; labelKey: Transla
 ];
 
 const ATTACK_ZONES = ['4', '3', '2', '5', '6', '1'] as const;
-const BLOCKERS = [0, 1, 2, 3] as const;
+const BLOCKERS = [0, 1, 2, 3, 4] as const; // 4 = open block (DataVolley players-at-net value)
 const ROTATIONS = [1, 2, 3, 4, 5, 6] as const;
 
 export interface VideoChainFilterPanelProps {
@@ -163,7 +163,7 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
             <ChipSelect
               label={t('opponentReportAttackBlockers')}
               allLabel={all}
-              options={BLOCKERS.map((value) => ({ value, label: String(value) }))}
+              options={BLOCKERS.map((value) => ({ value, label: String(value), title: t(`numBlockers${value}` as TranslationKey) }))}
               selected={attributes.blockers ?? []}
               onChange={(blockers) => patchAttributes(key, { blockers })}
             />

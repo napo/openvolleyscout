@@ -622,6 +622,32 @@ describe('opponent attacking metrics', () => {
     expect(custom[0].views[1].rotations[0].band.sideOut).toMatchObject({ count: 1, total: 1, rate: 1 });
   });
 
+  it('keeps attacks against an open block (players at net 4) apart from the others', () => {
+    const attack = (id: string, order: number, numBlockers: 0 | 1 | 2 | 3 | 4, rally: number): RallyStats => ({
+      setNumber: 1,
+      rallyNumber: rally,
+      touches: [
+        touch(`d${id}`, order, 'a4', 'dig', '+', { rallyNumber: rally }),
+        touch(id, order + 1, 'a4', 'attack', '#', {
+          startZoneCode: '4',
+          numBlockers,
+          ballDirection: { start: { x: 55, y: 20 }, end: { x: 25, y: 70 } },
+          rallyNumber: rally,
+        }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'away',
+      pointWinner: 'away',
+      terminalReason: null,
+    });
+    const fixture = match([attack('open', 1, 4, 1), attack('triple', 3, 3, 2)], 'm1', 'a1');
+    const metrics = computeAttackingReportMetrics([fixture]);
+    const [view] = computeAttackerDirectionViews([fixture], [{ id: 'open', label: 'Open block', blockers: [4] }], metrics.attackers);
+    const player = view.attackers.find((entry) => entry.player.jersey === '4')!;
+    expect(player.attacks).toBe(1);
+    expect(player.directionsForDrawing.map((direction) => direction.touchId)).toEqual(['open']);
+  });
+
   it('filters custom attacker direction views by phase, reception, rotation, zone, subtype, base/combination, blockers, and evaluation', () => {
     const rallies: RallyStats[] = [
       {

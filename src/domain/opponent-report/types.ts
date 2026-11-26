@@ -232,7 +232,7 @@ export interface AttackerDirectionViewConfig {
   attackZones?: string[];
   /** Empty or omitted = all attack evaluations ('#', '+', '!', '-', '/', '='). */
   evaluations?: AttackerDirectionEvaluation[];
-  /** Empty or omitted = all blocker counts (0, 1, 2, 3). */
+  /** Empty or omitted = all blocker counts (0 to 3, and 4 = open block). */
   blockers?: number[];
   /** Empty or omitted = all attack subtypes ('H' hard, 'P' placed, 'T' tip). */
   attackSubtypes?: AttackSubtype[];

@@ -1274,7 +1274,7 @@ const HEATMAP_ATTACK_SUBTYPES: ReadonlyArray<{
   { value: 'P', labelKey: 'attackSubtypePlaced' },
   { value: 'T', labelKey: 'attackSubtypeTip' },
 ];
-const HEATMAP_BLOCKERS = [0, 1, 2, 3] as const;
+const HEATMAP_BLOCKERS = [0, 1, 2, 3, 4] as const; // 4 = open block (DataVolley players-at-net value)
 
 function hasAnyAttackFilter(f: HeatmapAttackFilters): boolean {
   return (
@@ -1743,7 +1743,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
             <FilterGroup title={t('opponentReportAttackBlockers')} active={attackFilters.blockers.length > 0}>
               <ChipSelect
                 allLabel={allLabel}
-                options={HEATMAP_BLOCKERS.map((count) => ({ value: count, label: String(count) }))}
+                options={HEATMAP_BLOCKERS.map((count) => ({ value: count, label: String(count), title: t(`numBlockers${count}` as TranslationKey) }))}
                 selected={attackFilters.blockers}
                 onChange={(next) => setAttackFilter('blockers', next)}
               />
