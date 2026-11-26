@@ -103,10 +103,13 @@ export function DashboardFilterPanel({
   const selectedEvaluations = filters.evaluations.length >= ALL_EVALUATIONS.length ? [] : filters.evaluations;
   const onEvaluations = (next: SkillEvaluation[]) => updateFilter('evaluations', next.length === 0 ? [...ALL_EVALUATIONS] : next);
 
+  // Only athletes with touches in the skill of the filter, with their number of touches in brackets.
+  const touchesOf = useMemo(() => new Map(stats.playerStats.map((p) => [p.playerId, p])), [stats.playerStats]);
   const playerSelect = (
     key: 'server' | 'receiver' | 'attacker',
     labelKey: 'filterServer' | 'filterReceiver' | 'filterAttacker',
     allKey: 'allServers' | 'allReceivers' | 'allAttackers',
+    skill: 'serve' | 'receive' | 'attack',
   ) => (
     <label className="dashboard-filter-panel__select">
       <span className="filter-chips__row-label">{t(labelKey)}</span>
@@ -117,13 +120,18 @@ export function DashboardFilterPanel({
         onChange={(event) => updateFilter(key, event.target.value)}
       >
         <option value="all">{t(allKey)}</option>
-        {teams.map((team) => (
-          <optgroup key={team.side} label={team.name}>
-            {team.players.map((player) => (
-              <option key={player.playerId} value={player.playerId}>{playerLabel(player)}</option>
-            ))}
-          </optgroup>
-        ))}
+        {teams.map((team) => {
+          const withTouches = team.players
+            .map((player) => ({ player, touches: touchesOf.get(player.playerId)?.[skill]?.total ?? 0 }))
+            .filter(({ player, touches }) => touches > 0 || player.playerId === filters[key]);
+          return withTouches.length === 0 ? null : (
+            <optgroup key={team.side} label={team.name}>
+              {withTouches.map(({ player, touches }) => (
+                <option key={player.playerId} value={player.playerId}>{playerLabel(player)} ({touches})</option>
+              ))}
+            </optgroup>
+          );
+        })}
       </select>
     </label>
   );
@@ -240,9 +248,10 @@ export function DashboardFilterPanel({
           >
             {teams.length > 0 ? (
               <>
-                {playerSelect('server', 'filterServer', 'allServers')}
-                {playerSelect('receiver', 'filterReceiver', 'allReceivers')}
-                {playerSelect('attacker', 'filterAttacker', 'allAttackers')}
+                <span className="perf-dashboard__filter-hint">{t('dashboardFilterPlayersHint')}</span>
+                {playerSelect('server', 'filterServer', 'allServers', 'serve')}
+                {playerSelect('receiver', 'filterReceiver', 'allReceivers', 'receive')}
+                {playerSelect('attacker', 'filterAttacker', 'allAttackers', 'attack')}
               </>
             ) : null}
             {showRole ? (

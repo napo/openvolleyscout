@@ -1199,6 +1199,7 @@ export const sl = {
   filterAthleteNoResults: 'Noben atlet ni najden',
   filterEvaluations: 'Ocene',
   dashboardFilterPlayersTitle: 'Igralci',
+  dashboardFilterPlayersHint: "Samo športniki z dotiki v tem elementu; v oklepaju število dotikov.",
   allPhases: 'Vse faze',
   situationAnalytics: 'Analitika situacije v igri',
   situationSideOut: 'Navzven',

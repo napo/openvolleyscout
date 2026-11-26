@@ -1199,6 +1199,7 @@ export const de = {
   filterAthleteNoResults: 'Kein Athlet gefunden',
   filterEvaluations: 'Bewertungen',
   dashboardFilterPlayersTitle: 'Spieler',
+  dashboardFilterPlayersHint: "Nur Spielende mit Aktionen in diesem Spielelement; in Klammern die Anzahl der Aktionen.",
   allPhases: 'Alle Phasen',
   situationAnalytics: 'Analyse der Spielsituation',
   situationSideOut: 'Von der Seite nach außen',

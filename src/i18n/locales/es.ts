@@ -1202,6 +1202,7 @@ export const es = {
   filterAthleteNoResults: 'No se ha encontrado ninguna jugadora',
   filterEvaluations: 'Valoraciones',
   dashboardFilterPlayersTitle: 'Jugadores',
+  dashboardFilterPlayersHint: "Solo atletas con toques en ese fundamento; entre paréntesis el número de toques.",
   allPhases: 'Todas las fases',
   situationAnalytics: 'Análisis de situaciones de juego',
   situationSideOut: 'Cambio de balón',

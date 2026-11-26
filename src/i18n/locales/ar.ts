@@ -1201,6 +1201,7 @@ export const ar = {
   filterAthleteNoResults: 'لم يتم العثور على لاعب',
   filterEvaluations: 'التقييمات',
   dashboardFilterPlayersTitle: 'اللاعبون',
+  dashboardFilterPlayersHint: "اللاعبون الذين لديهم لمسات في هذه المهارة فقط؛ وبين قوسين عدد اللمسات.",
   allPhases: 'جميع المراحل',
   situationAnalytics: 'تحليلات مواقف اللعب',
   situationSideOut: 'تبديل الإرسال',

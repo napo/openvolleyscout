@@ -1199,6 +1199,7 @@ export const tr = {
   filterAthleteNoResults: 'Sporcu bulunamadı',
   filterEvaluations: 'Değerlendirmeler',
   dashboardFilterPlayersTitle: 'Oyuncular',
+  dashboardFilterPlayersHint: "Yalnızca bu beceride vuruşu olan sporcular; parantez içinde vuruş sayısı.",
   allPhases: 'Tüm fazlar',
   situationAnalytics: 'Oyun durumu analitikleri',
   situationSideOut: 'Side-out',

@@ -1201,6 +1201,7 @@ export const ro = {
   filterAthleteNoResults: 'Niciun sportiv găsit',
   filterEvaluations: 'Evaluări',
   dashboardFilterPlayersTitle: 'Jucători',
+  dashboardFilterPlayersHint: "Doar sportivii cu atingeri la acel element; între paranteze numărul de atingeri.",
   allPhases: 'Toate fazele',
   situationAnalytics: 'Analiza situațiilor de joc',
   situationSideOut: 'Schimb de minge',

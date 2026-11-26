@@ -1199,6 +1199,7 @@ export const zh = {
   filterAthleteNoResults: '未找到运动员',
   filterEvaluations: '评估',
   dashboardFilterPlayersTitle: '球员',
+  dashboardFilterPlayersHint: "仅显示在该技术上有触球的运动员;括号内为触球次数。",
   allPhases: '所有阶段',
   situationAnalytics: '比赛形势分析',
   situationSideOut: '侧面朝外',

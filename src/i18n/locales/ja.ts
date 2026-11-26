@@ -1201,6 +1201,7 @@ export const ja = {
   filterAthleteNoResults: "該当する選手がいません",
   filterEvaluations: "評価",
   dashboardFilterPlayersTitle: '選手',
+  dashboardFilterPlayersHint: "そのスキルで触球のある選手のみ。括弧内は触球数。",
   allPhases: "全局面",
   situationAnalytics: "局面別の分析",
   situationSideOut: "サイドアウト",

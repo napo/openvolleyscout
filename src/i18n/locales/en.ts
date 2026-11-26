@@ -1239,6 +1239,7 @@ export const en = {
   filterAthleteNoResults: 'No athlete found',
   filterEvaluations: 'Evaluations',
   dashboardFilterPlayersTitle: 'Players',
+  dashboardFilterPlayersHint: "Only athletes with touches in that skill; touches in brackets.",
   allPhases: 'All phases',
   situationAnalytics: 'Game situation analytics',
   situationSideOut: 'Side-out',

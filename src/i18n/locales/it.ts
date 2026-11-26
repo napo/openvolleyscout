@@ -1240,6 +1240,7 @@ export const it = {
   filterAthleteNoResults: 'Nessun atleta trovato',
   filterEvaluations: 'Valutazioni',
   dashboardFilterPlayersTitle: 'Protagonisti',
+  dashboardFilterPlayersHint: "Solo atlete e atleti con tocchi in quel fondamentale; tra parentesi il numero di tocchi.",
   allPhases: 'Tutte le fasi',
   situationAnalytics: 'Analisi situazioni di gioco',
   situationSideOut: 'Cambio-palla',
