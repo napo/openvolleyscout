@@ -1084,6 +1084,16 @@ input {
     background: rgba(255, 255, 255, 0.96);
 }
 
+/*
+ * Buttons: three variants, used everywhere.
+ *   .btn-primary    the one action a screen or dialog is for (import, confirm, start).
+ *   .btn-secondary  every other action, and the default for a button in a toolbar or a table row.
+ *   .icon-button    a secondary button that shows an icon (ActionIcon) with a short label under or
+ *                   beside it; an icon-only button must carry an aria-label.
+ * .btn-small makes the first two compact (rows, chips bars, dialogs); it never changes the colour.
+ * A new button takes one of these; a different look is a reason to extend them here, not to style
+ * a button in place.
+ */
 .btn-primary,
 .btn-secondary {
     padding: var(--space-md) var(--space-xl);

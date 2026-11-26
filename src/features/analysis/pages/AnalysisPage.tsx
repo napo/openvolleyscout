@@ -1,3 +1,4 @@
+import { ActionIcon } from '@src/components/ActionIcon';
 import { StatsCaptureContext } from '@src/features/analytics/export/stats-capture-context';
 import { Link, useLocation } from 'react-router-dom';
 import { EfficiencyNote } from '@src/features/analytics/EfficiencyNote';
@@ -363,12 +364,7 @@ export function AnalysisPage() {
                   title={t('openPrintableReport')}
                   aria-label={t('openPrintableReport')}
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M8 19H5c-1 0-2-1-2-2V7c0-1 1-2 2-2h14c1 0 2 1 2 2v10" />
-                    <polyline points="16 5 16 1 8 1 8 5" />
-                    <rect x="2" y="12" width="20" height="8" />
-                    <path d="M22 17H2" />
-                  </svg>
+                  <ActionIcon name="print" size={24} />
                   <span className="icon-button__label">{t('openPrintableReport')}</span>
                 </button>
                 </> : null}
@@ -379,11 +375,7 @@ export function AnalysisPage() {
                   title={t('exportDataVolleyHelp')}
                   aria-label={t('exportDataVolley')}
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                    <polyline points="16 11 12 15 8 11" />
-                    <line x1="12" y1="2" x2="12" y2="15" />
-                  </svg>
+                  <ActionIcon name="download" size={24} />
                   <span className="icon-button__label">{t('exportDataVolley')}</span>
                 </button>
                 <button
@@ -393,11 +385,7 @@ export function AnalysisPage() {
                   title={t('exportTiebreakHelp')}
                   aria-label={t('exportTiebreak')}
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14.5 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5z" />
-                    <polyline points="14.5 2 14.5 7.5 20 7.5" />
-                    <text x="12" y="17" fontSize="6" fontWeight="700" letterSpacing="-0.3" textAnchor="middle" stroke="none" fill="currentColor">TB</text>
-                  </svg>
+                  <ActionIcon name="tiebreak" size={24} />
                   <span className="icon-button__label">{t('exportTiebreak')}</span>
                 </button>
                 <button
@@ -407,11 +395,7 @@ export function AnalysisPage() {
                   title={t('exportOvsHelp')}
                   aria-label={t('exportOvs')}
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 8v13H3V8" />
-                    <path d="M1 3h22v5H1z" />
-                    <path d="M10 12h4" />
-                  </svg>
+                  <ActionIcon name="ovs" size={24} />
                   <span className="icon-button__label">{t('exportOvs')}</span>
                 </button>
               </div>

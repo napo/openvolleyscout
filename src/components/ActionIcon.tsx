@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type ActionIconName = 'pan' | 'zoom-in' | 'zoom-out' | 'fit' | 'pdf' | 'pptx' | 'ods' | 'svg' | 'web' | 'preview' | 'import' | 'export' | 'archive' | 'add' | 'edit' | 'manage' | 'copy' | 'delete' | 'up' | 'down' | 'undo' | 'redo' | 'select' | 'player' | 'arrow' | 'move' | 'cone' | 'area' | 'text' | 'close' | 'external' | 'video' | 'whatsapp';
+export type ActionIconName = 'pan' | 'zoom-in' | 'zoom-out' | 'fit' | 'pdf' | 'pptx' | 'ods' | 'svg' | 'web' | 'preview' | 'import' | 'export' | 'archive' | 'add' | 'edit' | 'manage' | 'copy' | 'delete' | 'up' | 'down' | 'undo' | 'redo' | 'select' | 'player' | 'arrow' | 'move' | 'cone' | 'area' | 'text' | 'close' | 'external' | 'video' | 'whatsapp' | 'print' | 'download' | 'tiebreak' | 'ovs';
 
 const paths: Record<ActionIconName, ReactNode> = {
   video: <><rect x="2" y="6" width="14" height="12" rx="2" /><path d="m16 10 6-4v12l-6-4z" /></>,
@@ -35,10 +35,14 @@ const paths: Record<ActionIconName, ReactNode> = {
   text: <><path d="M4 7V4h16v3M12 4v16M8 20h8" /></>,
   close: <><path d="m5 5 14 14M19 5 5 19" /></>,
   external: <><path d="M14 3h7v7M21 3 10 14M10 3H3v18h18v-7" /></>,
+  print: <><path d="M8 19H5c-1 0-2-1-2-2V7c0-1 1-2 2-2h14c1 0 2 1 2 2v10" /><path d="M16 5V1H8v4" /><rect x="2" y="12" width="20" height="8" /><path d="M22 17H2" /></>,
+  download: <><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="m16 11-4 4-4-4M12 2v13" /></>,
+  tiebreak: <><path d="M14.5 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5zM14.5 2v5.5H20" /><text x="12" y="17" fontSize="6" fontWeight="700" letterSpacing="-0.3" textAnchor="middle" stroke="none" fill="currentColor">TB</text></>,
+  ovs: <><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" /></>,
   whatsapp: <><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" /><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1" /></>,
 };
 
 /** Decorative icons supplement translated labels; icon-only controls need an aria-label. */
-export function ActionIcon({ name, className = '' }: { name: ActionIconName; className?: string }) {
-  return <svg className={`ovs-action-icon ovs-action-icon--${name} ${className}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{paths[name]}</svg>;
+export function ActionIcon({ name, className = '', size = 20 }: { name: ActionIconName; className?: string; size?: number }) {
+  return <svg className={`ovs-action-icon ovs-action-icon--${name} ${className}`} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{paths[name]}</svg>;
 }
