@@ -196,6 +196,7 @@ interface AttackArrowChartProps {
 }
 
 function AttackArrowChart({ zoneFreq, directions }: AttackArrowChartProps) {
+  const { t } = useTranslation();
   const maxZone = Math.max(0, ...Object.values(zoneFreq));
   const maxDir = Math.max(0, ...directions.map((d) => d.count));
 
@@ -204,7 +205,7 @@ function AttackArrowChart({ zoneFreq, directions }: AttackArrowChartProps) {
       viewBox="-4 -24 98 118"
       width="100%"
       className="atk-arrow-chart"
-      aria-label="Attack direction chart"
+      aria-label={t('attackDirectionsPanel')}
     >
       <defs>
         <marker id="atk-arr" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
@@ -254,7 +255,7 @@ function AttackArrowChart({ zoneFreq, directions }: AttackArrowChartProps) {
 
       {/* Net line */}
       <line x1="0" y1="0" x2="90" y2="0" stroke="#64748b" strokeWidth="1.5" />
-      <text x="2" y="-2" fontSize="4" fill="#94a3b8">NET</text>
+      <text x="2" y="-2" fontSize="4" fill="#94a3b8">{t('opponentReportNet').toUpperCase()}</text>
 
       {/* Attack direction arrows */}
       {directions.map(({ startZone, endZone, count }) => {

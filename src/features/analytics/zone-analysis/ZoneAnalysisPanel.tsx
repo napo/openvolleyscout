@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMemo, useState } from 'react';
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -100,7 +101,7 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
     return stats.playerStats
       .filter((p) => ids.has(p.playerId))
       .sort((a, b) => Number(a.jerseyNumber) - Number(b.jerseyNumber))
-      .map((p) => ({ value: p.playerId, label: `${p.jerseyNumber} ${shortName(p)}` }));
+      .map((p) => ({ value: p.playerId, label: formatPlayerLabel(p.jerseyNumber, shortName(p)) }));
   }, [attacks, stats.playerStats, team]);
 
   const attackerRoles = useMemo(() => {

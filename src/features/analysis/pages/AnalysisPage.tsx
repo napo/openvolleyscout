@@ -7,7 +7,7 @@ import { SNAPSHOT_TABS } from '@src/features/analytics/export/SharedStatsPanel';
 import { useFilterStore } from '@src/features/analytics/stores/filter-store';
 import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
 import type { TranslationKey } from '@src/i18n';
-import { PlayByPlayPanel, type PlayByPlayShare } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
+import { exportPlayByPlayShare, PlayByPlayPanel, type PlayByPlayShare } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { LoadingProgressBanner, yieldToUi, type LoadProgressState } from '@src/components/LoadingProgressBanner';
@@ -79,6 +79,8 @@ export function AnalysisPage() {
   // The play by play on screen, for its share link.
   const playByPlayShareRef = useRef<PlayByPlayShare | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  // A failed export is said on the page, next to the export buttons, not in a browser alert.
+  const [exportError, setExportError] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<LoadProgressState | null>(null);
   const [computeProgress, setComputeProgress] = useState<LoadProgressState | null>(null);
   const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
@@ -251,6 +253,7 @@ export function AnalysisPage() {
       return;
     }
 
+    setExportError(null);
     setIsExportingPdf(true);
     setExportProgress({ loaded: 1, total: 2, currentName: t('progressExportingFormat', { format: 'PDF' }) });
     await yieldToUi();
@@ -259,7 +262,7 @@ export function AnalysisPage() {
       setExportProgress({ loaded: 2, total: 2, currentName: t('progressSavingFile') });
     } catch (error) {
       console.error('Error exporting match report PDF:', error);
-      window.alert(t('exportPdfFailed'));
+      setExportError(t('exportPdfFailed'));
     } finally {
       setIsExportingPdf(false);
       setExportProgress(null);
@@ -301,7 +304,7 @@ export function AnalysisPage() {
       }
     } catch (error) {
       console.error('Error exporting Tiebreak Tech file:', error);
-      window.alert(t('exportTiebreakFailed'));
+      setExportError(t('exportTiebreakFailed'));
     }
   };
 
@@ -314,7 +317,7 @@ export function AnalysisPage() {
       await exportMatchAsOvs(activeProject);
     } catch (error) {
       console.error('Error exporting .ovs file:', error);
-      window.alert(t('ovsExportFailed'));
+      setExportError(t('ovsExportFailed'));
     }
   };
 
@@ -350,6 +353,7 @@ export function AnalysisPage() {
                   <span>{t('matchNotStarted')}</span>
                 )}
               </div>
+              {exportError ? <p role="alert" className="video-analysis__error">{exportError}</p> : null}
               <div className="analysis-page__actions">
                 {statsView === 'report' ? <>
                 <button
@@ -366,28 +370,6 @@ export function AnalysisPage() {
                     <path d="M22 17H2" />
                   </svg>
                   <span className="icon-button__label">{t('openPrintableReport')}</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary icon-button"
-                  onClick={() => void handleExportPdf()}
-                  disabled={isExportingPdf}
-                  title={isExportingPdf ? t('exportPdfGenerating') : t('exportPdf')}
-                  aria-label={isExportingPdf ? t('exportPdfGenerating') : t('exportPdf')}
-                  aria-busy={isExportingPdf}
-                >
-                  {isExportingPdf ? (
-                    <svg className="icon-button__spinner" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <path d="M12 3a9 9 0 1 1-9 9" />
-                    </svg>
-                  ) : (
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14.5 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5z" />
-                      <polyline points="14.5 2 14.5 7.5 20 7.5" />
-                      <text x="12" y="17" fontSize="5" fontWeight="700" letterSpacing="-0.3" textAnchor="middle" stroke="none" fill="currentColor">PDF</text>
-                    </svg>
-                  )}
-                  <span className="icon-button__label">{isExportingPdf ? t('exportPdfGenerating') : t('exportPdf')}</span>
                 </button>
                 </> : null}
                 <button
@@ -483,7 +465,9 @@ export function AnalysisPage() {
                   }
                   return buildStatsSnapshot(matchStats, { filters, selectedPlayerIds, scopeToPlayers: statsView === 'player-performance' });
                 } : undefined}
-                onExportPdf={statsView === 'report' && matchReportInput ? handleExportPdf : undefined}
+                onExportPdf={statsView === 'report' && matchReportInput ? handleExportPdf
+                  : statsView === 'play-by-play' ? async () => { if (playByPlayShareRef.current) await exportPlayByPlayShare(playByPlayShareRef.current, t); }
+                  : undefined}
               /> : null}
               <StatsCaptureContext.Provider value={isExportingTab}><div ref={exportPanelRef}>
               {statsView === 'play-by-play' ? (

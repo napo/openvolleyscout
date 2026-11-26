@@ -1,3 +1,4 @@
+import { useEscapeKey } from '@src/lib/hooks/useEscapeKey';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
@@ -18,6 +19,7 @@ const pad = (value: number) => String(value).padStart(2, '0');
  * number, date, time, venue and notes. The scouting itself is not touched.
  */
 export function MatchDetailsDialog({ project, onCancel, onSave }: MatchDetailsDialogProps) {
+  useEscapeKey(onCancel);
   const { t } = useTranslation();
   const playedAt = parseStoredDateTime(project.metadata.playedAt);
   const hasTime = Boolean(project.metadata.playedAt && project.metadata.playedAt.includes('T'));
@@ -66,7 +68,7 @@ export function MatchDetailsDialog({ project, onCancel, onSave }: MatchDetailsDi
   );
 
   return (
-    <div className="match-details-dialog__overlay" role="dialog" aria-modal="true" aria-labelledby="match-details-title" onKeyDown={(event) => event.key === 'Escape' && onCancel()}>
+    <div className="match-details-dialog__overlay" role="dialog" aria-modal="true" aria-labelledby="match-details-title">
       <form className="match-details-dialog" onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <h2 id="match-details-title">{t('matchDetailsTitle')}</h2>
         <p className="match-details-dialog__hint">{t('matchDetailsHint')}</p>

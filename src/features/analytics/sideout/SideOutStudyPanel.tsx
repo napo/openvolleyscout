@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useTranslation } from '@src/i18n';
 import type { TeamSide } from '@src/domain/common/enums';
 import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
@@ -145,7 +146,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
       .filter((player) => player.teamSide === filters.team && ids.has(player.playerId))
       .map((player) => ({
         playerId: player.playerId,
-        label: `${player.jerseyNumber} ${player.playerName}`,
+        label: formatPlayerLabel(player.jerseyNumber, player.playerName),
       }));
   }, [sequences, stats.playerStats, filters.team]);
 
@@ -159,7 +160,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
       .filter((player) => player.teamSide === filters.team && ids.has(player.playerId))
       .map((player) => ({
         playerId: player.playerId,
-        label: `${player.jerseyNumber} ${player.playerName}`,
+        label: formatPlayerLabel(player.jerseyNumber, player.playerName),
       }));
   }, [sequences, stats.playerStats, filters.team]);
 

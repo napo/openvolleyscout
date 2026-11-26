@@ -190,8 +190,10 @@ describe('MatchReportTable tabellino renderer', () => {
     const source = await readFile(analysisPagePath, 'utf8');
 
     assert(source.includes('exportMatchReportPdf'));
-    assert(source.includes("t('exportPdf')"));
+    // One PDF entry for the tab: "Export this tab" calls the match report exporter.
+    assert(source.includes('onExportPdf={'));
     assert(source.includes('handleExportPdf'));
+    assertNotPresent(source, "t('exportPdf')");
   });
 
   it('renders a separate set summary section per team with ov1 columns (Won/Ser/Atk/Blo | Op.Err | Serve+BP% | Rec+SO% | Atk | Blo)', async () => {

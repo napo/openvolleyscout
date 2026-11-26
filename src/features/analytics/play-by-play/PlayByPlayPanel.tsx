@@ -1,4 +1,4 @@
-import { useMemo, useState, type MutableRefObject } from 'react';
+import { useMemo, type MutableRefObject } from 'react';
 import { ChipSelect, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
 import { useRememberedState } from '@src/lib/hooks/useRememberedState';
 import { statsScopeKey } from '@src/lib/utils/stats-scope';
@@ -8,7 +8,6 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchMetadata } from '@src/domain/match/types';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { useTranslation } from '@src/i18n';
-import { ActionIcon } from '@src/components/ActionIcon';
 import { buildPlayByPlay, type PlayByPlaySet } from './play-by-play';
 import { playByPlayDetail, playByPlayServer } from './play-by-play-labels';
 import { buildPlayByPlayChartSvg } from './play-by-play-chart';
@@ -24,6 +23,17 @@ export interface PlayByPlayShare {
   setNumber: number;
 }
 
+/** The dedicated play-by-play PDF of what is on screen: the one PDF of this tab. */
+export async function exportPlayByPlayShare(share: PlayByPlayShare, t: Parameters<typeof import('./play-by-play-pdf').exportPlayByPlayPdf>[1]): Promise<void> {
+  const { exportPlayByPlayPdf } = await import('./play-by-play-pdf');
+  await exportPlayByPlayPdf({
+    sets: share.sets,
+    teams: { home: share.homeTeam, away: share.awayTeam },
+    metadata: share.metadata,
+    options: { reference: share.reference, setNumber: share.setNumber },
+  }, t);
+}
+
 export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata, initialSet, initialReference = 'home', precomputedSets, shareRef }: {
   homeTeam: Team; awayTeam: Team; stats?: MatchStats; eventLog?: readonly MatchEvent[]; metadata?: MatchMetadata | null; initialSet?: number; initialReference?: TeamSide;
   /** Shared viewer: the timeline already built by the sender. */
@@ -36,8 +46,6 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
   const scope = precomputedSets ? `shared|${initialReference}|${initialSet ?? 0}` : `${metadata?.id ?? ''}|${stats ? statsScopeKey(stats) : ''}`;
   const [choice, setChoice, resetChoice] = useRememberedState('play-by-play', scope, () => ({ reference: initialReference, setNumber: initialSet ?? 0 }));
   const { reference, setNumber } = choice;
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState(false);
   const sets = useMemo(() => {
     if (precomputedSets) return precomputedSets;
     if (!stats || !eventLog) return [];
@@ -48,15 +56,6 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
   const teams = { home: homeTeam, away: awayTeam };
   const options = { reference, setNumber };
   const visibleSets = sets.filter((set) => !setNumber || set.setNumber === setNumber);
-  const exportPdf = async () => {
-    if (exporting) return;
-    setExporting(true); setExportError(false);
-    try {
-      const { exportPlayByPlayPdf } = await import('./play-by-play-pdf');
-      await exportPlayByPlayPdf({ sets, teams, metadata, options }, t);
-    } catch (error) { console.error('Play-by-play PDF export failed:', error); setExportError(true); }
-    finally { setExporting(false); }
-  };
   return <section className="play-by-play" aria-label={t('pbpTitle')}>
     <h3>{t('pbpTitle')}</h3><p className="play-by-play__intro">{t('pbpDescription')}</p>
     <FilterGroups>
@@ -82,9 +81,7 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
     </FilterGroups>
     <div className="play-by-play__controls">
       <ResetFiltersButton count={setNumber !== 0 ? 1 : 0} onReset={resetChoice} />
-      <button type="button" className="btn-secondary" disabled={exporting || !visibleSets.some((set) => set.rows.length)} aria-busy={exporting} onClick={() => void exportPdf()}><ActionIcon name="pdf" />{t(exporting ? 'exportPdfGenerating' : 'pbpExport')}</button>
     </div>
-    {exportError ? <p role="alert">{t('exportPdfFailed')}</p> : null}
     <p className="play-by-play__legend">P: {t('pbpRotation')}. {t('pbpLegend')}</p>
     {!visibleSets.length || visibleSets.every((set) => !set.rows.length) ? <p>{t('pbpEmpty')}</p> : visibleSets.map((set) => {
       const chart = buildPlayByPlayChartSvg({ sets, teams, metadata, options }, set, t);

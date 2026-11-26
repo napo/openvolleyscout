@@ -11,15 +11,6 @@
   --za-high: #111827;
 }
 
-@media (prefers-color-scheme: dark) {
-  .zone-analysis {
-    --za-v2: #60a5fa;
-    --za-v3: #f87171;
-    --za-v4: #4ade80;
-    --za-high: #e5e7eb;
-  }
-}
-
 .zone-analysis__description,
 .zone-analysis__hint,
 .zone-analysis__empty {

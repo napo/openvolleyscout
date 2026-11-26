@@ -350,23 +350,23 @@
 }
 
 .tag-court__half--team-home[data-team-name] {
-    border-color: #93c5fd;
-    background: rgba(37, 99, 235, 0.35);
+    border-color: var(--team-home-soft);
+    background: color-mix(in srgb, var(--team-home) 35%, transparent);
 }
 
 .tag-court__half--team-away[data-team-name] {
-    border-color: #fdba74;
-    background: rgba(234, 88, 12, 0.4);
+    border-color: var(--team-away-soft);
+    background: color-mix(in srgb, var(--team-away) 40%, transparent);
 }
 
 .tag-court__half--team-home[data-team-name].is-active {
-    background: rgba(37, 99, 235, 0.6);
-    box-shadow: inset 0 0 0 3px #93c5fd;
+    background: color-mix(in srgb, var(--team-home) 60%, transparent);
+    box-shadow: inset 0 0 0 3px var(--team-home-soft);
 }
 
 .tag-court__half--team-away[data-team-name].is-active {
-    background: rgba(234, 88, 12, 0.65);
-    box-shadow: inset 0 0 0 3px #fdba74;
+    background: color-mix(in srgb, var(--team-away) 65%, transparent);
+    box-shadow: inset 0 0 0 3px var(--team-away-soft);
 }
 
 .tag-court__half--single {
@@ -976,11 +976,11 @@
 
 /* Both teams: the keys take the colour of the team the play is for. */
 .tag-input__what--team-home {
-    border-top: 4px solid #2563eb;
+    border-top: 4px solid var(--team-home);
 }
 
 .tag-input__what--team-away {
-    border-top: 4px solid #ea580c;
+    border-top: 4px solid var(--team-away);
 }
 
 /* Liberos to the left of "Substitution", on the same row; the team name above. */

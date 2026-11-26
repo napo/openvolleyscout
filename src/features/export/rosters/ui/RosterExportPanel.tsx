@@ -1,3 +1,4 @@
+import { useEscapeKey } from '@src/lib/hooks/useEscapeKey';
 import { useState } from 'react';
 import type { RosterExportFormat } from '../types';
 import { useTranslation } from '@src/i18n';
@@ -13,6 +14,7 @@ type RosterExportPanelProps = {
 };
 
 export function RosterExportPanel({ teams, defaultTeamId, onClose, onExport }: RosterExportPanelProps) {
+  useEscapeKey(onClose);
   const { t } = useTranslation();
 
   const [format, setFormat] = useState<RosterExportFormat>('json');

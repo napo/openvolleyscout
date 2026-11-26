@@ -1,3 +1,4 @@
+import { useEscapeKey } from '@src/lib/hooks/useEscapeKey';
 import { useEffect, useState } from 'react';
 import { registerSW } from 'virtual:pwa-register';
 import { useTranslation } from '@src/i18n';
@@ -34,6 +35,8 @@ export function PwaUpdateBanner() {
       listeners.delete(show);
     };
   }, []);
+
+  useEscapeKey(() => setVisible(false), visible);
 
   if (!visible || !updateServiceWorker) {
     return null;

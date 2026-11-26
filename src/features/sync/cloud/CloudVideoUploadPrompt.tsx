@@ -1,3 +1,4 @@
+import { useEscapeKey } from '@src/lib/hooks/useEscapeKey';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -122,6 +123,9 @@ export function CloudVideoUploadPrompt() {
     void deleteCloudVideoOfMatch(matchId).catch((error) => console.warn('Could not remove the match video from the cloud', error));
     force((value) => value + 1);
   }), []);
+
+  // Escape answers "not now", like the other dialogs.
+  useEscapeKey(() => setQuestion(null), question !== null);
 
   if (!question) return null;
   const { video, size, free } = question;

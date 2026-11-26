@@ -1,10 +1,15 @@
+import { DEFAULT_THRESHOLDS } from '../../opponent-reports/model/traffic-light';
 import type { CrossRotationAggregate } from '@src/features/scouting/model/match-stats';
 
 export type CrossRotationView = 'breakPoint' | 'sideOut';
 
+/**
+ * Green from `good`, red up to `bad`: the same limits as the traffic lights of the tactical reports
+ * (side-out 60% / 50%, break point 40% / 30%), so a value has one colour wherever it is shown.
+ */
 export const CROSS_ROTATION_THRESHOLDS: Record<CrossRotationView, { good: number; bad: number }> = {
-  sideOut: { good: 0.55, bad: 0.45 },
-  breakPoint: { good: 0.4, bad: 0.3 },
+  sideOut: { good: DEFAULT_THRESHOLDS.metrics.sideOut.green, bad: DEFAULT_THRESHOLDS.metrics.sideOut.red },
+  breakPoint: { good: DEFAULT_THRESHOLDS.metrics.breakPoint.green, bad: DEFAULT_THRESHOLDS.metrics.breakPoint.red },
 };
 
 export function getCrossRotationPercentage(aggregate: CrossRotationAggregate, view: CrossRotationView): number | null {

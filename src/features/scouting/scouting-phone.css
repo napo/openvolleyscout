@@ -811,8 +811,12 @@
         opacity: 0.7;
     }
 
+    .phone-rally-timeline__item--home {
+        border-left-color: var(--team-home);
+    }
+
     .phone-rally-timeline__item--away {
-        border-left-color: #f59e0b;
+        border-left-color: var(--team-away);
     }
 
     .phone-rally-timeline__item.is-latest {

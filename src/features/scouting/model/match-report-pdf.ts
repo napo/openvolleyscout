@@ -1,3 +1,4 @@
+import { CROSS_ROTATION_THRESHOLDS } from '@src/features/analytics/cross-rotation/cross-rotation-format';
 import type { TranslationKey } from '@src/i18n';
 import { saveFile } from '@src/lib/utils/save-file';
 import {
@@ -611,10 +612,6 @@ function buildBottomSummarySection(report: MatchTabellinoReport, t: TFunction): 
 // ---------------------------------------------------------------------------
 // Cross-rotation analysis (mirrors CrossRotationAnalysisPanel/CrossRotationTable)
 // ---------------------------------------------------------------------------
-const CROSS_ROTATION_THRESHOLDS: Record<CrossRotationView, { good: number; bad: number }> = {
-  sideOut: { good: 0.55, bad: 0.45 },
-  breakPoint: { good: 0.4, bad: 0.3 },
-};
 const CROSS_ROTATION_GREEN = '#16a34a';
 const CROSS_ROTATION_RED = '#dc2626';
 const CROSS_ROTATION_GREEN_TINT = '#e5f6ea';

@@ -49,6 +49,11 @@ body,
     --color-surface: #F8FAFC;
     --color-text-primary: #0F172A;
     --color-text-secondary: #475569;
+    /* The two teams: blue for home, orange for away, in every screen that tells them apart. */
+    --team-home: #2563eb;
+    --team-home-soft: #93c5fd;
+    --team-away: #ea580c;
+    --team-away-soft: #fdba74;
     /* Spacing */
     --space-xs: 0.25rem;
     --space-sm: 0.5rem;

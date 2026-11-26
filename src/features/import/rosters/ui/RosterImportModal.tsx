@@ -1,3 +1,4 @@
+import { useEscapeKey } from '@src/lib/hooks/useEscapeKey';
 import { useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { RosterImportFormat, RosterImportPayload } from '../types';
@@ -9,6 +10,7 @@ type RosterImportModalProps = {
 };
 
 export function RosterImportModal({ onClose, onImport }: RosterImportModalProps) {
+  useEscapeKey(onClose);
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 

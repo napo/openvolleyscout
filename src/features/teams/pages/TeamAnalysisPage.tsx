@@ -1,4 +1,4 @@
-import type { PlayByPlayShare } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
+import { exportPlayByPlayShare, type PlayByPlayShare } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
 import { StatsCaptureContext } from '@src/features/analytics/export/stats-capture-context';
 import { LoadingProgressBanner, yieldToUi, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { EfficiencyNote } from '@src/features/analytics/EfficiencyNote';
@@ -398,7 +398,9 @@ export function TeamAnalysisPage() {
                 stats: singleMatchStats,
                 lineupSnapshots: singleMatch.scoutingSession?.lineupSnapshots,
               }, t)
-              : undefined
+              : activeTab === 'play-by-play'
+                ? async () => { if (playByPlayShareRef.current) await exportPlayByPlayShare(playByPlayShareRef.current, t); }
+                : undefined
           }
         />
       ) : null}
