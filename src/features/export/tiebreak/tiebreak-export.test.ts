@@ -41,6 +41,8 @@ function actionSummary(match: ParsedDataVolleyMatch) {
       // Tiebreak Tech serve types are float, jump float and jump spin only:
       // any other serve type is read back as float (H).
       action.dataVolleySkill === 'S' ? (['M', 'Q'].includes(action.skillTypeCode ?? '') ? action.skillTypeCode : 'H') : '',
+      // The attack type (hard, placed, tip) must survive. Tiebreak Tech has no ball tempo, so that is not compared.
+      action.dataVolleySkill === 'A' ? action.skillSubtypeCode ?? '' : '',
     ].join(':'));
 }
 

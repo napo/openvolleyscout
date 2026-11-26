@@ -340,7 +340,7 @@ function writeMatch(db: SqlJsWritableDatabase, match: ParsedDataVolleyMatch, dia
           ? zoneNumber(row.endZone) ?? courtPosition
           : zoneNumber(row.startZone) ?? courtPosition,
         ATT_cono: isAttack ? `${conePart}:-1:-1:${targetPart}` : null,
-        ATT_type: isAttack && row.skillTypeCode ? ATT_TYPE_TO_TT[row.skillTypeCode] ?? null : null,
+        ATT_type: isAttack && row.skillSubtypeCode ? ATT_TYPE_TO_TT[row.skillSubtypeCode] ?? null : null,
         ATT_breakpoint: isAttack ? (reception && !earlierAttack ? 0 : 1) : null,
         SERVE_from: skill === 'S' ? zoneNumber(row.startZone) : null,
         SERVE_direction: skill === 'S' ? zoneNumber(row.endZone)

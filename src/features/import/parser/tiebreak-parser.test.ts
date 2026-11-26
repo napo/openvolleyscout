@@ -292,13 +292,13 @@ describe('Tiebreak Tech importer (tiebreak-parser)', () => {
       subtype: a.skillSubtypeCode,
       blockers: a.playersCode,
     }))).toEqual([
-      { cone: '5', target: '1', type: 'H', subtype: 'H', blockers: '2' },
-      { cone: '3', target: '6', type: 'P', subtype: 'P', blockers: '1' },
-      { cone: '2', target: '5', type: 'T', subtype: 'T', blockers: '3' },
-      { cone: '6', target: '9', type: 'T', subtype: 'T', blockers: '0' },
-      { cone: '4', target: '6', type: 'H', subtype: 'H', blockers: '2' },
-      { cone: '1', target: '5', type: 'H', subtype: 'H', blockers: '1' },
-      { cone: '7', target: '1', type: 'H', subtype: 'H', blockers: '2' },
+      { cone: '5', target: '1', type: undefined, subtype: 'H', blockers: '2' },
+      { cone: '3', target: '6', type: undefined, subtype: 'P', blockers: '1' },
+      { cone: '2', target: '5', type: undefined, subtype: 'T', blockers: '3' },
+      { cone: '6', target: '9', type: undefined, subtype: 'T', blockers: '0' },
+      { cone: '4', target: '6', type: undefined, subtype: 'H', blockers: '2' },
+      { cone: '1', target: '5', type: undefined, subtype: 'H', blockers: '1' },
+      { cone: '7', target: '1', type: undefined, subtype: 'H', blockers: '2' },
     ]);
 
     // Block and dig are parsed with blockers count on block.

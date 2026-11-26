@@ -515,13 +515,12 @@ function eventToAction(
   const evaluation = MARK_TO_EVALUATION[event.mark];
   const { cone, targetZone } = parseCone(event.attCono);
 
-  // Every DataVolley touch code carries a skill-type letter; skills without a
-  // meaningful sub-type (receive, block, dig, set, freeball) default to 'H'.
-  let skillTypeCode = 'H';
-  if (skillCode === 'S' && event.serveType) {
-    skillTypeCode = TT_SERVE_TYPE[event.serveType] ?? 'H';
-  } else if (skillCode === 'A' && event.attType) {
-    skillTypeCode = TT_ATT_TYPE[event.attType] ?? 'H';
+  // Only serves have a ball-type letter in Tiebreak Tech (float, jump float, jump spin). The attack
+  // type (hard, placed, tip) is the DataVolley skill subtype, not the ball tempo (H high, M medium,
+  // Q quick...), so it goes in the subtype only and the ball type stays empty.
+  let skillTypeCode: string | undefined;
+  if (skillCode === 'S') {
+    skillTypeCode = event.serveType ? TT_SERVE_TYPE[event.serveType] ?? 'H' : 'H';
   }
   const skillSubtypeCode = skillCode === 'A' ? TT_ATT_TYPE[event.attType] : undefined;
   const playersCode = skillCode === 'A' && event.numGiocatoriMuro >= 0 && event.numGiocatoriMuro <= 4
@@ -599,7 +598,7 @@ function eventToFaultAction(
   const jerseyNumber = event.ipPlayer ? idToJersey.get(event.ipPlayer) : undefined;
   const skillCode = ERROR_TYPE_TO_SKILL[event.errorType] ?? 'F';
   const playerCode = jerseyNumber ? String(jerseyNumber).padStart(2, '0') : '$$';
-  const rawCode = `${marker}${playerCode}${skillCode}H=`;
+  const rawCode = `${marker}${playerCode}${skillCode}${skillCode === 'S' ? 'H' : '~'}=`;
 
   return {
     kind: 'touch',
@@ -614,7 +613,7 @@ function eventToFaultAction(
     unknownPlayer: !jerseyNumber,
     skill: SKILL_CODE_TO_SKILL[skillCode],
     dataVolleySkill: skillCode,
-    skillTypeCode: 'H',
+    skillTypeCode: skillCode === 'S' ? 'H' : undefined,
     evaluation: '=',
     setNumber,
     lineup: buildEventLineup(event, homeTeamId, homeIdToJersey, awayIdToJersey, lineup),
