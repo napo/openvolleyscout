@@ -65,7 +65,7 @@ function DistributionTooltip({
           return (
             <span key={evaluation}>
               <strong style={getEvaluationChipStyle(skill, evaluation)}>{evaluation}</strong>
-              {` ${t('count')}: ${count} · ${t('percentage')}: ${formatPercentage(percentage)}`}
+              {` ${count} · ${formatPercentage(percentage)}`}
             </span>
           );
         })}

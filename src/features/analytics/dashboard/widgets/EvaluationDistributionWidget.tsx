@@ -67,7 +67,7 @@ function EvalTooltip({ active, payload, skill }: { active?: boolean; payload?: T
           return (
             <span key={ev}>
               <strong style={getEvaluationChipStyle(skill, ev)}>{ev}</strong>
-              {` ${t('count')}: ${count} · ${t('percentage')}: ${pct.toFixed(1)}%`}
+              {` ${count} · ${pct.toFixed(1)}%`}
             </span>
           );
         })}
