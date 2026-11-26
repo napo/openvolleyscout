@@ -54,7 +54,7 @@ export function TeamRadarWidget({ stats, filters }: TeamRadarWidgetProps) {
   }), [stats, setFilter, situationMetrics]);
 
   return (
-    <ExportableWidget id="team-radar" title={t('radarChartTitleTeam')} className="perf-dashboard__section">
+    <ExportableWidget title={t('radarChartTitleTeam')} className="perf-dashboard__section">
       <RadarComparisonChart
         title={t('radarChartTitleTeam')}
         series={series}

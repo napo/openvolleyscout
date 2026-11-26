@@ -3,10 +3,7 @@ import { useTranslation } from '@src/i18n';
 import type { MatchProject } from '@src/domain/match/types';
 import { computeMarkovChain, type MarkovChainKind } from '../model/markov-rally-model';
 import '../trends-panel.css';
-
-function formatPct(value: number | null): string {
-  return value === null || Number.isNaN(value) ? '-' : `${(value * 100).toFixed(1)}%`;
-}
+import { formatPercent } from '@src/lib/utils/format-percent';
 
 function probabilityColor(value: number | null): string {
   if (value === null) return 'var(--color-text-secondary)';
@@ -79,7 +76,7 @@ export function MarkovChainPanel({ matches, teamRef }: MarkovChainPanelProps) {
                     {' · '}{t(row.state.skill)} {row.state.evaluation}
                   </th>
                   <td>{row.observedCount}</td>
-                  <td style={{ color: probabilityColor(row.winProbability) }}>{formatPct(row.winProbability)}</td>
+                  <td style={{ color: probabilityColor(row.winProbability) }}>{formatPercent(row.winProbability)}</td>
                   <td>{row.expectedRemainingTouches !== null ? row.expectedRemainingTouches.toFixed(1) : '-'}</td>
                 </tr>
               ))}

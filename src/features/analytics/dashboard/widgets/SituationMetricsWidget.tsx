@@ -14,13 +14,9 @@ import {
 import { computeRallyExchangeStats } from '../situation/rally-exchange-metrics';
 import { safeDivide } from '@src/features/scouting/model/match-stats';
 import { filterRalliesForTeam } from '../selectors/rally-context-filters';
+import { formatPercent } from '@src/lib/utils/format-percent';
 
 const FBSO_SHARE_WARNING_THRESHOLD = 0.55;
-
-function formatPct(value: number | null): string {
-  if (value === null) return '-';
-  return `${(value * 100).toFixed(1)}%`;
-}
 
 function formatRatio(value: number | null): string {
   if (value === null) return '-';
@@ -74,7 +70,7 @@ function PhaseTile({ label, tooltip, home, away, homeTeamName, awayTeamName, foo
                 className="perf-dashboard__sit-tile-pct"
                 style={{ color: pctColor(m.pointPct) }}
               >
-                {formatPct(m.pointPct)}
+                {formatPercent(m.pointPct)}
               </span>
               <span className="perf-dashboard__sit-tile-counts">
                 {m.pointsWon}/{m.attempts}
@@ -128,13 +124,13 @@ function TeamTrendTable({ rallies }: TeamTrendTableProps) {
             <tr key={row.setNumber}>
               <td>{row.setNumber}</td>
               <td style={{ color: pctColor(row.sideOutPct) }}>
-                {formatPct(row.sideOutPct)}
+                {formatPercent(row.sideOutPct)}
                 <span className="perf-dashboard__sit-trend-sub">
                   {' '}({row.sideOutWins}/{row.sideOutAttempts})
                 </span>
               </td>
               <td style={{ color: pctColor(row.breakPointPct) }}>
-                {formatPct(row.breakPointPct)}
+                {formatPercent(row.breakPointPct)}
                 <span className="perf-dashboard__sit-trend-sub">
                   {' '}({row.breakPointWins}/{row.breakPointAttempts})
                 </span>
@@ -294,7 +290,7 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
             <div className="perf-dashboard__sit-tile-footnote">
               {[{ share: fbsoShare.home, name: homeTeamName }, { share: fbsoShare.away, name: awayTeamName }].map(({ share, name }) => (
                 <span key={name} className="perf-dashboard__sit-tile-footnote-row">
-                  {t('fbsoShareLabel', { team: name, share: formatPct(share) })}
+                  {t('fbsoShareLabel', { team: name, share: formatPercent(share) })}
                   {share !== null && share > FBSO_SHARE_WARNING_THRESHOLD && (
                     <span className="perf-dashboard__sit-tile-footnote-warning" title={t('fbsoShareWarningTooltip')}>
                       {' '}⚠

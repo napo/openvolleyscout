@@ -13,11 +13,11 @@ import {
 } from './selectors/dashboard-selectors';
 import { useAdvancedFilters } from '../stores/filter-selectors';
 import { useFilterActions } from '../stores/filter-selectors';
-import { TeamEvaluationDistributionWidget } from './widgets/TeamEvaluationDistributionWidget';
+import { EvaluationDistributionWidget } from './widgets/EvaluationDistributionWidget';
 import { PlayerEvaluationDistributionWidget } from './widgets/PlayerEvaluationDistributionWidget';
-import { TeamEfficiencyWidget } from './widgets/TeamEfficiencyWidget';
+import { EfficiencyWidget } from './widgets/EfficiencyWidget';
 import { PlayerEfficiencyWidget } from './widgets/PlayerEfficiencyWidget';
-import { TeamPointsErrorsWidget } from './widgets/TeamPointsErrorsWidget';
+import { PointsErrorsWidget } from './widgets/PointsErrorsWidget';
 import { PlayerPointsErrorsWidget } from './widgets/PlayerPointsErrorsWidget';
 import { PlayerAnalyticsWidget } from './widgets/PlayerAnalyticsWidget';
 import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
@@ -108,6 +108,7 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
           {(() => {
             // Clean filters for team-performance section (remove player filter)
             const teamFilters = { ...filters, player: 'all' };
+            const bothTeamsFilters = { ...teamFilters, team: 'all' as const, role: 'all' as const };
             return (
               <>
                 <SituationMetricsWidget stats={stats} filters={teamFilters} />
@@ -121,11 +122,12 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
                   showPlayer={false}
                 />
 
-                <TeamEvaluationDistributionWidget stats={stats} filters={teamFilters} />
+                {/* The team, athlete and role filters are not offered here: both teams are always shown. */}
+                <EvaluationDistributionWidget stats={stats} filters={bothTeamsFilters} />
 
-                <TeamEfficiencyWidget stats={stats} filters={teamFilters} />
+                <EfficiencyWidget stats={stats} filters={bothTeamsFilters} />
 
-                <TeamPointsErrorsWidget stats={stats} filters={teamFilters} />
+                <PointsErrorsWidget stats={stats} filters={bothTeamsFilters} />
               </>
             );
           })()}

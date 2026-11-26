@@ -13,13 +13,9 @@ import {
   type PhaseContribution,
 } from '../situation/situation-metrics';
 import { filterRalliesForTeam } from '../selectors/rally-context-filters';
+import { formatPercent } from '@src/lib/utils/format-percent';
 
 const PLAYER_BAR_COLOR = '#6366f1';
-
-function formatPct(value: number | null): string {
-  if (value === null) return '-';
-  return `${(value * 100).toFixed(1)}%`;
-}
 
 function pctColor(value: number | null): string {
   if (value === null) return 'var(--color-text-secondary)';
@@ -61,7 +57,7 @@ function PlayerPhaseTile({ label, team, contribution, teamName, playerName }: Pl
               className="perf-dashboard__sit-tile-pct"
               style={{ color: pctColor(team.pointPct) }}
             >
-              {formatPct(team.pointPct)}
+              {formatPercent(team.pointPct)}
             </span>
             <span className="perf-dashboard__sit-tile-counts">
               {team.pointsWon}/{team.attempts}
@@ -84,7 +80,7 @@ function PlayerPhaseTile({ label, team, contribution, teamName, playerName }: Pl
               className="perf-dashboard__sit-tile-pct"
               style={{ color: PLAYER_BAR_COLOR }}
             >
-              {formatPct(contribution.playerShare)}
+              {formatPercent(contribution.playerShare)}
             </span>
             <span className="perf-dashboard__sit-tile-counts">
               {contribution.playerPoints}/{contribution.teamPointsWon}
@@ -201,13 +197,13 @@ export function PlayerSituationMetricsWidget({ stats, filters, player }: PlayerS
                     <tr key={row.setNumber}>
                       <td>{row.setNumber}</td>
                       <td style={{ color: pctColor(row.sideOutPct) }}>
-                        {formatPct(row.sideOutPct)}
+                        {formatPercent(row.sideOutPct)}
                         <span className="perf-dashboard__sit-trend-sub">
                           {' '}({row.sideOutWins}/{row.sideOutAttempts})
                         </span>
                       </td>
                       <td style={{ color: pctColor(row.breakPointPct) }}>
-                        {formatPct(row.breakPointPct)}
+                        {formatPercent(row.breakPointPct)}
                         <span className="perf-dashboard__sit-trend-sub">
                           {' '}({row.breakPointWins}/{row.breakPointAttempts})
                         </span>

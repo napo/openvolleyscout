@@ -9,7 +9,6 @@ import {
   buildPdfLogo,
   loadPdfMakeApi,
 } from '@src/features/scouting/model/pdf-branding';
-import type { RegisteredWidget } from './widget-export-registry';
 import { buildVectorWidgetContent, inlineSvgStylesForCapture } from './widget-vector-content';
 
 export interface WidgetPdfMeta {
@@ -132,49 +131,5 @@ export async function exportWidgetAsPdf(el: HTMLElement, title: string, meta: Wi
 
   const blob = await pdfMake.createPdf(docDefinition).getBlob();
   const fileNamePart = title.trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'widget';
-  await saveFile(`${fileNamePart}.pdf`, blob, 'application/pdf');
-}
-
-/**
- * Composes every currently-registered widget (in registration/DOM order)
- * into a single multi-page PDF, one widget per page.
- */
-export async function exportTabAsPdf(widgets: RegisteredWidget[], tabTitle: string, meta: WidgetPdfMeta): Promise<void> {
-  const renderable = widgets.filter((widget): widget is RegisteredWidget & { ref: { current: HTMLElement } } => (
-    widget.ref.current !== null
-  ));
-  if (renderable.length === 0) return;
-
-  const font = await preparePdfFont(collectPdfText(
-    renderable.map((widget) => widget.ref.current),
-    [tabTitle, ...renderable.map((widget) => widget.title)],
-    meta,
-  ));
-  const [pdfMake, bodies] = await Promise.all([
-    loadPdfMakeApi(),
-    Promise.all(renderable.map((widget) => buildWidgetBody(widget.ref.current, font))),
-  ]);
-
-  const content = renderable.flatMap((widget, index) => [
-    ...buildPdfHeader(widget.title, meta),
-    ...bodies[index],
-    ...(index < renderable.length - 1 ? [{ text: '', pageBreak: 'after' as const }] : []),
-  ]);
-
-  const docDefinition = {
-    pageSize: 'A4',
-    pageOrientation: 'landscape',
-    pageMargins: [24, 24, 24, 30],
-    defaultStyle: { font, fontSize: 8 },
-    styles: PDF_WIDGET_STYLES,
-    footer: () => buildPdfFooter(meta),
-    content: [
-      { text: tabTitle, style: 'pdfWidgetSectionHeading', margin: [0, 0, 0, 10] },
-      ...content,
-    ],
-  };
-
-  const blob = await pdfMake.createPdf(docDefinition).getBlob();
-  const fileNamePart = tabTitle.trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'tab';
   await saveFile(`${fileNamePart}.pdf`, blob, 'application/pdf');
 }

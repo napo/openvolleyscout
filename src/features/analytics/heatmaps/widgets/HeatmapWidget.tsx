@@ -14,7 +14,7 @@ export function HeatmapWidget({ stats, filters }: HeatmapWidgetProps) {
   const { t } = useTranslation();
 
   return (
-    <ExportableWidget id="heatmap" title={t('heatmapTitle')} className="heatmap-widget perf-dashboard__section">
+    <ExportableWidget title={t('heatmapTitle')} className="heatmap-widget perf-dashboard__section">
       <section aria-label={t('heatmapTitle')}>
         <h3 className="heatmap-widget__title">{t('heatmapTitle')}</h3>
 

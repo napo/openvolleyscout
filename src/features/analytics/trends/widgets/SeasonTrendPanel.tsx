@@ -10,16 +10,13 @@ import { computeDeltaVsAverage } from '../model/season-trend';
 import { useTrendsSource, useTrendsViewStore } from '../trends-data-source';
 import '../trends-panel.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
+import { formatPercent } from '@src/lib/utils/format-percent';
 
 const CHART_COLORS = {
   line: 'var(--color-primary)',
   grid: 'var(--color-border, rgba(15, 23, 42, 0.12))',
   text: 'var(--color-text-secondary)',
 };
-
-function formatPct(value: number | null): string {
-  return value === null || Number.isNaN(value) ? '-' : `${(value * 100).toFixed(1)}%`;
-}
 
 function deltaColor(delta: number | null): string {
   if (delta === null) return 'var(--color-text-secondary)';
@@ -87,14 +84,14 @@ export function SeasonTrendPanel({ matches, teamRef }: SeasonTrendPanelProps) {
                 return match ? `${match[2]}/${match[1]}` : String(value);
               }}
             />
-            <YAxis stroke={CHART_COLORS.text} tickFormatter={(v: number) => formatPct(v)} />
+            <YAxis stroke={CHART_COLORS.text} tickFormatter={(v: number) => formatPercent(v)} />
             <Tooltip
               labelFormatter={(label: unknown) => {
                 const point = chartData[Number(label) - 1];
                 return point ? `${formatDisplayDate(point.date) || ''} · ${t('vs')} ${point.opponent}` : String(label);
               }}
               formatter={(value: unknown) => [
-                formatPct(typeof value === 'number' ? value : null),
+                formatPercent(typeof value === 'number' ? value : null),
                 t(RADAR_AXES.find((a) => a.id === selectedAxis)!.labelKey),
               ]}
             />
@@ -127,8 +124,8 @@ export function SeasonTrendPanel({ matches, teamRef }: SeasonTrendPanelProps) {
           {deltas.map((row) => (
             <tr key={row.axis}>
               <th scope="row">{t(RADAR_AXES.find((a) => a.id === row.axis)!.labelKey)}</th>
-              <td>{formatPct(row.latest)}</td>
-              <td>{formatPct(row.average)}</td>
+              <td>{formatPercent(row.latest)}</td>
+              <td>{formatPercent(row.average)}</td>
               <td style={{ color: deltaColor(row.delta) }}>
                 {row.delta === null ? '-' : `${row.delta > 0 ? '+' : ''}${(row.delta * 100).toFixed(1)}%`}
               </td>

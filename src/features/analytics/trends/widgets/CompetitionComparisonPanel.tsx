@@ -11,10 +11,7 @@ import {
   type CompetitionTeamSnapshot,
 } from '../model/competition-comparison';
 import '../trends-panel.css';
-
-function formatPct(value: number | null): string {
-  return value === null || Number.isNaN(value) ? '-' : `${(value * 100).toFixed(1)}%`;
-}
+import { formatPercent } from '@src/lib/utils/format-percent';
 
 function competitionKey(option: CompetitionOption): string {
   return option.competitionEntryId ?? `name:${(option.competitionName ?? '').toLowerCase().trim()}`;
@@ -147,7 +144,7 @@ export function CompetitionComparisonPanel({ teamRef }: CompetitionComparisonPan
               >
                 <td>{index + 1} / {ranked.length}</td>
                 <th scope="row">{team.teamName}</th>
-                <td>{formatPct(team.values[selectedAxis] ?? null)}</td>
+                <td>{formatPercent(team.values[selectedAxis] ?? null)}</td>
               </tr>
             ))}
           </tbody>

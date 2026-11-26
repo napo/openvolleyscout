@@ -23,6 +23,7 @@ import {
   type SideOutStudyFilters,
 } from './sideout-distribution';
 import './sideout-study.css';
+import { formatPercent } from '@src/lib/utils/format-percent';
 
 interface SideOutStudyPanelProps {
   stats: MatchStats;
@@ -52,10 +53,6 @@ const BALL_TYPE_LABEL_KEYS = {
 const ROTATION_DISPLAY_ORDER = [1, 6, 5, 4, 3, 2] as const;
 
 type ViewMode = 'zone' | 'calls' | 'sequential';
-
-function formatPct(pct: number | null): string {
-  return pct === null ? '-' : `${(pct * 100).toFixed(1)}%`;
-}
 
 const ZONE_TAGS: Record<SideOutDistributionTarget, string> = {
   zone7: '7', zone8: '8', zone9: '9',
@@ -346,7 +343,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           fill={emphasized ? '#4B61D1' : '#0F172A'}
           className={`sideout-study__area-pct${emphasized ? ' sideout-study__area-pct--strong' : ''}`}
         >
-          {formatPct(bucket.pctOfSets)}
+          {formatPercent(bucket.pctOfSets)}
         </text>
         <text
           x={cx}
@@ -367,7 +364,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
             fill="#475569"
             className="sideout-study__area-count"
           >
-            {`${formatPct(bucket.successRate)} ✓`}
+            {`${formatPercent(bucket.successRate)} ✓`}
           </text>
         )}
       </g>
@@ -456,8 +453,8 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         </header>
         {renderCourt(result)}
         <footer className="sideout-study__rotation-footer">
-          <span>{`${t('sideOutTargetSetter')}: ${formatPct(result.buckets.setter.pctOfSets)} (${result.buckets.setter.total})`}</span>
-          <span>{`${t('sideOutTargetUnknown')}: ${formatPct(result.buckets.unknown.pctOfSets)} (${result.buckets.unknown.total})`}</span>
+          <span>{`${t('sideOutTargetSetter')}: ${formatPercent(result.buckets.setter.pctOfSets)} (${result.buckets.setter.total})`}</span>
+          <span>{`${t('sideOutTargetUnknown')}: ${formatPercent(result.buckets.unknown.pctOfSets)} (${result.buckets.unknown.total})`}</span>
         </footer>
       </article>
     );
@@ -503,8 +500,8 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         </header>
         {renderCourt(group.result, maxPctCalls)}
         <footer className="sideout-study__rotation-footer">
-          <span>{`${t('sideOutTargetSetter')}: ${formatPct(group.result.buckets.setter.pctOfSets)} (${group.result.buckets.setter.total})`}</span>
-          <span>{`${t('sideOutTargetUnknown')}: ${formatPct(group.result.buckets.unknown.pctOfSets)} (${group.result.buckets.unknown.total})`}</span>
+          <span>{`${t('sideOutTargetSetter')}: ${formatPercent(group.result.buckets.setter.pctOfSets)} (${group.result.buckets.setter.total})`}</span>
+          <span>{`${t('sideOutTargetUnknown')}: ${formatPercent(group.result.buckets.unknown.pctOfSets)} (${group.result.buckets.unknown.total})`}</span>
         </footer>
       </article>
     );

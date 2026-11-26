@@ -6,6 +6,7 @@ import type {
   SkillStats,
   TrackedSkill,
 } from '@src/features/scouting/model/match-stats';
+import { formatPercent } from '@src/lib/utils/format-percent';
 import { safeDivide } from '@src/features/scouting/model/match-stats';
 import { computePlayerServeWins, computePlayerReceptionWins } from '@src/features/scouting/model/match-report';
 import { createTeamScopedPlayerKey } from '@src/domain/lineup';
@@ -269,10 +270,7 @@ export function computePlayerPointConversion(stats: MatchStats, player: PlayerSt
   };
 }
 
-export function formatEfficiencyPct(value: number | null): string {
-  if (value === null) return '-';
-  return `${(value * 100).toFixed(1)}%`;
-}
+export const formatEfficiencyPct = (value: number | null): string => formatPercent(value);
 
 export function formatCount(value: number): string {
   return String(value);
