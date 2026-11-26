@@ -25,3 +25,7 @@ src-tauri/plugins/*/android/.gradle/
 # Local build settings (OAuth client ids, secrets)
 .env.local
 .env.*.local
+
+# Local scratch files (QA screenshots and scripts, machine-specific Python path)
+/tmp/
+/pipx_shared.pth

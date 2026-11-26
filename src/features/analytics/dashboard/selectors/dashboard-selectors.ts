@@ -7,7 +7,6 @@ import type {
   PlayerStats,
   RallyStats,
   SkillStats,
-  TeamStats,
   TrackedSkill,
 } from '@src/features/scouting/model/match-stats';
 import {
@@ -84,32 +83,6 @@ export function aggregateSkillStatsFromTouches(
     .filter((t) => t.teamSide === teamSide && t.skill === skill && isTrackedSkill(t.skill))
     .forEach((t) => updateSkillStats(stats, t));
   return stats;
-}
-
-export function getSkillStatsForTeam(
-  stats: MatchStats,
-  filters: DashboardFilters,
-  teamSide: TeamSide,
-  skill: TrackedSkill,
-): SkillStats {
-  const hasEvaluationFilter = filters.evaluations.length < 6; // 6 is the total number of evaluations
-  const hasAdvancedFilter = hasRallyContextFilter(filters);
-  const needsReaggregation = filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all' ||
-                             hasEvaluationFilter || hasAdvancedFilter;
-
-  if (!needsReaggregation) {
-    return stats.teamStats[teamSide][skill];
-  }
-
-  const touches = getFilteredTouches(stats, {
-    set: filters.set,
-    team: teamSide,
-    source: filters.source,
-    rallyPhase: filters.rallyPhase,
-    evaluations: filters.evaluations,
-    ...pickRallyContextFilters(filters),
-  });
-  return aggregateSkillStatsFromTouches(touches, teamSide, skill);
 }
 
 export function getFilteredPlayerStats(
@@ -282,45 +255,6 @@ export function getFilteredTeamStats(
   return { teamSide, teamName, skillStats };
 }
 
-export function getFullyFilteredTouches(
-  stats: MatchStats,
-  filters: DashboardFilters,
-): BallTouch[] {
-  let touches = getFilteredTouches(stats, {
-    set: filters.set,
-    team: filters.team,
-    source: filters.source,
-    rallyPhase: filters.rallyPhase,
-    evaluations: filters.evaluations,
-    ...pickRallyContextFilters(filters),
-  });
-
-  if (filters.player !== 'all') {
-    touches = touches.filter((t) => t.playerId === filters.player);
-  }
-
-  if (filters.role !== 'all') {
-    const rolePlayerIds = new Set(
-      stats.playerStats
-        .filter((p) => p.role === filters.role)
-        .map((p) => p.playerId),
-    );
-    touches = touches.filter((t) => t.playerId != null && rolePlayerIds.has(t.playerId));
-  }
-
-  return touches;
-}
-
-export function getTeamStatsForFilters(
-  stats: MatchStats,
-  filters: DashboardFilters,
-): Record<TeamSide, TeamStats> | null {
-  if (filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all' || hasRallyContextFilter(filters)) {
-    return null;
-  }
-  return stats.teamStats;
-}
-
 export function computeFilteredPlayerStats(
   basePlayer: PlayerStats,
   filteredTouches: readonly BallTouch[],
@@ -399,75 +333,4 @@ export function getFilteredRalliesForSituation(
   filters: Pick<DashboardFilters, 'set'>,
 ): RallyStats[] {
   return getFilteredRallies(stats, filters);
-}
-
-// Advanced filter selectors for tactical analysis
-
-export function getServerFromRally(rally: RallyStats): string | null {
-  const serveTouch = rally.touches.find((t) => t.skill === 'serve');
-  return serveTouch?.playerId ?? null;
-}
-
-export function getReceiverFromRally(rally: RallyStats): string | null {
-  // Receiver is the first player (after server) who touches the ball on the receiving team
-  const servingTeam = rally.servingTeam;
-  if (!servingTeam) return null;
-
-  const receivingTeam = servingTeam === 'home' ? 'away' : 'home';
-  const receiveTouch = rally.touches.find(
-    (t) => t.teamSide === receivingTeam && t.skill === 'receive',
-  );
-  return receiveTouch?.playerId ?? null;
-}
-
-export function getTouchesWithScoreRange(
-  stats: MatchStats,
-  touches: readonly BallTouch[],
-  scoreRange: 'tied' | 'leading' | 'trailing' | 'clutch',
-): BallTouch[] {
-  if (!scoreRange) {
-    return touches as BallTouch[];
-  }
-
-  const touchesByRally = new Map<string, { touch: BallTouch; rally: RallyStats }>();
-  const ralliesByKey = new Map<string, RallyStats>();
-
-  // Build rally lookup
-  stats.rallyStats.forEach((rally) => {
-    const key = `${rally.setNumber}-${rally.rallyNumber}`;
-    ralliesByKey.set(key, rally);
-  });
-
-  // Map each touch to its rally and calculate score
-  touches.forEach((touch) => {
-    const key = `${touch.setNumber}-${touch.rallyNumber}`;
-    const rally = ralliesByKey.get(key);
-    if (rally) {
-      touchesByRally.set(`${key}-${touch.sequenceNumber}`, { touch, rally });
-    }
-  });
-
-  // Filter by score range
-  return Array.from(touchesByRally.values())
-    .filter(({ rally }) => {
-      const setStats = stats.setStats.find((s) => s.setNumber === rally.setNumber);
-      if (!setStats) return false;
-
-      const { homeScore, awayScore } = setStats;
-      const pointDiff = Math.abs(homeScore - awayScore);
-
-      switch (scoreRange) {
-        case 'tied':
-          return homeScore === awayScore;
-        case 'leading':
-          return pointDiff > 0;
-        case 'trailing':
-          return pointDiff > 0;
-        case 'clutch':
-          return (homeScore >= 23 && awayScore >= 23) || (homeScore >= 14 && awayScore >= 14 && pointDiff <= 2);
-        default:
-          return true;
-      }
-    })
-    .map(({ touch }) => touch);
 }
