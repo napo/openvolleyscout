@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { OpponentReport, OpponentReportKey } from '@src/domain/opponent-report/types';
 import { useTranslation } from '@src/i18n';
 import type { KeySuggestion } from '../model/report-keys';
-import type { ViewT } from '../model/report-view';
+import { keySampleText, type ViewT } from '../model/report-view';
 import { automaticPriority, priorityText, reportPriorities, reorderPriorities, setReportPriorities } from '../model/report-priorities';
 
 export function ReportPriorities({ report, suggestions, viewT, update }: {
@@ -28,7 +28,7 @@ export function ReportPriorities({ report, suggestions, viewT, update }: {
         </div>
         <textarea aria-label={`${index + 1}. ${t('tacticalAdviceColumn')}`} value={priorityText(key, viewT)} rows={2}
           onChange={(event) => change((items) => items.map((entry) => entry.id === key.id ? { ...entry, source: 'custom', text: event.target.value } : entry))} />
-        {key.source === 'auto' && key.suggestion ? <small>{t('opponentReportKeySample', { n: key.suggestion.sample })}</small> : null}
+        {key.source === 'auto' && key.suggestion ? <small>{keySampleText(key.suggestion, viewT)}</small> : null}
         <div className="opponent-report__key-actions">
           <button type="button" className="btn-secondary btn-small" disabled={index === 0} aria-label={t('opponentReportMoveUp')} onClick={() => move(index, index - 1)}>↑</button>
           <button type="button" className="btn-secondary btn-small" disabled={index === keys.length - 1} aria-label={t('opponentReportMoveDown')} onClick={() => move(index, index + 1)}>↓</button>

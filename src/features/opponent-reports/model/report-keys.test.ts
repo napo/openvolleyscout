@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { buildKeySuggestions, compareReportPlayers, playerLabel } from './report-keys';
+import { keySampleText, suggestionText, type ViewT } from './report-view';
+import { en } from '@src/i18n/locales/en';
+import { it as italian } from '@src/i18n/locales/it';
 import { ratio, type OpponentReportMetrics, type ReportPlayer } from './report-metrics';
 import type { AttackingReportMetrics, AttackPerformance } from './attacking-metrics';
 import { computeThresholdsFromHistory, DEFAULT_THRESHOLDS, trafficBand, type HistoryTeamMatch } from './traffic-light';
@@ -133,5 +136,24 @@ describe('traffic light', () => {
     expect(thresholds.metrics.receptionPositive.green).toBeCloseTo(0.53, 2);
     expect(thresholds.metrics.sideOut).toEqual(DEFAULT_THRESHOLDS.metrics.sideOut);
     expect(thresholds.minSample).toBe(10);
+  });
+});
+
+describe('sample size printed after a key', () => {
+  const translate = (messages: Record<string, string>): ViewT => (key, params) => (messages[key] ?? key).replace(/{{(\w+)}}/g, (_, name) => String(params?.[name] ?? name));
+  const setter = { kind: 'setterContext', params: { player: '#16 Rossi', rotation: 'P1', band: '! / -', zone: '4', rate: '68%', n: 34 }, sample: 23 };
+
+  it('says how many of the sets in the band went to the zone, once', () => {
+    const t = translate(italian);
+    const sentence = suggestionText({ id: 'x', score: 1, ...setter } as never, t);
+    expect(sentence).toBe('In P1, con ric. ! / -, #16 Rossi alza in zona 4 nel 68% dei casi.');
+    expect(keySampleText(setter, t)).toBe('23 azioni su 34');
+    expect(keySampleText(setter, translate(en))).toBe('23 of 34 actions');
+  });
+
+  it('keeps the plain sample for the other sentences and for a bad saved total', () => {
+    const t = translate(en);
+    expect(keySampleText({ kind: 'serverTargetZone', params: { n: 80 }, sample: 30 }, t)).toBe('Based on 30 actions');
+    expect(keySampleText({ ...setter, params: { ...setter.params, n: 10 } }, t)).toBe('Based on 23 actions');
   });
 });

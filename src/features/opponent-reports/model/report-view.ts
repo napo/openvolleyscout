@@ -48,7 +48,7 @@ export interface ViewTable {
 
 export interface ReportView {
   advice?: Record<string, string>;
-  keys: { id?: string; text: string; source: 'confirmed' | 'suggested'; sample?: number; includeInPrint?: boolean }[];
+  keys: { id?: string; text: string; source: 'confirmed' | 'suggested'; sample?: number; sampleText?: string; includeInPrint?: boolean }[];
   overview: {
     rotations: ViewTable;
     strengths: string[];
@@ -235,12 +235,25 @@ export function resolveReportKeys(
     id: key.id, text: priorityText(key, t),
     source: key.source === 'custom' ? 'confirmed' : 'suggested',
     sample: key.source === 'auto' ? key.suggestion?.sample : undefined,
+    sampleText: key.source === 'auto' && key.suggestion ? keySampleText(key.suggestion, t) : undefined,
     includeInPrint: key.includeInPrint,
   }));
 }
 
 export function suggestionText(suggestion: KeySuggestion, t: ViewT): string {
   return t(`opponentKey_${suggestion.kind}`, suggestion.params);
+}
+
+/**
+ * The sample size printed after a key. A setter sentence quotes a share of the sets in that
+ * rotation and reception band, so it shows "23 of 34 actions" instead of the numerator alone.
+ * Reads only what a saved priority already stores (kind, params, sample).
+ */
+export function keySampleText(suggestion: { kind: string; params: Record<string, string | number>; sample: number }, t: ViewT): string {
+  const total = suggestion.kind === 'setterContext' ? Number(suggestion.params.n) : Number.NaN;
+  return Number.isFinite(total) && total >= suggestion.sample
+    ? t('opponentReportKeySampleOf', { n: suggestion.sample, total })
+    : t('opponentReportKeySample', { n: suggestion.sample });
 }
 
 function outcomeRow(label: string, outcome: AttackOutcome, thresholds: OpponentReportThresholds): ViewCell[] {
@@ -1345,7 +1358,7 @@ export function buildReportView(
   ];
   for (const subject of subjects) {
     const suggestion = suggestions.find((entry) => subject.kinds.includes(entry.kind) && entry.params.player === playerLabel(subject.player));
-    if (suggestion) advice[`${subject.skill}:${subject.player.key}`] = `${suggestionText(suggestion, t)} (${t('opponentReportKeySample', { n: suggestion.sample })})`;
+    if (suggestion) advice[`${subject.skill}:${subject.player.key}`] = `${suggestionText(suggestion, t)} (${keySampleText(suggestion, t)})`;
   }
   return {
     advice,
