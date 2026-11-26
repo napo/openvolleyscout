@@ -42,6 +42,7 @@ import type { QuickJerseyEntryOutcome } from '@src/components/roster/QuickJersey
 import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
 import type { QuickStartRequest } from '@src/features/scouting/model/quick-start';
 import { QuickMatchStart } from '../components/QuickMatchStart';
+import { findReceptionSystemForTeam, useReceptionSystemStore } from '@src/features/systems/model';
 
 type MatchWizardStep = 'match_info' | 'home_team' | 'away_team';
 
@@ -214,6 +215,8 @@ export function MatchSetupPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
+  const receptionSystemBlocks = useReceptionSystemStore((state) => state.receptionSystemBlocks);
+  const activeReceptionSystemBlock = useReceptionSystemStore((state) => state.activeReceptionSystemBlock);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const closeProject = useAppStore((state) => state.closeProject);
 
@@ -868,6 +871,9 @@ export function MatchSetupPage() {
         homeName={formData.homeTeam.teamName}
         awayName={formData.awayTeam.teamName}
         homePlayers={formData.homeTeam.players}
+        // Same role order the live scouting uses: the team's system, else the active one.
+        homeRoleSequence={(findReceptionSystemForTeam(receptionSystemBlocks, formData.homeTeam.archivedTeam?.id ?? undefined)
+          ?? activeReceptionSystemBlock)?.roleSequence}
         awayHasRoster={formData.awayTeam.players.some((player) => player.isSelectedForMatch)}
         isSubmitting={isSubmitting}
         onOpponentNameChange={(name) => handleTeamNameChange('away', name)}

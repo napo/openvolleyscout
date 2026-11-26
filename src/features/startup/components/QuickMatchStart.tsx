@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAppStore } from '@src/app/store/app-store';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
+import type { PlayerRole } from '@src/domain/systems';
 import type { MatchRosterSelectionPlayer } from '@src/domain/match/types';
 import type { QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
 import { getQuickStartMiddlePositions, parseLineupJersey, type QuickStartLevel, type QuickStartRequest } from '@src/features/scouting/model/quick-start';
@@ -28,6 +29,8 @@ interface QuickMatchStartProps {
   homeName: string;
   awayName: string;
   homePlayers: MatchRosterSelectionPlayer[];
+  /** The home team's role order, setter first (from its reception system). */
+  homeRoleSequence?: readonly PlayerRole[];
   awayHasRoster: boolean;
   isSubmitting: boolean;
   onOpponentNameChange: (name: string) => void;
@@ -66,6 +69,7 @@ export function QuickMatchStart({
   homeName,
   awayName,
   homePlayers,
+  homeRoleSequence,
   awayHasRoster,
   isSubmitting,
   onOpponentNameChange,
@@ -115,6 +119,7 @@ export function QuickMatchStart({
   // The middles follow from the setter: show them, the libero enters for them.
   const middlePositions = getQuickStartMiddlePositions(
     setterPosition && parsed[setterPosition] !== undefined ? setterPosition : undefined,
+    homeRoleSequence,
   );
   const middleJerseys = middlePositions
     .map((position) => parsed[position])
