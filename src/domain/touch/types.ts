@@ -37,6 +37,14 @@ export function parseAttackSubtypeCode(skill: string, code: string | undefined):
   return upper === 'H' || upper === 'P' || upper === 'T' ? upper : undefined;
 }
 
+/**
+ * Button input (Basic / Tags) records a touch with only a placeholder court zone. Its zones are not real
+ * data, unless they were then picked on purpose: the analysis views must not read them as a position.
+ */
+export function hasPlaceholderZones(touch: Pick<BallTouch, 'withoutZones' | 'zonesPicked'>): boolean {
+  return touch.withoutZones === true && touch.zonesPicked !== true;
+}
+
 /** The attack subtype of a touch, also from the older advanced details (power / roll shot / tip). */
 export function getAttackSubtype(touch: Pick<BallTouch, 'skill' | 'attackSubtype' | 'advancedDetails'>): AttackSubtype | undefined {
   if (touch.skill !== 'attack') return undefined;

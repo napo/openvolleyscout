@@ -7,6 +7,7 @@
  * Runs under ts-node too: relative and type-only imports only.
  */
 import type { BallTouch } from '../../domain/touch/types';
+import { hasPlaceholderZones } from '../../domain/touch/types';
 import type { SetterDistributionServeType } from '../../domain/opponent-report/types';
 
 /** The five DataVolley serve start zones, in the order the manual lists them (13.2). */
@@ -28,6 +29,8 @@ export function receptionZone(receive: BallTouch, serve: BallTouch | undefined):
 
 /** Zone (1-9) the serve started from. */
 export function serveStartZone(serve: BallTouch): string | null {
+  // Button input has only a placeholder serve zone (always the position-1 lane).
+  if (hasPlaceholderZones(serve)) return null;
   return zoneDigit(
     serve.startZoneCode
       ?? serve.advancedDetails?.serve?.startZone
@@ -42,6 +45,7 @@ export function serveTargetZone(serve: BallTouch, receive?: BallTouch): string |
     const fromReceive = receptionZone(receive, serve);
     if (fromReceive) return fromReceive;
   }
+  if (hasPlaceholderZones(serve)) return null;
   return zoneDigit(
     serve.endZoneCode
       ?? serve.advancedDetails?.serve?.targetZone

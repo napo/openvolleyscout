@@ -14,6 +14,7 @@
  */
 import type { SkillEvaluation, TeamSide } from '../../../domain/common/enums';
 import type { BallTouch } from '../../../domain/touch/types';
+import { hasPlaceholderZones } from '../../../domain/touch/types';
 import type { DataVolleyCodeTables } from '../../../domain/match/code-tables';
 import { findAttackCombination } from '../../../domain/match/code-tables';
 import type { MatchStats, RallyStats, RotationNumber } from '../../scouting/model/match-stats';
@@ -113,7 +114,10 @@ const FOLD: Record<ZoneAnalysisZone, ZoneAnalysisZone> = {
 
 function realStartZone(touch: BallTouch, tables: DataVolleyCodeTables): string | null {
   // Same reading as the side-out study: the DataVolley start zone, else the drawn origin.
-  const code = touch.startZoneCode ?? getZoneCode(touch.originZone ?? touch.direction?.start ?? touch.zone);
+  // A button-input touch only has a placeholder zone: do not read it as the real start zone.
+  const code = hasPlaceholderZones(touch)
+    ? undefined
+    : touch.startZoneCode ?? getZoneCode(touch.originZone ?? touch.direction?.start ?? touch.zone);
   const digit = typeof code === 'string' ? code.trim().charAt(0) : '';
   if (/^[1-9]$/.test(digit)) return digit;
   const combo = findAttackCombination(tables, touch.combinationCode);

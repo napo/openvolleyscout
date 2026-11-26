@@ -3,6 +3,7 @@
 // importing import.meta.env which ts-node rejects at type-check time.
 import type { SkillEvaluation, SkillType, TeamSide } from '../../../../domain/common/enums';
 import type { BallTouch } from '../../../../domain/touch/types';
+import { hasPlaceholderZones } from '../../../../domain/touch/types';
 import type { StagePoint } from '../../../../domain/trajectory/types';
 import {
   SCOUTING_SURFACE_INSET_X,
@@ -80,11 +81,15 @@ function extractDirection(
     return { start: td.start, end: td.end };
   }
 
+  // Button input only has a placeholder zone: there is no real direction to draw.
+  if (hasPlaceholderZones(touch)) return null;
+
   // Fallback: reconstruct from zone references (DataVolley imports)
+  const prevZones = prev && !hasPlaceholderZones(prev) ? prev : undefined;
   const startPoint =
     touch.originZone?.point ??
-    prev?.targetZone?.point ??
-    prev?.zone?.point ??
+    prevZones?.targetZone?.point ??
+    prevZones?.zone?.point ??
     touch.zone?.point ??
     null;
   const endPoint =
