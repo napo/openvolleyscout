@@ -59,6 +59,7 @@ export function flattenTouchEvents(events: MatchEvent[]): OvsTouchRow[] {
         ballDirectionJson: jsonOrUndefined(touch.ballDirection),
         trajectoryJson: jsonOrUndefined(touch.trajectory),
         advancedDetailsJson: jsonOrUndefined(touch.advancedDetails),
+        dataVolleySourceJson: jsonOrUndefined(touch.dataVolleySource),
         locationJson: jsonOrUndefined(location),
       } satisfies OvsTouchRow),
     );
@@ -110,6 +111,7 @@ export function unflattenTouchRows(rows: OvsTouchRow[]): Array<TouchRecordedEven
       homeSetterPlayerId: row.homeSetterPlayerId,
       awaySetterPlayerId: row.awaySetterPlayerId,
       advancedDetails: parseJsonOrUndefined(row.advancedDetailsJson),
+      dataVolleySource: parseJsonOrUndefined(row.dataVolleySourceJson),
       source: row.source,
       touchOrigin: row.touchOrigin,
       requiredExplicitInput: row.requiredExplicitInput,

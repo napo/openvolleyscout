@@ -18,6 +18,18 @@ export type ManualCorrectionKind =
   | 'rotation_backward'
   | 'serve_assigned';
 
+/** Time of day (HH.MM.SS), video file number and video position (seconds) of a row of an imported file. */
+export interface DataVolleyRowStamp {
+  time?: string;
+  videoFile?: string;
+  videoTime?: string;
+}
+
+export interface DataVolleyGreenCode extends DataVolleyRowStamp {
+  code: string;
+  pointPhase?: string;
+}
+
 export type MatchEvent =
   | {
       id: string;
@@ -56,6 +68,15 @@ export type MatchEvent =
       skipRotation?: boolean;
       /** Video position when the point was recorded with the video open: where the rally ends. */
       videoTimeSeconds?: number;
+      /** The point row of the imported file: its time of day and video position. */
+      dataVolleyRow?: DataVolleyRowStamp;
+      /** The setter-position row ("*z4") the file wrote after this point, when the winner rotated. */
+      dataVolleyRotationRow?: DataVolleyRowStamp;
+      /**
+       * DataVolley "green codes" of the rally in an imported file (a point or an error of the team,
+       * without a player, e.g. `a$$&H=`), kept as read to write the file back unchanged.
+       */
+      dataVolleyGreenCodes?: DataVolleyGreenCode[];
     }
   | {
       id: string;
@@ -68,6 +89,8 @@ export type MatchEvent =
       playerInId: string;
       canReenterOnlyForPlayerId?: string;
       hasReentered?: boolean;
+      /** The row of the imported file: its time of day and video position. */
+      dataVolleyRow?: DataVolleyRowStamp;
     }
   | {
       id: string;
@@ -76,6 +99,8 @@ export type MatchEvent =
       setNumber: number;
       rallyNumber?: number;
       teamSide: TeamSide;
+      /** The row of the imported file: its time of day and video position. */
+      dataVolleyRow?: DataVolleyRowStamp;
     }
   | {
       id: string;
@@ -170,6 +195,8 @@ export type MatchEvent =
       awayScore: number;
       /** Real set duration in milliseconds when known (e.g. from DVW import). */
       durationMillis?: number;
+      /** The set-end row of the imported file: its time of day and video position. */
+      dataVolleyRow?: DataVolleyRowStamp;
     }
   | {
       id: string;

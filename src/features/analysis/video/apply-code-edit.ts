@@ -1,5 +1,5 @@
 import type { MatchProject } from '@src/domain/match/types';
-import type { BallTouch } from '@src/domain/touch/types';
+import { parseAttackSubtypeCode, parseNumBlockersCode, type BallTouch, type DataVolleySourceFields } from '@src/domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { ParsedTouchCode } from '@src/features/scouting/expert/code-parser';
 
@@ -30,8 +30,40 @@ export function applyParsedCodeToTouch(
     ? `${parsed.endZone}${parsed.endSubzone ? parsed.endSubzone.toLowerCase() : ''}`
     : undefined;
 
+  // A code typed with its fixed positions (with `~`) also says the skill subtype, the players and
+  // the special code: they are taken from it. A short code leaves them as they were.
+  const tail = parsed.rawCode.slice(4);
+  const hasFixedPositions = tail.includes('~') || tail.length >= 8;
+  const nextStartZoneCode = parsed.startZone ?? touch.startZoneCode;
+  const nextEndZoneCode = endZoneCode ?? touch.endZoneCode;
+  const zonesChanged = nextStartZoneCode !== touch.startZoneCode || nextEndZoneCode !== touch.endZoneCode;
+  const source = touch.dataVolleySource;
+  const nextSource: DataVolleySourceFields | undefined = source && (hasFixedPositions || zonesChanged)
+    ? Object.fromEntries(Object.entries({
+        ...source,
+        ...(hasFixedPositions ? {
+          skillSubtypeCode: parsed.skillSubtypeCode,
+          playersCode: parsed.playersCode,
+          specialCode: parsed.specialCode,
+        } : {}),
+        // The ball coordinates and the cone described the zones of the file: not the edited ones.
+        ...(zonesChanged ? {
+          endCone: undefined,
+          endConeSubzone: undefined,
+          startCoordinate: undefined,
+          midCoordinate: undefined,
+          endCoordinate: undefined,
+        } : {}),
+      }).filter(([, value]) => value !== undefined)) as DataVolleySourceFields
+    : source;
+
   return {
     ...touch,
+    ...(nextSource ? { dataVolleySource: nextSource } : {}),
+    ...(hasFixedPositions ? {
+      attackSubtype: parseAttackSubtypeCode(parsed.skill, parsed.skillSubtypeCode),
+      numBlockers: parseNumBlockersCode(parsed.skill, parsed.playersCode),
+    } : {}),
     teamSide,
     playerId,
     skill: parsed.skill,

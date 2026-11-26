@@ -1,5 +1,5 @@
 import type { CourtPosition, PlayerRole, SkillEvaluation, TeamSide } from '@src/domain/common/enums';
-import type { MatchEvent } from '@src/domain/events/types';
+import type { DataVolleyGreenCode, DataVolleyRowStamp, MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import { buildSetLineupSnapshotsFromEvents } from '@src/domain/lineup';
 import {
@@ -553,6 +553,14 @@ function parseVideoTimeSeconds(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function pruneUndefinedFields<T extends object>(value: T): T {
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined && entry !== '')) as T;
+}
+
+function rowStampOf(row: { time?: string; videoFileNumber?: string; videoTime?: string }): DataVolleyRowStamp {
+  return pruneUndefinedFields({ time: row.time, videoFile: row.videoFileNumber, videoTime: row.videoTime });
+}
+
 function createTouch(input: {
   projectId: string;
   setNumber: number;
@@ -682,6 +690,23 @@ function createTouch(input: {
     endZoneCode: combinedEndZone,
     numBlockers: parseNumBlockersCode(input.draft.skill, action?.playersCode),
     attackSubtype: parseAttackSubtypeCode(input.draft.skill, action?.skillSubtypeCode),
+    // What the file says beyond the app's own model, kept to write the file back unchanged.
+    // Touches the importer adds itself (inferred) are not in the file and carry none.
+    ...(action && input.draft.source !== 'inferred' ? {
+      dataVolleySource: pruneUndefinedFields({
+        skillSubtypeCode: action.skillSubtypeCode,
+        playersCode: action.playersCode,
+        specialCode: action.specialCode,
+        endCone,
+        endConeSubzone: endCone ? displaySubzone : undefined,
+        videoFileNumber: action.videoFileNumber,
+        pointPhase: action.pointPhase,
+        attackPhase: action.attackPhase,
+        startCoordinate: action.startCoordinate,
+        midCoordinate: action.midCoordinate,
+        endCoordinate: action.endCoordinate,
+      }),
+    } : {}),
     ballDirection: dvDirection?.direction ?? undefined,
     source: input.draft.source,
     touchOrigin: input.draft.source === 'inferred' ? 'implicit_inference' : 'live_scouting',
@@ -699,6 +724,9 @@ function appendRallyEvents(input: {
   pointWinner: TeamSide;
   indexes: Record<TeamSide, TeamPlayerIndex>;
   reason: string;
+  /** Time and video position of the point row, and the green codes read since the previous point. */
+  rowStamp?: DataVolleyRowStamp;
+  greenCodes?: DataVolleyGreenCode[];
 }): void {
   input.events.push({
     id: createStableId(input.projectId, 'set', input.setNumber, 'rally', input.rallyNumber, 'started'),
@@ -734,6 +762,8 @@ function appendRallyEvents(input: {
     rallyNumber: input.rallyNumber,
     teamSide: input.pointWinner,
     reason: input.reason,
+    ...(input.rowStamp ? { dataVolleyRow: input.rowStamp } : {}),
+    ...(input.greenCodes?.length ? { dataVolleyGreenCodes: input.greenCodes } : {}),
   });
 
   input.events.push({
@@ -764,6 +794,7 @@ function appendDeadBallEvent(input: {
       setNumber: input.setNumber,
       rallyNumber: input.rallyNumber,
       teamSide: input.row.teamSide,
+      dataVolleyRow: rowStampOf(input.row),
     });
     return;
   }
@@ -818,6 +849,7 @@ function appendDeadBallEvent(input: {
     playerInId: playerIn.id,
     canReenterOnlyForPlayerId: playerIn.id,
     hasReentered: false,
+    dataVolleyRow: rowStampOf(input.row),
   };
   // Vendor lineups and substitution rows can disagree. Keep the diagnostic
   // instead of adding an event that makes the whole imported set unreplayable.
@@ -912,11 +944,30 @@ function appendSetEvents(input: {
     away: 0,
   };
   let pendingActions: ParsedDataVolleyAction[] = [];
+  let pendingGreenCodes: DataVolleyGreenCode[] = [];
   let sawEndSet = false;
+  let endSetStamp: DataVolleyRowStamp | undefined;
 
   input.rows.forEach((row) => {
     if (row.type === 'touch') {
       pendingActions.push(row);
+      return;
+    }
+
+    if (row.type === 'setter_position') {
+      // The rotation row a point causes ("*z4"): its time and video position go back with the point.
+      let lastEvent: MatchEvent | undefined;
+      for (let index = input.events.length - 1; index >= 0 && !lastEvent; index -= 1) {
+        if (input.events[index].type !== 'rally_ended') lastEvent = input.events[index];
+      }
+      if (lastEvent?.type === 'point_awarded' && lastEvent.setNumber === input.setNumber && !lastEvent.dataVolleyRotationRow) {
+        lastEvent.dataVolleyRotationRow = rowStampOf(row);
+      }
+      return;
+    }
+
+    if (row.type === 'green_code') {
+      pendingGreenCodes.push({ code: row.rawCode, ...pruneUndefinedFields({ pointPhase: row.pointPhase }), ...rowStampOf(row) });
       return;
     }
 
@@ -931,6 +982,7 @@ function appendSetEvents(input: {
           message: `Set ${input.setNumber}: point row repeats the score ${row.score.home}-${row.score.away} (rally annulled and replayed); its actions were not counted.`,
         });
         pendingActions = [];
+        pendingGreenCodes = [];
         return;
       }
 
@@ -986,8 +1038,11 @@ function appendSetEvents(input: {
         pointWinner: row.pointWinnerSide,
         indexes: input.indexes,
         reason: 'datavolley_import',
+        rowStamp: rowStampOf(row),
+        greenCodes: pendingGreenCodes,
       });
       pendingActions = [];
+      pendingGreenCodes = [];
       score[row.pointWinnerSide] += 1;
       if (row.score.home !== score.home || row.score.away !== score.away) {
         pushMappingWarning(input.warnings, {
@@ -1018,6 +1073,7 @@ function appendSetEvents(input: {
 
     if (row.type === 'end_set') {
       sawEndSet = true;
+      endSetStamp = rowStampOf(row);
     }
   });
 
@@ -1069,6 +1125,7 @@ function appendSetEvents(input: {
       // Store the real duration directly so getSetDurationLabel() can read it
       // even on older events where createdAt was set by the synthetic ms-clock.
       durationMillis: dvwDurationMs,
+      ...(endSetStamp ? { dataVolleyRow: endSetStamp } : {}),
     });
   }
 }

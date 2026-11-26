@@ -85,6 +85,7 @@ export interface OvsTouchRow {
   attackSubtype?: AttackSubtype;
   homeSetterPlayerId?: string;
   awaySetterPlayerId?: string;
+  dataVolleySourceJson?: string;
   source?: TouchSource;
   touchOrigin?: TouchOrigin;
   requiredExplicitInput?: boolean;

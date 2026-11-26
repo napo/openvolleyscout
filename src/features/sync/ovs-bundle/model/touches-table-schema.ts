@@ -53,6 +53,7 @@ export const TOUCH_TABLE_COLUMNS: Array<ArrowColumnSpec<OvsTouchRow>> = [
   { name: 'ballDirectionJson', type: () => new Utf8(), get: (r) => r.ballDirectionJson },
   { name: 'trajectoryJson', type: () => new Utf8(), get: (r) => r.trajectoryJson },
   { name: 'advancedDetailsJson', type: () => new Utf8(), get: (r) => r.advancedDetailsJson },
+  { name: 'dataVolleySourceJson', type: () => new Utf8(), get: (r) => r.dataVolleySourceJson },
   { name: 'locationJson', type: () => new Utf8(), get: (r) => r.locationJson },
 ];
 

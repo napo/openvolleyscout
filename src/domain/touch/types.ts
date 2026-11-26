@@ -38,6 +38,32 @@ export function parseAttackSubtypeCode(skill: string, code: string | undefined):
 }
 
 /**
+ * What a DataVolley (or Tiebreak Tech) file says about a touch beyond what the app models. It is
+ * kept as read, so the file can be written back without losing it. Its presence also tells that
+ * the touch came from a file: nothing is then added that the file did not hold.
+ */
+export interface DataVolleySourceFields {
+  /** Skill subtype (position 10 of the code): reception side, serve or block type... */
+  skillSubtypeCode?: string;
+  /** Players (position 11): blockers on attacks and blocks, the reception line elsewhere. */
+  playersCode?: string;
+  /** Special code (position 12): out, net, block-out, referee call... */
+  specialCode?: string;
+  /** Attack cone written in the end subzone position, with the subzone letter the app shows for it. */
+  endCone?: string;
+  endConeSubzone?: string;
+  /** Video file number column of the scout row. */
+  videoFileNumber?: string;
+  /** Point phase and attack phase columns of the scout row. */
+  pointPhase?: string;
+  attackPhase?: string;
+  /** Ball coordinates of the scout row: start, middle and end click. */
+  startCoordinate?: string;
+  midCoordinate?: string;
+  endCoordinate?: string;
+}
+
+/**
  * Button input (Basic / Tags) records a touch with only a placeholder court zone. Its zones are not real
  * data, unless they were then picked on purpose: the analysis views must not read them as a position.
  */
@@ -111,6 +137,8 @@ export interface BallTouch {
   /** Button input whose zones were then picked on purpose (Tags zone picker): those zones are exported. */
   zonesPicked?: boolean;
   advancedDetails?: AdvancedTouchDetails;
+  /** Present on touches read from a DataVolley / Tiebreak Tech file: see DataVolleySourceFields. */
+  dataVolleySource?: DataVolleySourceFields;
   source?: TouchSource;
   touchOrigin?: TouchOrigin;
   requiredExplicitInput?: boolean;

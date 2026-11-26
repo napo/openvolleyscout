@@ -63,6 +63,7 @@ const buttonInputTouchEvent: MatchEvent = {
     skill: 'attack',
     createdAt: 1700000002000,
     attackSubtype: 'P',
+    dataVolleySource: { specialCode: 'F', playersCode: '4', startCoordinate: '0982' },
     withoutZones: true,
     zonesPicked: true,
     homeSetterPlayerId: 'player-3',

@@ -1,5 +1,5 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
-import { getAttackSubtypeOrDefault, hasPlaceholderZones, type AttackSubtype, type BallTouch, type NumBlockers } from '../../../domain/touch/types';
+import { getAttackSubtype, hasPlaceholderZones, type AttackSubtype, type BallTouch, type DataVolleySourceFields, type NumBlockers } from '../../../domain/touch/types';
 import type { ScoutingDirectionData, ScoutingZoneReference } from '@src/domain/spatial/types';
 import { isSetterCallCode } from '../../../domain/match/code-tables';
 
@@ -119,6 +119,8 @@ type DataVolleyTouchInput = {
   courtZoneEnd?: string;
   numBlockers?: NumBlockers;
   attackSubtype?: AttackSubtype;
+  /** What the imported file said about the touch (see DataVolleySourceFields); absent on touches recorded in the app. */
+  source?: DataVolleySourceFields;
   originZone?: ScoutingZoneReference;
   targetZone?: ScoutingZoneReference;
   /** A drawn direction, or the free-text direction of the advanced details (e.g. "1-5"). */
@@ -142,10 +144,20 @@ export interface DataVolleyCodeFields {
   /** End zone 1-9, with its subzone A-D when known. */
   endZone: string;
   endSubzone: string;
-  /** Skill subtype: hard / placed / tip for an attack, C ("spike cover") for a cover. */
+  /**
+   * Attack cone of an imported file, when the end subzone still is the one the cone was read as:
+   * the export writes it back in the end subzone position.
+   */
+  endCone: string;
+  /**
+   * Skill subtype: hard / placed / tip for an attack, C ("spike cover") for a cover; on an imported
+   * touch, whatever the file said (reception side, serve or block type...).
+   */
   subtype: string;
-  /** Players at the net (blockers 0-4), on attacks and blocks. */
+  /** Players: blockers 0-4 on attacks and blocks; on an imported touch, what the file said. */
   players: string;
+  /** Special code of an imported touch (out, net, block-out...). */
+  special: string;
   /** Custom characters, written after the special position. */
   custom: string;
 }
@@ -234,7 +246,8 @@ function touchToInput(touch: BallTouch, jerseyNumber?: number | string): DataVol
     courtZoneStart: buttonInput ? undefined : touch.ballDirection?.courtZoneStart,
     courtZoneEnd: buttonInput ? undefined : touch.ballDirection?.courtZoneEnd,
     numBlockers: touch.numBlockers,
-    attackSubtype: getAttackSubtypeOrDefault(touch),
+    attackSubtype: getAttackSubtype(touch),
+    source: touch.dataVolleySource,
     originZone: buttonInput ? undefined : touch.originZone ?? touch.direction?.start,
     targetZone: buttonInput ? undefined : touch.targetZone ?? touch.zone ?? touch.direction?.end,
     direction: buttonInput ? undefined : serveDetails?.direction ?? attackDetails?.direction,
@@ -243,6 +256,10 @@ function touchToInput(touch: BallTouch, jerseyNumber?: number | string): DataVol
 
 function fieldsOfInput(i: DataVolleyTouchInput): DataVolleyCodeFields {
   const { start, end, subzone } = getDirectionParts(i);
+  // A touch read from a file keeps what the file said in the positions the app does not model,
+  // and gets nothing the file did not hold (no default subtype, no cover mark).
+  const source = i.source;
+  const fromFile = (value: string | undefined) => field(value, 1, /^[A-Z0-9]$/);
   return {
     // The set's own field here is the ball type (inherited from its attack);
     // its target attack (F/B/C/P/S) goes after the setter call.
@@ -256,13 +273,22 @@ function fieldsOfInput(i: DataVolleyTouchInput): DataVolleyCodeFields {
       2,
       /^[A-Z0-9]{2}$/,
     ),
-    targetAttack: field(i.skill === 'set' ? i.setType : undefined, 1, /^[A-Z]$/),
+    // Only a real target attack (Front, Back, Centre, Pipe, Setter dump): a set without one keeps its
+    // ball type in setType, which must not be written here.
+    targetAttack: field(i.skill === 'set' ? i.setType : undefined, 1, /^[FBCPS]$/),
     startZone: start,
     endZone: end,
     endSubzone: subzone,
-    // DataVolley has no cover skill: a cover is a dig of type C ("spike cover"), read back as a cover.
-    subtype: i.skill === 'attack' ? i.attackSubtype ?? 'H' : i.skill === 'cover' ? 'C' : '',
-    players: (i.skill === 'attack' || i.skill === 'block') && i.numBlockers !== undefined ? String(i.numBlockers) : '',
+    endCone: source?.endCone && subzone && subzone === (source.endConeSubzone ?? '').toUpperCase() ? fromFile(source.endCone) : '',
+    // DataVolley writes every attack with a subtype (hard spike unless told otherwise) and has no
+    // cover skill: a cover is a dig of type C ("spike cover"), read back as a cover.
+    subtype: i.skill === 'attack'
+      ? i.attackSubtype ?? (source ? fromFile(source.skillSubtypeCode) : 'H')
+      : source ? fromFile(source.skillSubtypeCode) : i.skill === 'cover' ? 'C' : '',
+    players: (i.skill === 'attack' || i.skill === 'block') && i.numBlockers !== undefined
+      ? String(i.numBlockers)
+      : fromFile(source?.playersCode),
+    special: fromFile(source?.specialCode),
     custom: (i.customCode ?? '').trim().replace(/[;\r\n]+/g, '').slice(0, 12),
   };
 }
@@ -275,13 +301,19 @@ export function getDataVolleyCodeFields(touch: BallTouch): DataVolleyCodeFields 
 /**
  * The part of a DataVolley code after team, jersey and skill, at the fixed positions of the manual
  * (§4.1): ball type, evaluation, combination / setter call (2), target attack, start zone, end zone,
- * end subzone, skill subtype, players at the net, special, then the custom characters. `~` fills
+ * end subzone, skill subtype, players, special, then the custom characters. `~` fills
  * every empty position.
  */
-export function formatDataVolleyCodeTail(fields: DataVolleyCodeFields, evaluation: string | undefined): string {
+export function formatDataVolleyCodeTail(
+  fields: DataVolleyCodeFields,
+  evaluation: string | undefined,
+  options: { cones?: boolean } = {},
+): string {
   const or = (value: string, length = 1) => value || '~'.repeat(length);
+  // The file keeps the attack cone of an imported touch; on screen the subzone letter is shown.
+  const endSubzone = options.cones && fields.endCone ? fields.endCone : fields.endSubzone;
   return `${or(fields.ballType)}${evaluation ?? '~'}${or(fields.combination, 2)}${or(fields.targetAttack)}`
-    + `${or(fields.startZone)}${or(fields.endZone)}${or(fields.endSubzone)}${or(fields.subtype)}${or(fields.players)}~${fields.custom}`;
+    + `${or(fields.startZone)}${or(fields.endZone)}${or(endSubzone)}${or(fields.subtype)}${or(fields.players)}${or(fields.special)}${fields.custom}`;
 }
 
 export const DATA_VOLLEY_SKILL_CODE = SKILL_CODE;

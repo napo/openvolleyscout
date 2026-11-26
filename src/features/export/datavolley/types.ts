@@ -41,6 +41,8 @@ export interface DataVolleyExportSet {
   homeScore?: number;
   awayScore?: number;
   durationMinutes?: number;
+  /** Partial scores at 8, 16 and 21 points (5, 10, 12 in a set to 15); undefined when not reached. */
+  checkpoints?: Array<{ home: number; away: number } | undefined>;
 }
 
 export interface DataVolleyScoutRow {

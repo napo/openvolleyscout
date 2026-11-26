@@ -128,11 +128,16 @@ function buildSets(sets: DataVolleyExportSet[]): string {
     const score = (set.homeScore !== undefined && set.awayScore !== undefined)
       ? `${set.homeScore}-${set.awayScore}`
       : '';
+    // DataVolley writes a partial score as "8 -6" / "16-13": the home score on two characters.
+    const checkpoint = (index: number) => {
+      const partial = set.checkpoints?.[index];
+      return partial ? `${String(partial.home).padEnd(2, ' ')}-${partial.away}` : '';
+    };
     return row(
       'True',   // 0 played
-      '',        // 1 checkpoint1
-      '',        // 2 checkpoint2
-      '',        // 3 checkpoint3
+      checkpoint(0), // 1 partial score at 8 (5 in a set to 15)
+      checkpoint(1), // 2 partial score at 16 (10)
+      checkpoint(2), // 3 partial score at 21 (12)
       score,     // 4 final score
       set.durationMinutes ?? '',  // 5 duration minutes
     );

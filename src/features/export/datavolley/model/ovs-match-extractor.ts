@@ -1,7 +1,7 @@
 import { DATA_VOLLEY_SKILL_CODE, formatDataVolleyCodeTail, getDataVolleyCodeFields } from '../../../scouting/model/datavolley-code';
 import { createCourtOpsReader } from '../../../../domain/events/court-ops';
 import type { TeamSide } from '@src/domain/common/enums';
-import type { MatchEvent } from '@src/domain/events/types';
+import type { DataVolleyRowStamp, MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import { getMatchCodeTables, getMatchRoster, getMatchTeamSnapshot } from '../../../../domain/match';
 import { parseStoredDateTime } from '../../../../lib/utils/local-date';
@@ -29,10 +29,17 @@ type LineupState = {
 
 type TimedRowInput = Omit<DataVolleyScoutRow, 'time' | 'videoTime' | 'homeLineup' | 'awayLineup' | 'homeSetterPosition' | 'awaySetterPosition'> & {
   timestamp?: number;
+  /**
+   * The row as the imported file had it: time of day, video file number and video position. An
+   * empty object is a row of the file without any of them; undefined is a row the app adds.
+   */
+  stamp?: DataVolleyRowStamp;
   /** Position in the match video recorded with the touch (live video panel / tag input). */
   videoSeconds?: number;
   lineup: LineupState | null;
 };
+
+const RECORDED_TIME_PATTERN = /^\d{2}\.\d{2}\.\d{2}$/;
 
 const MAX_EXPORTED_SETS = 5;
 const REAL_TIMESTAMP_MINIMUM = Date.UTC(2000, 0, 1);
@@ -206,8 +213,39 @@ function createTimedRowFactory(
   const hasTouchVideoTimes = hasSyncedVideoTimes || project.events.some((event) => (
     event.type === 'touch_recorded' && typeof event.touch?.videoTimeSeconds === 'number'
   ));
+  // A match read from a file keeps the time of day of its rows (its own timestamps are only the
+  // moment of the import): those times are written back, and the rows the file leaves without one
+  // (rotations, set end) take the last one, as DataVolley does. Nothing is then made up.
+  const usesRecordedClock = project.events.some((event) => (
+    event.type === 'touch_recorded'
+    && event.touch.dataVolleySource !== undefined
+    && RECORDED_TIME_PATTERN.test(event.touch.recordedAtTime ?? '')
+  ));
+  let lastRecordedTime: string | undefined;
+  let lastVideoFile = '';
+  const resolveTime = (input: TimedRowInput): { time: string; usedFallback: boolean } => {
+    if (usesRecordedClock) {
+      if (input.stamp?.time && RECORDED_TIME_PATTERN.test(input.stamp.time)) lastRecordedTime = input.stamp.time;
+      return { time: lastRecordedTime ?? '', usedFallback: false };
+    }
+    return formatScoutTime(input.timestamp, fallbackSeconds);
+  };
+  // The video file number of a file's rows is written back; the rows the app adds take the last one.
+  const resolveVideoFile = (input: TimedRowInput): string => {
+    if (!usesRecordedClock) return '1';
+    if (input.stamp) lastVideoFile = input.stamp.videoFile ?? '';
+    return lastVideoFile;
+  };
   let lastVideoSeconds: number | undefined;
-  const resolveVideoTime = (input: TimedRowInput): number => {
+  const resolveVideoTime = (input: TimedRowInput): number | undefined => {
+    // A row of an imported file without sync points goes back with its own video position.
+    const stampVideo = input.stamp?.videoTime !== undefined ? Number(input.stamp.videoTime) : undefined;
+    if (!hasSyncedVideoTimes && input.videoSeconds === undefined && stampVideo !== undefined && Number.isFinite(stampVideo)) {
+      lastVideoSeconds = Math.max(0, Math.round(stampVideo));
+      return lastVideoSeconds;
+    }
+    // Before any video position of the file (the lineup rows), the file has none.
+    if (usesRecordedClock && input.videoSeconds === undefined && lastVideoSeconds === undefined) return undefined;
     if (typeof input.videoSeconds === 'number' && Number.isFinite(input.videoSeconds)) {
       lastVideoSeconds = Math.max(0, Math.round(input.videoSeconds));
       return lastVideoSeconds;
@@ -220,7 +258,7 @@ function createTimedRowFactory(
 
   return (input: TimedRowInput): DataVolleyScoutRow => {
     fallbackSeconds += 1;
-    const formattedTime = formatScoutTime(input.timestamp, fallbackSeconds);
+    const formattedTime = resolveTime(input);
     if (formattedTime.usedFallback) {
       diagnostics.push(createDataVolleyExportDiagnostic({
         severity: 'warning',
@@ -245,10 +283,11 @@ function createTimedRowFactory(
       }));
     }
 
+    const { stamp: _stamp, ...rowInput } = input;
     return {
-      ...input,
+      ...rowInput,
       time: formattedTime.time,
-      videoFileNumber: '1',
+      videoFileNumber: resolveVideoFile(input),
       videoTime: resolveVideoTime(input),
       homeSetterPosition: input.lineup?.homeSetterPosition,
       awaySetterPosition: input.lineup?.awaySetterPosition,
@@ -328,7 +367,31 @@ function getPlayers(project: MatchProject, side: TeamSide): DataVolleyExportPlay
     }));
 }
 
+/**
+ * The partial scores DataVolley writes for each set: the score when a team first reaches 8, 16 and
+ * 21 points (5, 10 and 12 in a set to 15). Read from the event log with the shared court reading.
+ */
+function getSetCheckpoints(project: MatchProject): Map<number, Array<{ home: number; away: number } | undefined>> {
+  const progress = new Map<number, Array<{ home: number; away: number }>>();
+  const court = createCourtOpsReader();
+  let setNumber = 0;
+  for (const event of project.events) {
+    if (event.type === 'set_started') setNumber = event.setNumber;
+    if (court.read(event).some((op) => op.kind === 'score') && setNumber > 0) {
+      progress.set(setNumber, [...(progress.get(setNumber) ?? []), { ...court.score }]);
+    }
+  }
+  const checkpoints = new Map<number, Array<{ home: number; away: number } | undefined>>();
+  progress.forEach((scores, number) => {
+    const final = scores.at(-1);
+    const marks = final && Math.max(final.home, final.away) >= 25 ? [8, 16, 21] : [5, 10, 12];
+    checkpoints.set(number, marks.map((mark) => scores.find((score) => Math.max(score.home, score.away) >= mark)));
+  });
+  return checkpoints;
+}
+
 function getSets(project: MatchProject): DataVolleyExportSet[] {
+  const checkpoints = getSetCheckpoints(project);
   const completedSets = getCompletedSetsFromEvents(project.events);
   const setStartedEvents = getSetLineups(project);
   const setStartedByNumber = new Map(setStartedEvents.map((event) => [event.setNumber, event]));
@@ -348,6 +411,7 @@ function getSets(project: MatchProject): DataVolleyExportSet[] {
       homeScore: completedSet?.homeScore,
       awayScore: completedSet?.awayScore,
       durationMinutes: duration,
+      checkpoints: completedSet ? checkpoints.get(setNumber) : undefined,
     };
   });
 }
@@ -475,7 +539,7 @@ function createTouchCode(input: {
 
   // Every field of the code comes from the same builder as the on-screen code, so a touch
   // reads the same in the code list and in the exported file.
-  return `${marker}${jersey}${skillCode}${formatDataVolleyCodeTail(getDataVolleyCodeFields(touch), evaluation)}`;
+  return `${marker}${jersey}${skillCode}${formatDataVolleyCodeTail(getDataVolleyCodeFields(touch), evaluation, { cones: true })}`;
 }
 
 function createSyntheticTouch(base: BallTouch, input: {
@@ -515,10 +579,20 @@ function hasExplicitNextBlock(touches: readonly BallTouch[], index: number, team
   return Boolean(next && next.skill === 'block' && next.teamSide === teamSide);
 }
 
-function materializeComposedTouches(touches: readonly BallTouch[]): BallTouch[] {
+function materializeComposedTouches(recorded: readonly BallTouch[]): BallTouch[] {
   const rows: BallTouch[] = [];
+  // A rally read from a file is written back as the file had it: the touches the importer added
+  // itself (an inferred block, for instance) are left out, and none is made up below.
+  const fromFile = recorded.some((touch) => touch.dataVolleySource !== undefined);
+  const touches = fromFile
+    ? recorded.filter((touch) => touch.dataVolleySource !== undefined || touch.source !== 'inferred')
+    : recorded;
 
   touches.forEach((touch, index) => {
+    if (touch.dataVolleySource) {
+      rows.push(touch);
+      return;
+    }
     if (touch.skill === 'receive' && touch.evaluation && !hasExplicitServeBefore(touches, index)) {
       const serveEvaluation = RECEIVE_TO_SERVE_EVALUATION[touch.evaluation];
       if (serveEvaluation) {
@@ -575,11 +649,12 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
 
   const pushScoreRow = (
     teamSide: TeamSide,
-    event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number; videoTimeSeconds?: number },
+    event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number; videoTimeSeconds?: number; dataVolleyRow?: DataVolleyRowStamp },
   ) => {
     rows.push(createTimedRow({
       code: `${TEAM_MARKER[teamSide]}p${padNumber(court.score.home)}:${padNumber(court.score.away)}`,
       timestamp: event.createdAt,
+      stamp: event.dataVolleyRow,
       // Recorded against the open video: where the rally ends (sync points,
       // when present, place the touches and the point follows them).
       videoSeconds: videoSync ? undefined : event.videoTimeSeconds,
@@ -594,7 +669,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
   const rotate = (
     teamSide: TeamSide,
     direction: 'forward' | 'backward',
-    event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number },
+    event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number; dataVolleyRotationRow?: DataVolleyRowStamp },
   ) => {
     currentLineup = rotateLineupState(currentLineup, teamSide, direction);
     const setterPosition = teamSide === 'home' ? currentLineup?.homeSetterPosition : currentLineup?.awaySetterPosition;
@@ -604,6 +679,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
     rows.push(createTimedRow({
       code: `${TEAM_MARKER[teamSide]}z${setterPosition}`,
       timestamp: event.createdAt,
+      stamp: event.dataVolleyRotationRow,
       setNumber: event.setNumber,
       eventId: event.id,
       rallyNumber: event.rallyNumber,
@@ -625,13 +701,17 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
       currentSetNumber = event.setNumber;
       currentLineup = getLineupState(project, event);
       court.read(event);
-      const homeCaptain = getMatchRoster(project, 'home').find((player) => player.isCaptain);
-      const awayCaptain = getMatchRoster(project, 'away').find((player) => player.isCaptain);
-      const homeLineupPlayer = currentLineup.home.find((jersey): jersey is number => typeof jersey === 'number');
-      const awayLineupPlayer = currentLineup.away.find((jersey): jersey is number => typeof jersey === 'number');
-
+      // "P" declares the setter of the set (the same code a setter change writes): the player
+      // in the setter's position, else the captain or the first player of the lineup.
+      const setterOrFallback = (side: TeamSide) => {
+        const players = side === 'home' ? currentLineup?.home : currentLineup?.away;
+        const setterPosition = side === 'home' ? currentLineup?.homeSetterPosition : currentLineup?.awaySetterPosition;
+        return (setterPosition ? players?.[setterPosition - 1] : undefined)
+          ?? getMatchRoster(project, side).find((player) => player.isCaptain)?.jerseyNumber
+          ?? players?.find((jersey): jersey is number => typeof jersey === 'number');
+      };
       rows.push(createTimedRow({
-        code: `*P${padNumber(homeCaptain?.jerseyNumber ?? homeLineupPlayer)}>LUp`,
+        code: `*P${padNumber(setterOrFallback('home'))}>LUp`,
         timestamp: event.createdAt,
         setNumber: event.setNumber,
         eventId: event.id,
@@ -645,7 +725,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
         lineup: currentLineup,
       }));
       rows.push(createTimedRow({
-        code: `aP${padNumber(awayCaptain?.jerseyNumber ?? awayLineupPlayer)}>LUp`,
+        code: `aP${padNumber(setterOrFallback('away'))}>LUp`,
         timestamp: event.createdAt,
         setNumber: event.setNumber,
         eventId: event.id,
@@ -676,7 +756,15 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
             diagnostics,
             synthetic: touch.id.includes('-synthetic-'),
           }),
-          pointPhase: touch.skill === 'serve' ? 's' : undefined,
+          // The scout row columns of an imported touch are written back as read.
+          pointPhase: touch.dataVolleySource ? touch.dataVolleySource.pointPhase : touch.skill === 'serve' ? 's' : undefined,
+          attackPhase: touch.dataVolleySource?.attackPhase,
+          startCoordinate: touch.dataVolleySource?.startCoordinate,
+          midCoordinate: touch.dataVolleySource?.midCoordinate,
+          endCoordinate: touch.dataVolleySource?.endCoordinate,
+          stamp: touch.dataVolleySource
+            ? { time: touch.recordedAtTime, videoFile: touch.dataVolleySource.videoFileNumber }
+            : undefined,
           timestamp: touch.createdAt,
           videoSeconds: resolveTouchVideoSeconds(touch),
           setNumber: touch.setNumber,
@@ -692,6 +780,21 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
       // A point writes its score row, then the rotation it causes ("*z4"). A manual correction
       // writes the score or the rotation it changes; a new serving team has no DataVolley row:
       // the next serve code says who serves.
+      // Green codes of an imported rally (a team point or error without a player) go before its point.
+      if (event.type === 'point_awarded') {
+        for (const green of event.dataVolleyGreenCodes ?? []) {
+          rows.push(createTimedRow({
+            code: green.code,
+            pointPhase: green.pointPhase,
+            timestamp: event.createdAt,
+            stamp: green,
+            setNumber: event.setNumber,
+            eventId: event.id,
+            rallyNumber: event.rallyNumber,
+            lineup: currentLineup,
+          }));
+        }
+      }
       const holdRotation = event.type !== 'manual_correction' && endsSet(index);
       for (const op of court.read(event, { skipRotation: holdRotation })) {
         if (op.kind === 'score') pushScoreRow(op.teamSide, event);
@@ -718,6 +821,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
       rows.push(createTimedRow({
         code: `${TEAM_MARKER[event.teamSide]}c${padNumber(playerOutNumber)}:${padNumber(playerInNumber)}`,
         timestamp: event.createdAt,
+        stamp: event.dataVolleyRow,
         setNumber: event.setNumber,
         eventId: event.id,
         rallyNumber: event.rallyNumber,
@@ -764,6 +868,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
       rows.push(createTimedRow({
         code: `${TEAM_MARKER[event.teamSide]}T`,
         timestamp: event.createdAt,
+        stamp: event.dataVolleyRow,
         setNumber: event.setNumber,
         eventId: event.id,
         rallyNumber: event.rallyNumber,
@@ -776,6 +881,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
       rows.push(createTimedRow({
         code: `**${event.setNumber}set`,
         timestamp: event.createdAt,
+        stamp: event.dataVolleyRow,
         setNumber: event.setNumber,
         eventId: event.id,
         lineup: currentLineup,

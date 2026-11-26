@@ -116,3 +116,33 @@ describe('one writer for the on-screen code and the .dvw export', () => {
     }
   });
 });
+
+describe('a touch read from a file keeps what the file said', () => {
+  it('writes back the subtype, the players and the special code of any skill', () => {
+    const reception = touch({ skill: 'receive', skillTypeCode: 'M', evaluation: '!', startZoneCode: '1', endZoneCode: '6D', dataVolleySource: { skillSubtypeCode: 'L', playersCode: '4' } });
+    expect(buildDataVolleyTouchCode({ touch: reception, jerseyNumber: 4 })).toBe('*04RM!~~~16DL4');
+    const attack = touch({ skillTypeCode: 'H', evaluation: '#', combinationCode: 'XA', startZoneCode: '4', endZoneCode: '3A', attackSubtype: 'T', numBlockers: 2, dataVolleySource: { skillSubtypeCode: 'T', playersCode: '2', specialCode: 'F' } });
+    expect(buildDataVolleyTouchCode({ touch: attack, jerseyNumber: 4 })).toBe('*04AH#XA~43AT2F');
+  });
+
+  it('adds nothing the file did not hold: no default subtype, no cover mark', () => {
+    const attack = touch({ skillTypeCode: 'T', evaluation: '!', dataVolleySource: {} });
+    expect(buildDataVolleyTouchCode({ touch: attack, jerseyNumber: 3 })).toBe('*03AT!');
+    const cover = touch({ skill: 'cover', skillTypeCode: 'H', evaluation: '!', dataVolleySource: {} });
+    expect(buildDataVolleyTouchCode({ touch: cover, jerseyNumber: 3 })).toBe('*03DH!');
+  });
+
+  it('does not write the ball type of a set in the target attack position', () => {
+    const set = touch({ skill: 'set', skillTypeCode: 'H', setType: 'H', evaluation: '+' });
+    expect(getDataVolleyCodeFields(set)).toMatchObject({ ballType: 'H', targetAttack: '' });
+  });
+
+  it('writes the attack cone back in the file, the subzone letter on screen', () => {
+    const attack = touch({ startZoneCode: '4', endZoneCode: '6b', dataVolleySource: { endCone: '5', endConeSubzone: 'b' } });
+    const fields = getDataVolleyCodeFields(attack);
+    expect(formatDataVolleyCodeTail(fields, '+', { cones: true })).toContain('465');
+    expect(formatDataVolleyCodeTail(fields, '+')).toContain('46B');
+    // Once the end zone is edited the cone no longer describes it.
+    expect(getDataVolleyCodeFields({ ...attack, endZoneCode: '6c' }).endCone).toBe('');
+  });
+});
