@@ -192,8 +192,8 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                       allLabel={t('setterViewReceptionAll')}
                       evaluations={RECEPTION_EVALS}
                       presets={[
-                        { label: t('setterViewReceptionPositive'), value: ['#', '+'] },
-                        { label: t('setterViewReceptionNegative'), value: ['!', '-'] },
+                        { label: t('setterViewReceptionPositive'), value: ['#', '+'], tone: 'positive' },
+                        { label: t('setterViewReceptionNegative'), value: ['!', '-'], tone: 'negative' },
                       ]}
                       selected={selectedReceptionEvals(view)}
                       onChange={(next) => setReceptionEvals(index, next as SetterDistributionReceptionEval[])}

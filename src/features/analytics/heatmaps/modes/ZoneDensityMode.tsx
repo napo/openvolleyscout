@@ -1708,8 +1708,8 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
                 allLabel={allLabel}
                 evaluations={HEATMAP_RECEPTION_EVALS}
                 presets={[
-                  { label: t('setterViewReceptionPositive'), value: ['#', '+'] },
-                  { label: t('setterViewReceptionNegative'), value: ['!', '-'] },
+                  { label: t('setterViewReceptionPositive'), value: ['#', '+'], tone: 'positive' },
+                  { label: t('setterViewReceptionNegative'), value: ['!', '-'], tone: 'negative' },
                 ]}
                 selected={attackFilters.receptionEvaluations}
                 onChange={(next) => setAttackFilter('receptionEvaluations', next as SetterDistributionReceptionEval[])}

@@ -199,8 +199,8 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
                         allLabel={all}
                         evaluations={RECEPTION_EVALS}
                         presets={[
-                          { label: t('setterViewReceptionPositive'), value: ['#', '+'] },
-                          { label: t('setterViewReceptionNegative'), value: ['!', '-'] },
+                          { label: t('setterViewReceptionPositive'), value: ['#', '+'], tone: 'positive' },
+                          { label: t('setterViewReceptionNegative'), value: ['!', '-'], tone: 'negative' },
                         ]}
                         selected={view.receptionEvaluations ?? []}
                         onChange={(next) => setField(index, 'receptionEvaluations', next as SetterDistributionReceptionEval[])}

@@ -158,3 +158,44 @@
 .filter-chips__reset:hover {
   background: rgba(254, 202, 202, 0.95);
 }
+
+/* Positive and negative groups of evaluations: intense green and red (blue and orange for colour blindness). */
+:root {
+  --chip-positive: #15803d;
+  --chip-negative: #b91c1c;
+}
+
+:root[data-a11y-color] {
+  --chip-positive: #0072b2;
+  --chip-negative: #d55e00;
+}
+
+.filter-chips__chip--positive,
+.filter-chips__chip--negative {
+  font-weight: 700;
+}
+
+.filter-chips__chip--positive {
+  color: var(--chip-positive);
+  border-color: var(--chip-positive);
+}
+
+.filter-chips__chip--negative {
+  color: var(--chip-negative);
+  border-color: var(--chip-negative);
+}
+
+.filter-chips__chip--positive.is-active,
+.filter-chips__chip--negative.is-active {
+  color: #ffffff;
+}
+
+.filter-chips__chip--positive.is-active {
+  background: var(--chip-positive);
+  border-color: var(--chip-positive);
+}
+
+.filter-chips__chip--negative.is-active {
+  background: var(--chip-negative);
+  border-color: var(--chip-negative);
+}

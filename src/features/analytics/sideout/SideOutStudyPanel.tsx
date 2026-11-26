@@ -268,8 +268,8 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
             allLabel={all}
             evaluations={SIDEOUT_EVALUATIONS}
             presets={[
-              { label: t('setterViewReceptionPositive'), value: ['#', '+'] },
-              { label: t('setterViewReceptionNegative'), value: ['!', '-'] },
+              { label: t('setterViewReceptionPositive'), value: ['#', '+'], tone: 'positive' },
+              { label: t('setterViewReceptionNegative'), value: ['!', '-'], tone: 'negative' },
             ]}
             selected={chips(filters.receptionEvaluations, SIDEOUT_EVALUATIONS)}
             onChange={(next) => setFilters({ ...filters, receptionEvaluations: fromChips(next, SIDEOUT_EVALUATIONS) })}

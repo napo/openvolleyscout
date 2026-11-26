@@ -154,6 +154,8 @@ export function evaluationChipStyle(skill: SkillType | null | undefined, evaluat
 export interface EvaluationPreset {
   label: string;
   value: readonly SkillEvaluation[];
+  /** Colours the chip: intense green for the positive group, intense red for the negative one. */
+  tone?: 'positive' | 'negative';
 }
 
 /**
@@ -197,7 +199,7 @@ export function EvaluationChips({ skill, selected, onChange, allLabel, label, ev
             <button
               key={preset.label}
               type="button"
-              className={`filter-chips__chip${active ? ' is-active' : ''}`}
+              className={`filter-chips__chip${preset.tone ? ` filter-chips__chip--${preset.tone}` : ''}${active ? ' is-active' : ''}`}
               aria-pressed={active}
               onClick={() => onChange(scale.filter((evaluation) => preset.value.includes(evaluation)))}
             >
