@@ -55,7 +55,7 @@ export type ZoneAnalysisValue = (typeof ZONE_ANALYSIS_VALUES)[number];
 
 /** DataVolley's own default: total, total %, points won, points lost. */
 export const DEFAULT_ZONE_ANALYSIS_VALUES: [ZoneAnalysisValue, ZoneAnalysisValue, ZoneAnalysisValue, ZoneAnalysisValue] = [
-  'total', 'totalPct', 'pointsWon', 'pointsLost',
+  'total', 'totalPct', 'pointsLost', 'pointsWon',
 ];
 
 export interface ZoneAnalysisFilters {
@@ -74,7 +74,7 @@ export interface ZoneAnalysisFilters {
 }
 
 export function createDefaultZoneAnalysisFilters(team: TeamSide = 'home'): ZoneAnalysisFilters {
-  return { team, mode: 'classic', grid: 6, phase: 'all', setNumbers: [], rotations: [], playerId: 'all', roles: [], evaluations: [] };
+  return { team, mode: 'classic', grid: 9, phase: 'all', setNumbers: [], rotations: [], playerId: 'all', roles: [], evaluations: [] };
 }
 
 /** One attack with everything the filters and the zones need. */

@@ -237,3 +237,49 @@
 .zone-analysis__box--compact {
   min-height: 5.5rem;
 }
+
+/* One court per rotation, in the order of service, each drawn like the side-out study courts. */
+.zone-analysis__court-wrap--rotations {
+  max-width: none;
+}
+
+.zone-analysis__courts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.zone-analysis__court-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.zone-analysis__court-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.9rem;
+}
+
+.zone-analysis__court--small .zone-analysis__box {
+  min-height: 4.4rem;
+  padding: 0.25rem 0.3rem;
+}
+
+.zone-analysis__court--small .zone-analysis__values {
+  font-size: 0.68rem;
+}
+
+@media (max-width: 900px) {
+  .zone-analysis__courts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .zone-analysis__courts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

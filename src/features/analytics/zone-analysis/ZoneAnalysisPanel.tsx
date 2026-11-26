@@ -81,7 +81,9 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
   const scope = `${statsScopeKey(stats)}|${lockedTeam ?? ''}`;
   const [filters, setFilters, resetFilters] = useRememberedState('zone-analysis', scope, () => createDefaultZoneAnalysisFilters(lockedTeam ?? 'home'));
   const [values, setValues] = useRememberedState<ZoneAnalysisValue[]>('zone-analysis-values', scope, () => [...DEFAULT_ZONE_ANALYSIS_VALUES]);
-  const [selectedZone, setSelectedZone] = useState<ZoneAnalysisZone | 'none' | null>(null);
+  // The zone clicked, and the rotation court it belongs to (null on the single court).
+  const [selection, setSelection] = useState<{ rotation: RotationNumber | null; zone: ZoneAnalysisZone | 'none' } | null>(null);
+  const setSelectedZone = (next: ZoneAnalysisZone | 'none' | null, rotation: RotationNumber | null = null) => setSelection(next === null ? null : { rotation, zone: next });
   const team = lockedTeam ?? filters.team;
 
   const attacks = useMemo(() => extractZoneAnalysisAttacks(stats.rallyStats, codeTables), [stats.rallyStats, codeTables]);
@@ -95,7 +97,22 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [attacks, team, filters, roleOf]);
   const result = useMemo(() => computeZoneAnalysis(filtered, filters.mode, filters.grid), [filtered, filters.mode, filters.grid]);
-  const extremes = zoneAnalysisExtremes(result, values[0]);
+  // With no rotation or several chosen, one court per rotation in the order of service; with one, a single big court.
+  const rotationCourts: RotationNumber[] | null = filters.rotations.length === 1
+    ? null
+    : (filters.rotations.length === 0 ? ROTATION_ORDER : ROTATION_ORDER.filter((rotation) => filters.rotations.includes(rotation)));
+  const courts = useMemo(() => {
+    if (!rotationCourts) return [{ rotation: null as RotationNumber | null, result }];
+    return rotationCourts.map((rotation) => ({
+      rotation: rotation as RotationNumber | null,
+      result: computeZoneAnalysis(
+        filtered.filter((attack) => attack.rotation === rotation),
+        filters.mode,
+        filters.grid,
+      ),
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, filters.mode, filters.grid, filters.rotations]);
 
   const setNumbers = useMemo(() => [...new Set(attacks.map((a) => a.setNumber))].sort((a, b) => a - b), [attacks]);
   const attackerOptions = useMemo(() => {
@@ -140,17 +157,17 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
   const all = t('setterViewReceptionAll');
   const teamName = (side: TeamSide) => stats.teamStats[side].teamName || t(side === 'home' ? 'homeTeam' : 'awayTeam');
 
-  const renderBox = (box: ZoneAnalysisBox, extraClass = '') => {
+  const renderBox = (box: ZoneAnalysisBox, extremes: { low: ZoneAnalysisZone | null; high: ZoneAnalysisZone | null }, rotation: RotationNumber | null, extraClass = '') => {
     const isLow = extremes.low === box.zone;
     const isHigh = extremes.high === box.zone;
-    const active = selectedZone === box.zone;
+    const active = selection?.zone === box.zone && selection.rotation === rotation;
     const empty = box.attacks.length === 0;
     return (
       <button
         type="button"
         key={box.zone}
         className={`zone-analysis__box${extraClass}${isLow ? ' is-low' : ''}${isHigh ? ' is-high' : ''}${active ? ' is-selected' : ''}${empty ? ' is-empty' : ''}`}
-        onClick={() => setSelectedZone(active ? null : box.zone)}
+        onClick={() => setSelectedZone(active ? null : box.zone, rotation)}
         disabled={empty}
         aria-pressed={active}
         aria-label={box.zone === 'setter' ? t('zoneAnalysisSetterBox') : `${t('zoneAnalysisZone')} ${box.zone}`}
@@ -164,7 +181,7 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
               ))}
             </span>
             <span className="zone-analysis__players">
-              {box.players.slice(0, 5).map((p) => (
+              {box.players.slice(0, rotation === null ? 5 : 0).map((p) => (
                 <span key={p.playerId}>{shortName(playersById.get(p.playerId))} {p.count}</span>
               ))}
             </span>
@@ -174,8 +191,10 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
     );
   };
 
-  const listBox: ZoneAnalysisBox | null = selectedZone === null ? null
-    : selectedZone === 'none' ? result.noZone : result.boxes[selectedZone];
+  const selectedZone = selection?.zone ?? null;
+  const selectedResult = selection === null ? null : (courts.find((court) => court.rotation === selection.rotation)?.result ?? null);
+  const listBox: ZoneAnalysisBox | null = selection === null || selectedResult === null ? null
+    : selection.zone === 'none' ? selectedResult.noZone : selectedResult.boxes[selection.zone];
 
   const renderAttackRow = (attack: ZoneAnalysisAttack) => {
     const player = attack.touch.playerId ? playersById.get(attack.touch.playerId) : undefined;
@@ -343,33 +362,48 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
       {result.total === 0 ? (
         <EmptyState>{t('zoneAnalysisEmpty')}</EmptyState>
       ) : (
-        <div className="zone-analysis__court-wrap">
-          {result.noZone.attacks.length > 0 ? (
-            <button
-              type="button"
-              className={`zone-analysis__nozone${selectedZone === 'none' ? ' is-selected' : ''}`}
-              onClick={() => setSelectedZone(selectedZone === 'none' ? null : 'none')}
-            >
-              {t('zoneAnalysisNoZone')}: {result.noZone.attacks.length}
-            </button>
-          ) : null}
-          <div className="zone-analysis__court">
-            <div className="zone-analysis__net" aria-hidden="true" />
-            <div className="zone-analysis__grid">
-              {zoneAnalysisCourtZones(filters.grid).map((zone) => renderBox(result.boxes[zone], filters.grid === 9 ? ' zone-analysis__box--compact' : ''))}
-            </div>
-            {filters.mode === 'served' ? (
-              <div className="zone-analysis__setter-row">
-                {renderBox(result.boxes.setter, ' zone-analysis__box--setter')}
-              </div>
-            ) : null}
+        <div className={`zone-analysis__court-wrap${rotationCourts ? ' zone-analysis__court-wrap--rotations' : ''}`}>
+          <div className={rotationCourts ? 'zone-analysis__courts' : undefined}>
+            {courts.map(({ rotation, result: courtResult }) => {
+              const courtExtremes = zoneAnalysisExtremes(courtResult, values[0]);
+              return (
+                <section key={rotation ?? 'one'} className="zone-analysis__court-card">
+                  {rotation !== null ? (
+                    <header className="zone-analysis__court-title">
+                      <strong>P{rotation}</strong>
+                      <span>{courtResult.total}</span>
+                    </header>
+                  ) : null}
+                  {courtResult.noZone.attacks.length > 0 ? (
+                    <button
+                      type="button"
+                      className={`zone-analysis__nozone${selection?.zone === 'none' && selection.rotation === rotation ? ' is-selected' : ''}`}
+                      onClick={() => setSelectedZone(selection?.zone === 'none' && selection.rotation === rotation ? null : 'none', rotation)}
+                    >
+                      {t('zoneAnalysisNoZone')}: {courtResult.noZone.attacks.length}
+                    </button>
+                  ) : null}
+                  <div className={`zone-analysis__court${rotation !== null ? ' zone-analysis__court--small' : ''}`}>
+                    <div className="zone-analysis__net" aria-hidden="true" />
+                    <div className="zone-analysis__grid">
+                      {zoneAnalysisCourtZones(filters.grid).map((zone) => renderBox(courtResult.boxes[zone], courtExtremes, rotation, filters.grid === 9 || rotation !== null ? ' zone-analysis__box--compact' : ''))}
+                    </div>
+                    {filters.mode === 'served' ? (
+                      <div className="zone-analysis__setter-row">
+                        {renderBox(courtResult.boxes.setter, courtExtremes, rotation, ' zone-analysis__box--setter')}
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
+              );
+            })}
           </div>
           <div className="zone-analysis__legend">
             {values.map((value, i) => (
               <span key={i} className={`zone-analysis__legend-item ${VALUE_CLASSES[i]}`}>{t(VALUE_KEYS[value])}</span>
             ))}
-            {extremes.low ? <span className="zone-analysis__legend-item is-low-legend">{t('zoneAnalysisLegendLow')}</span> : null}
-            {extremes.high ? <span className="zone-analysis__legend-item is-high-legend">{t('zoneAnalysisLegendHigh')}</span> : null}
+            <span className="zone-analysis__legend-item is-low-legend">{t('zoneAnalysisLegendLow')}</span>
+            <span className="zone-analysis__legend-item is-high-legend">{t('zoneAnalysisLegendHigh')}</span>
           </div>
           <p className="zone-analysis__hint">{t('zoneAnalysisClickHint')}</p>
         </div>
