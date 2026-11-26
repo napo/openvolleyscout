@@ -12,8 +12,7 @@
 }
 
 .zone-analysis__description,
-.zone-analysis__hint,
-.zone-analysis__empty {
+.zone-analysis__hint {
   font-size: 0.85rem;
   color: var(--color-text-secondary);
   margin: 0;

@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useStatsChartAnimation } from '@src/features/analytics/export/stats-capture-context';
 import { useMemo } from 'react';
 import { getEvaluationChipStyle, getEvaluationColor, getEvaluationScale } from '@src/domain/touch/evaluation-scale';
@@ -137,7 +138,7 @@ function SkillBar({
           </div>
         </>
       ) : (
-        <p className="perf-dashboard__empty">{t('noChartData')}</p>
+        <EmptyState>{t('noChartData')}</EmptyState>
       )}
     </article>
   );
@@ -155,7 +156,7 @@ export function PlayerEvaluationDistributionWidget({
     return (
       <section className="perf-dashboard__section" aria-label={t('evaluationCharts')}>
         <h3 className="perf-dashboard__section-title">{t('evaluationCharts')}</h3>
-        <p className="perf-dashboard__empty">{t('noChartData')}</p>
+        <EmptyState>{t('noChartData')}</EmptyState>
       </section>
     );
   }

@@ -52,12 +52,6 @@
     box-shadow: 0 0 0 1px var(--color-primary, #4f8ff7);
 }
 
-.similarity-panel__empty {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-    padding: var(--space-lg) 0;
-}
-
 .similarity-panel__excluded-banner {
     font-size: var(--font-size-xs);
     color: var(--color-text-secondary);

@@ -12,7 +12,6 @@
 .team-review__config-check { display: flex; gap: 0.4rem; align-items: center; font-size: 0.85rem; cursor: pointer; }
 .team-review__preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.75rem; }
 .team-review__preview img { width: 100%; border: 1px solid var(--color-border, #ccc); background: #fff; }
-.team-review__empty { padding: 1rem; }
 
 @media (max-width: 720px) {
   .team-review__actions button,

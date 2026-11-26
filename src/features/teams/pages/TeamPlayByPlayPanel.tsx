@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useMemo, useState, type MutableRefObject } from 'react';
 import type { MatchProject } from '@src/domain/match/types';
 import { getMatchTeamSnapshot } from '@src/domain/match';
@@ -20,7 +21,7 @@ export function TeamPlayByPlayPanel({ projects, focusTeamId, focusTeamName, shar
   )?.metadata.id ?? '');
   const project = ordered.find((candidate) => candidate.metadata.id === selectedId) ?? ordered[0];
   const stats = useMemo(() => project ? buildProjectMatchStats(project) : null, [project]);
-  if (!project || !stats) return <p>{t('pbpEmpty')}</p>;
+  if (!project || !stats) return <EmptyState>{t('pbpEmpty')}</EmptyState>;
   return <div className="team-analysis-play-by-play">
     <div className="play-by-play__controls">
       <label>{t('match')}<select value={project.metadata.id} onChange={(event) => setSelectedId(event.target.value)}>

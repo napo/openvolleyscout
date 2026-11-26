@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
@@ -36,7 +37,7 @@ export function PrioritiesPanel({ matches, teamRef }: PrioritiesPanelProps) {
   );
 
   if (source.matchCount === 0) {
-    return <p className="trends-panel__empty">{t('prioritiesNoMatches')}</p>;
+    return <EmptyState>{t('prioritiesNoMatches')}</EmptyState>;
   }
 
   return (
@@ -56,7 +57,7 @@ export function PrioritiesPanel({ matches, teamRef }: PrioritiesPanelProps) {
         <h3 className="priorities-panel__title">{t('prioritiesTacticalTitle')}</h3>
         <RotationBarCharts diagnosis={rotationDiagnosis} />
         {weakRotations.length === 0 ? (
-          <p className="trends-panel__empty">{t('prioritiesNoWeakRotations')}</p>
+          <EmptyState>{t('prioritiesNoWeakRotations')}</EmptyState>
         ) : (
           <ul className="priorities-panel__weak-list">
             {weakRotations.map((weak) => (
@@ -73,7 +74,7 @@ export function PrioritiesPanel({ matches, teamRef }: PrioritiesPanelProps) {
         <h3 className="priorities-panel__title">{t('prioritiesPlayerTechnicalTitle')}</h3>
         <PlayerPicker players={availablePlayers} selectedIds={selectedPlayerIds} onToggle={togglePlayer} />
         {selectedPlayerIds.size === 0 ? (
-          <p className="trends-panel__empty">{t('prioritiesNoPlayerSelected')}</p>
+          <EmptyState>{t('prioritiesNoPlayerSelected')}</EmptyState>
         ) : (
           <div className="priorities-panel__player-grid">
             {Array.from(selectedPlayerIds).map((playerId) => {

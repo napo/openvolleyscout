@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useTranslation } from '@src/i18n';
 import { EfficiencyExtraSections } from './EfficiencyExtraSections';
 import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
@@ -111,7 +112,7 @@ export function PlayerEfficiencyWidget({
     return (
       <section className="perf-dashboard__section" aria-label={t('efficiencyTitle')}>
         <h3 className="perf-dashboard__section-title">{t('efficiencyTitle')}</h3>
-        <p className="perf-dashboard__empty">{t('noChartData')}</p>
+        <EmptyState>{t('noChartData')}</EmptyState>
       </section>
     );
   }

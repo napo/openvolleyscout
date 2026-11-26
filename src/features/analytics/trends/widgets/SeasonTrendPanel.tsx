@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useStatsChartAnimation } from '@src/features/analytics/export/stats-capture-context';
 import { useMemo } from 'react';
 import {
@@ -48,7 +49,7 @@ export function SeasonTrendPanel({ matches, teamRef }: SeasonTrendPanelProps) {
   })), [trend, selectedAxis]);
 
   if (trend.length === 0) {
-    return <p className="trends-panel__empty">{t('seasonTrendNoHistory')}</p>;
+    return <EmptyState>{t('seasonTrendNoHistory')}</EmptyState>;
   }
 
   return (

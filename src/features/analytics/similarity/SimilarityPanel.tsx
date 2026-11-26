@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
@@ -171,9 +172,9 @@ export function SimilarityPanel({ focus }: SimilarityPanelProps) {
       {isLoading ? (
         <p className="load-data-page__loading">{t('similarityLoading')}</p>
       ) : entities.length < 2 || narratives.length === 0 ? (
-        <p className="similarity-panel__empty">
+        <EmptyState>
           {entities.length < 2 ? t('similarityInsufficientData') : t('noSimilarEntities')}
-        </p>
+        </EmptyState>
       ) : (
         <div className="similarity-panel__list">
           {narratives.map((entry) => {

@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useStatsChartAnimation } from '@src/features/analytics/export/stats-capture-context';
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { getEvaluationChipStyle, getEvaluationColor, getEvaluationScale } from '@src/domain/touch/evaluation-scale';
@@ -140,7 +141,7 @@ function SkillBar({
           </div>
         </>
       ) : (
-        <p className="perf-dashboard__empty">{t('noChartData')}</p>
+        <EmptyState>{t('noChartData')}</EmptyState>
       )}
     </article>
   );

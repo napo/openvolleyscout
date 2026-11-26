@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useTranslation } from '@src/i18n';
 import type { PlayerStats, TrackedSkill } from '@src/features/scouting/model/match-stats';
 import { formatCount, type SkillPointsErrors } from '../metrics/dashboard-metrics';
@@ -104,7 +105,7 @@ export function PlayerPointsErrorsWidget({
     return (
       <section className="perf-dashboard__section" aria-label={t('pointsErrorsBySkill')}>
         <h3 className="perf-dashboard__section-title">{t('pointsErrorsBySkill')}</h3>
-        <p className="perf-dashboard__empty">{t('noChartData')}</p>
+        <EmptyState>{t('noChartData')}</EmptyState>
       </section>
     );
   }

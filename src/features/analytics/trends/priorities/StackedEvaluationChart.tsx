@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useStatsChartAnimation } from '@src/features/analytics/export/stats-capture-context';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -66,7 +67,7 @@ export function StackedEvaluationChart({ points }: { points: readonly MatchEvalu
 
   const hasData = rows.some((row) => row.total > 0);
   if (!hasData) {
-    return <p className="trends-panel__empty">{t('prioritiesEvaluationTrendEmpty')}</p>;
+    return <EmptyState>{t('prioritiesEvaluationTrendEmpty')}</EmptyState>;
   }
 
   return (

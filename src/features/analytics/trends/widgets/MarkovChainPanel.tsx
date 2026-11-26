@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchProject } from '@src/domain/match/types';
@@ -49,7 +50,7 @@ export function MarkovChainPanel({ matches, teamRef }: MarkovChainPanelProps) {
       <p className="markov-chain-panel__explanation">{t('rallyModelExplanation')}</p>
 
       {result.insufficientData ? (
-        <p className="trends-panel__empty">{t('rallyModelInsufficientData')}</p>
+        <EmptyState>{t('rallyModelInsufficientData')}</EmptyState>
       ) : (
         <>
           {result.excludedStateCount > 0 ? (

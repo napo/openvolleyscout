@@ -62,16 +62,6 @@
   margin: 0;
 }
 
-.sideout-study__empty {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-  margin: 0;
-  padding: 1rem;
-  text-align: center;
-  border: 1px dashed rgba(127, 127, 127, 0.4);
-  border-radius: 8px;
-}
-
 .sideout-study__rotations {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

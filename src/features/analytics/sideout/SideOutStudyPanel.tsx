@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useMemo } from 'react';
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useTranslation } from '@src/i18n';
@@ -519,7 +520,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
 
   const renderCallsView = () => {
     if (!callHasCodes) {
-      return <p className="sideout-study__empty">{t('sideOutCallsUnavailable')}</p>;
+      return <EmptyState>{t('sideOutCallsUnavailable')}</EmptyState>;
     }
     return (
       <div className="sideout-study__calls">
@@ -602,7 +603,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         {`${overall.totalSets} ${t('sideOutTotalSetsLabel')} · ${overall.receptionsWithoutSet} ${t('sideOutNoSetReceptionsLabel')}`}
       </p>
       {overall.totalSets === 0 ? (
-        <p className="sideout-study__empty">{t('sideOutNoData')}</p>
+        <EmptyState>{t('sideOutNoData')}</EmptyState>
       ) : viewMode === 'zone' ? (
         <div className="sideout-study__rotations">
           {renderRotationCard('all', overall)}

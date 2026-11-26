@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useState } from 'react';
 import { ActionIcon } from '@src/components/ActionIcon';
@@ -120,7 +121,7 @@ export function TeamReviewPanel({ matches, teamId, teamName }: TeamReviewPanelPr
     return () => { cancelled = true; };
   }, [matches, teamId, teamName, notes, config]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!matches.length) return <p className="team-review__empty">{t('teamReviewNoMatches')}</p>;
+  if (!matches.length) return <EmptyState>{t('teamReviewNoMatches')}</EmptyState>;
   if (!data || !plan) {
     return (
       <section className="team-review" aria-label={t('teamReviewTab')}>

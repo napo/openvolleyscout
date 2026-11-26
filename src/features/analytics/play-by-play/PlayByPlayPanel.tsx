@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useMemo, type MutableRefObject } from 'react';
 import { ChipSelect, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
 import { useRememberedState } from '@src/lib/hooks/useRememberedState';
@@ -83,7 +84,7 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
       <ResetFiltersButton count={setNumber !== 0 ? 1 : 0} onReset={resetChoice} />
     </div>
     <p className="play-by-play__legend">P: {t('pbpRotation')}. {t('pbpLegend')}</p>
-    {!visibleSets.length || visibleSets.every((set) => !set.rows.length) ? <p>{t('pbpEmpty')}</p> : visibleSets.map((set) => {
+    {!visibleSets.length || visibleSets.every((set) => !set.rows.length) ? <EmptyState>{t('pbpEmpty')}</EmptyState> : visibleSets.map((set) => {
       const chart = buildPlayByPlayChartSvg({ sets, teams, metadata, options }, set, t);
       const other = reference === 'home' ? 'away' : 'home';
       const score = reference === 'home' ? `${set.finalScore.home} - ${set.finalScore.away}` : `${set.finalScore.away} - ${set.finalScore.home}`;

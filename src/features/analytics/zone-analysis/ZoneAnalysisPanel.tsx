@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMemo, useState } from 'react';
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
@@ -308,7 +309,7 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
       </div>
 
       {result.total === 0 ? (
-        <p className="zone-analysis__empty">{t('zoneAnalysisEmpty')}</p>
+        <EmptyState>{t('zoneAnalysisEmpty')}</EmptyState>
       ) : (
         <div className="zone-analysis__court-wrap">
           {result.noZone.attacks.length > 0 ? (

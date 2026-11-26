@@ -1,0 +1,24 @@
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+  border: 1px dashed rgba(127, 127, 127, 0.4);
+  border-radius: 8px;
+}
+
+.empty-state__title {
+  color: var(--color-text-primary);
+}
+
+.empty-state__message {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.empty-state__action {
+  margin-top: 0.25rem;
+}

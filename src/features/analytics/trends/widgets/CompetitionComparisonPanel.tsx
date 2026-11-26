@@ -1,3 +1,4 @@
+import { EmptyState } from '@src/components/EmptyState';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchProject } from '@src/domain/match/types';
@@ -87,7 +88,7 @@ export function CompetitionComparisonPanel({ teamRef }: CompetitionComparisonPan
   }
 
   if (competitionOptions.length === 0) {
-    return <p className="trends-panel__empty">{t('competitionComparisonNoCompetition')}</p>;
+    return <EmptyState>{t('competitionComparisonNoCompetition')}</EmptyState>;
   }
 
   return (
@@ -126,7 +127,7 @@ export function CompetitionComparisonPanel({ teamRef }: CompetitionComparisonPan
       </div>
 
       {ranked.length <= 1 ? (
-        <p className="trends-panel__empty">{t('competitionComparisonNoOtherTeams')}</p>
+        <EmptyState>{t('competitionComparisonNoOtherTeams')}</EmptyState>
       ) : (
         <table className="competition-comparison-panel__table">
           <thead>

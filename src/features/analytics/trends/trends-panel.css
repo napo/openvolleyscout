@@ -55,12 +55,6 @@
     color: #fff;
 }
 
-.trends-panel__empty {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-    padding: var(--space-lg) 0;
-}
-
 /* Season trend */
 
 .season-trend-panel {
