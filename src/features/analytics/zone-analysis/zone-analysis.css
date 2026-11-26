@@ -73,7 +73,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-width: 640px;
+  max-width: 560px;
   width: 100%;
 }
 
@@ -102,8 +102,16 @@
 }
 
 .zone-analysis__grid {
+  /* A half court is a 9 m x 9 m square, and every zone has the same size. */
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  aspect-ratio: 1 / 1;
+}
+
+.zone-analysis__grid > .zone-analysis__box {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .zone-analysis__setter-row {
@@ -264,7 +272,6 @@
 }
 
 .zone-analysis__court--small .zone-analysis__box {
-  min-height: 4.4rem;
   padding: 0.25rem 0.3rem;
 }
 
