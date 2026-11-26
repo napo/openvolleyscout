@@ -46,7 +46,7 @@ describe('SideOutStudyPanel serve filters', () => {
     expect(labels(groupOf('Serve start zone'))).toEqual(['All', '5', '7', '6', '9', '1']);
     expect(labels(groupOf('Serve type'))).toHaveLength(5);
     expect(labels(groupOf('Direction (arrival zone)'))).toHaveLength(10);
-    expect(labels(groupOf('Receiver'))).toEqual(['All', '#3 Rita (OH)', '#9 Rosa (L)']);
+    expect(labels(groupOf('Receiver'))).toEqual(['All', '#3 Rita (OH)1', '#9 Rosa (L)1']);
   });
 
   it('choosing a serve start zone narrows the distribution, All brings it back', async () => {

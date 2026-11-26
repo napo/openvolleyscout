@@ -58,6 +58,8 @@ export interface ChipOption<T> {
   iconOnly?: boolean;
   /** Marks the chip in yellow (for example the athletes whose role is setter). */
   highlight?: boolean;
+  /** A small number after the label (for example how many receptions the athlete made). */
+  count?: number;
 }
 
 /** Zones as they sit on a half court, net at the top: front row 4 3 2, then 7 8 9, back row 5 6 1. */
@@ -109,6 +111,7 @@ export function ChipSelect<T extends string | number>({ options, selected, onCha
       >
         {option.icon ? <span className="filter-chips__icon" aria-hidden="true">{option.icon}</span> : null}
         {option.iconOnly && option.icon ? null : option.label}
+        {option.count !== undefined ? <small className="filter-chips__count">{option.count}</small> : null}
       </button>
     );
   };

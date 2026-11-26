@@ -216,3 +216,13 @@
   border-color: #b45309;
   color: #ffffff;
 }
+
+.filter-chips__count {
+  margin-inline-start: 0.35em;
+  padding: 0 0.35em;
+  border-radius: 999px;
+  background: rgba(var(--ink-rgb), 0.12);
+  font-size: 0.68em;
+  font-weight: 700;
+  vertical-align: 0.05em;
+}

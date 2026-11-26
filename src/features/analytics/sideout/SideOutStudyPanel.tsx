@@ -151,20 +151,35 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     return `${formatPlayerLabel(player.jerseyNumber, player.playerName)}${roleKey ? ` (${t(roleKey)})` : ''}`;
   };
 
+  // Receptions made by each athlete and rallies each one set in, over the side-out sequences of the team.
+  const receptionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    sequences.forEach((sequence) => {
+      if (sequence.teamSide !== filters.team || !sequence.receive.playerId) return;
+      counts.set(sequence.receive.playerId, (counts.get(sequence.receive.playerId) ?? 0) + 1);
+    });
+    return counts;
+  }, [sequences, filters.team]);
+  const setterRallyCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    sequences.forEach((sequence) => {
+      if (sequence.teamSide !== filters.team || !sequence.setterPlayerId) return;
+      counts.set(sequence.setterPlayerId, (counts.get(sequence.setterPlayerId) ?? 0) + 1);
+    });
+    return counts;
+  }, [sequences, filters.team]);
+
   const receiverOptions = useMemo(() => {
-    const ids = new Set(
-      sequences
-        .filter((sequence) => sequence.teamSide === filters.team && sequence.receive.playerId)
-        .map((sequence) => sequence.receive.playerId as string),
-    );
+    const ids = new Set(receptionCounts.keys());
     return stats.playerStats
       .filter((player) => player.teamSide === filters.team && ids.has(player.playerId))
       .map((player) => ({
         playerId: player.playerId,
         label: athleteLabel(player),
         highlight: player.role === 'setter',
+        count: receptionCounts.get(player.playerId) ?? 0,
       }));
-  }, [sequences, stats.playerStats, filters.team, t]);
+  }, [receptionCounts, setterRallyCounts, sequences, stats.playerStats, filters.team, t]);
 
   const setterOptions = useMemo(() => {
     const ids = new Set(
@@ -178,8 +193,9 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         playerId: player.playerId,
         label: athleteLabel(player),
         highlight: player.role === 'setter',
+        count: setterRallyCounts.get(player.playerId) ?? 0,
       }));
-  }, [sequences, stats.playerStats, filters.team, t]);
+  }, [receptionCounts, setterRallyCounts, sequences, stats.playerStats, filters.team, t]);
 
   // Sequences passing the reception filters (used by sequential view).
   const filteredSequences = useMemo(
@@ -261,7 +277,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           <FilterGroup title={t('sideOutFilterSetter')} active={choiceList(filters.setterPlayerId).length > 0}>
             <ChipSelect
               allLabel={all}
-              options={setterOptions.map((option) => ({ value: option.playerId, label: option.label, highlight: option.highlight }))}
+              options={setterOptions.map((option) => ({ value: option.playerId, label: option.label, highlight: option.highlight, count: option.count }))}
               selected={choiceList(filters.setterPlayerId)}
               onChange={(next) => setFilters({ ...filters, setterPlayerId: next })}
             />
@@ -271,7 +287,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           <FilterGroup title={t('sideOutFilterReceiver')} active={choiceList(filters.receiverPlayerId).length > 0}>
             <ChipSelect
               allLabel={all}
-              options={receiverOptions.map((option) => ({ value: option.playerId, label: option.label, highlight: option.highlight }))}
+              options={receiverOptions.map((option) => ({ value: option.playerId, label: option.label, highlight: option.highlight, count: option.count }))}
               selected={choiceList(filters.receiverPlayerId)}
               onChange={(next) => setFilters({ ...filters, receiverPlayerId: next })}
             />
