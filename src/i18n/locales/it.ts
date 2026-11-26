@@ -2724,7 +2724,7 @@ export const it = {
   setterViewServeStartLabel: "Partenza servizio",
   setterViewFilterAll: "Tutte",
   setterViewServeJumpSpin: "Salto spin",
-  setterViewServeJumpFloat: "Salto flot",
+  setterViewServeJumpFloat: "Salto float",
   setterViewServeFloat: "Flot",
   setterViewServeOther: "Altro",
   tacticalLegendLabel: "Voce in legenda",

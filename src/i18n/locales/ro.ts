@@ -2694,7 +2694,7 @@ export const ro = {
   setterViewServeStartLabel: "Zonă plecare serviciu",
   setterViewFilterAll: "Toate",
   setterViewServeJumpSpin: "Săritură spin",
-  setterViewServeJumpFloat: "Săritură flot",
+  setterViewServeJumpFloat: "Săritură float",
   setterViewServeFloat: "Flot",
   setterViewServeOther: "Altele",
   tacticalLegendLabel: "Text în legendă",

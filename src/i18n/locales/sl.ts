@@ -2692,7 +2692,7 @@ export const sl = {
   setterViewServeStartLabel: "Začetna cona servisa",
   setterViewFilterAll: "Vse",
   setterViewServeJumpSpin: "Skok spin",
-  setterViewServeJumpFloat: "Skok flot",
+  setterViewServeJumpFloat: "Skok float",
   setterViewServeFloat: "Flot",
   setterViewServeOther: "Drugo",
   tacticalLegendLabel: "Oznaka v legendi",

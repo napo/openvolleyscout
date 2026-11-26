@@ -2688,7 +2688,7 @@ export const tr = {
   setterViewServeStartLabel: "Servis başlangıç bölgesi",
   setterViewFilterAll: "Tümü",
   setterViewServeJumpSpin: "Sıçrayarak spin",
-  setterViewServeJumpFloat: "Sıçrayarak flot",
+  setterViewServeJumpFloat: "Sıçrayarak float",
   setterViewServeFloat: "Flot",
   setterViewServeOther: "Diğer",
   tacticalLegendLabel: "Gösterge etiketi",
