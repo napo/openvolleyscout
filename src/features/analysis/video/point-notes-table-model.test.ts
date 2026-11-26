@@ -6,12 +6,8 @@ import { POINT_NOTE_TAGS, createPointNote } from '@src/domain/video/point-notes'
 import { normalizeCustomKeywordList } from '@src/domain/video/custom-point-note-keywords';
 import type { BallTouch } from '@src/domain/touch/types';
 import {
-  POINT_NOTES_PAGE_SIZE,
   buildPointNoteDistribution,
   buildPointNoteTableRows,
-  filterPointNoteRows,
-  paginatePointNoteRows,
-  sortPointNoteRows,
 } from './point-notes-table-model';
 
 const TAG_LABELS: Record<string, string> = {
@@ -110,20 +106,6 @@ describe('point-notes-table-model', () => {
     expect(rows[0]!.timeLabel).toBe('18:05:10');
     expect(rows[0]!.codes.map((c) => c.touchId)).toEqual(['t1', 't2']);
     expect(rows[0]!.codes[0]!.isTarget).toBe(true);
-
-    const filtered = filterPointNoteRows(rows, 'Esultanza');
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0]!.note.id).toBe('n-0');
-
-    const sortedDesc = sortPointNoteRows(rows, 'score', 'desc');
-    expect(sortedDesc[0]!.note.homeScore).toBe(6);
-
-    const page1 = paginatePointNoteRows(rows, 1);
-    const page2 = paginatePointNoteRows(rows, 2);
-    expect(POINT_NOTES_PAGE_SIZE).toBe(5);
-    expect(page1.items).toHaveLength(5);
-    expect(page1.totalPages).toBe(2);
-    expect(page2.items).toHaveLength(1);
   });
 
   it('normalizes custom keywords and includes them in distribution and table filtering', () => {

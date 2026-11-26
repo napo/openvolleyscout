@@ -1,3 +1,4 @@
+import { filterAndSortTableRows } from '@src/components/InteractiveDataTable';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -5,7 +6,6 @@ import type { MatchProject } from '@src/domain/match/types';
 import type { ArchivedRoster, ArchivedTeam } from '@src/domain/team/types';
 import type { DataVolleyTeamPersistenceRepository } from '../persistence/types';
 import {
-  filterAndSortBulkProblems,
   resolveBulkProblemRow,
   runBulkImportPass,
   type BulkImportDeps,
@@ -149,24 +149,15 @@ describe('bulk import', () => {
       },
     ];
 
-    const filtered = filterAndSortBulkProblems(
-      rows,
-      'gamma',
-      'fileName',
-      'asc',
-      (k) => k,
-      (d) => d,
-    );
+    // The table is the shared one: its search and sort read the columns' text.
+    const columns = [
+      { key: 'fileName', label: 'File', text: (row: (typeof rows)[number]) => row.fileName },
+      { key: 'matchLabel', label: 'Match', text: (row: (typeof rows)[number]) => row.matchLabel },
+    ];
+    const filtered = filterAndSortTableRows(rows, columns, 'gamma', 'fileName', 'asc');
     expect(filtered.map((r) => r.id)).toEqual(['2']);
 
-    const sortedDesc = filterAndSortBulkProblems(
-      rows,
-      '',
-      'fileName',
-      'desc',
-      (k) => k,
-      (d) => d,
-    );
+    const sortedDesc = filterAndSortTableRows(rows, columns, '', 'fileName', 'desc');
     expect(sortedDesc.map((r) => r.fileName)).toEqual(['b.dvw', 'a.ovs']);
   });
 });

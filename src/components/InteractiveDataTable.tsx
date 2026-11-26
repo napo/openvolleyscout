@@ -88,6 +88,16 @@ export interface InteractiveDataTableProps<T> {
   actionsLabel?: string;
   renderBulkActions?: (selectedItems: T[], clearSelection: () => void) => ReactNode;
   headerExtra?: ReactNode;
+  /** Rows can be ticked (default). Off for a plain list that only searches, sorts and pages. */
+  selectable?: boolean;
+  /** A click on a row (not on a control inside it). */
+  onRowClick?: (item: T) => void;
+  /** Whether a row reacts to a click: false leaves it plain. */
+  isRowClickable?: (item: T) => boolean;
+  rowTitle?: (item: T) => string | undefined;
+  rowClassName?: (item: T) => string | undefined;
+  /** Shown in place of the table when it has no rows at all, instead of an empty grid. */
+  emptyState?: ReactNode;
 }
 
 export function InteractiveDataTable<T>({
@@ -108,6 +118,12 @@ export function InteractiveDataTable<T>({
   actionsLabel,
   renderBulkActions,
   headerExtra,
+  selectable = true,
+  onRowClick,
+  isRowClickable,
+  rowTitle,
+  rowClassName,
+  emptyState,
 }: InteractiveDataTableProps<T>) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
@@ -211,6 +227,10 @@ export function InteractiveDataTable<T>({
     </div>
   );
 
+  if (items.length === 0 && emptyState) {
+    return <section className="interactive-table" aria-label={label}>{emptyState}</section>;
+  }
+
   return (
     <section className="interactive-table" aria-label={label}>
       <div className="interactive-table__toolbar">
@@ -251,12 +271,16 @@ export function InteractiveDataTable<T>({
             </button>
           </div>
         ) : null}
-        <button type="button" className="btn-secondary btn-small" onClick={selectAllFiltered} disabled={!filteredRows.length}>
-          {t('bulkImportSelectAllFiltered')} ({filteredRows.length})
-        </button>
-        <button type="button" className="btn-secondary btn-small" onClick={clearSelection} disabled={!selectedIds.size}>
-          {t('tableClearVisible')}
-        </button>
+        {selectable ? (
+          <>
+            <button type="button" className="btn-secondary btn-small" onClick={selectAllFiltered} disabled={!filteredRows.length}>
+              {t('bulkImportSelectAllFiltered')} ({filteredRows.length})
+            </button>
+            <button type="button" className="btn-secondary btn-small" onClick={clearSelection} disabled={!selectedIds.size}>
+              {t('tableClearVisible')}
+            </button>
+          </>
+        ) : null}
         {headerExtra}
       </div>
 
@@ -273,14 +297,16 @@ export function InteractiveDataTable<T>({
         <table className="interactive-table__table">
           <thead>
             <tr>
-              <th scope="col" className="interactive-table__check">
-                <input
-                  type="checkbox"
-                  checked={allPageSelected}
-                  onChange={togglePage}
-                  aria-label={t('tableSelectVisible')}
-                />
-              </th>
+              {selectable ? (
+                <th scope="col" className="interactive-table__check">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    onChange={togglePage}
+                    aria-label={t('tableSelectVisible')}
+                  />
+                </th>
+              ) : null}
               {columns.map((column) => (
                 <th key={column.key} scope="col">
                   {column.sortable === false ? (
@@ -301,22 +327,32 @@ export function InteractiveDataTable<T>({
               const checked = selectedIds.has(id);
               const isActive = activeId === id;
               const disabled = isRowDisabled ? isRowDisabled(item) : false;
+              const clickable = Boolean(onRowClick) && (isRowClickable ? isRowClickable(item) : true);
               const rowClass = [
                 checked ? 'is-selected' : '',
                 isActive ? 'is-active' : '',
+                clickable ? 'is-clickable' : '',
+                rowClassName?.(item) ?? '',
               ].filter(Boolean).join(' ') || undefined;
 
               return (
-                <tr key={id} className={rowClass}>
-                  <td className="interactive-table__check">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={disabled}
-                      onChange={() => toggleRow(id)}
-                      aria-label={columns[0] ? columns[0].text(item) : id}
-                    />
-                  </td>
+                <tr
+                  key={id}
+                  className={rowClass}
+                  title={rowTitle?.(item)}
+                  onClick={clickable ? () => onRowClick?.(item) : undefined}
+                >
+                  {selectable ? (
+                    <td className="interactive-table__check">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={disabled}
+                        onChange={() => toggleRow(id)}
+                        aria-label={columns[0] ? columns[0].text(item) : id}
+                      />
+                    </td>
+                  ) : null}
                   {columns.map((column) => (
                     <td key={column.key} data-label={column.label} title={column.title?.(item)}>
                       <span className="interactive-table__cell-value">

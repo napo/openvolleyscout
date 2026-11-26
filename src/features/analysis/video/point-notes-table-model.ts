@@ -7,8 +7,6 @@ import type { PointNote, PointNoteTag } from '@src/domain/video/types';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import { buildVideoEventIndex, type VideoEventEntry } from './video-event-index';
 
-export const POINT_NOTES_PAGE_SIZE = 5;
-
 export interface PointNoteDistributionItem {
   key: string;
   label: string;
@@ -32,9 +30,6 @@ export interface PointNoteTableRow {
   codes: PointNoteCodeToken[];
   codesText: string;
 }
-
-export type PointNoteSortKey = 'time' | 'type' | 'score' | 'codes';
-export type PointNoteSortDir = 'asc' | 'desc';
 
 /**
  * Counts how many times each note tag appears and returns items sorted alphabetically by label.
@@ -169,61 +164,4 @@ export function buildPointNoteTableRows(
       codesText: codes.map((item) => item.code).join(' '),
     };
   });
-}
-
-export function filterPointNoteRows(rows: readonly PointNoteTableRow[], query: string): PointNoteTableRow[] {
-  const needle = query.trim().toLowerCase();
-  if (!needle) return [...rows];
-
-  return rows.filter((row) => {
-    const haystack = [
-      row.timeLabel,
-      row.noteTypeLabel,
-      row.note.text,
-      row.scoreLabel,
-      row.codesText,
-    ]
-      .join(' ')
-      .toLowerCase();
-    return haystack.includes(needle);
-  });
-}
-
-export function sortPointNoteRows(
-  rows: readonly PointNoteTableRow[],
-  sortKey: PointNoteSortKey,
-  sortDir: PointNoteSortDir,
-): PointNoteTableRow[] {
-  const factor = sortDir === 'asc' ? 1 : -1;
-  return [...rows].sort((a, b) => {
-    let cmp = 0;
-    if (sortKey === 'time') {
-      cmp = a.timeSortValue - b.timeSortValue;
-    } else if (sortKey === 'score') {
-      cmp = a.scoreSortValue - b.scoreSortValue;
-    } else if (sortKey === 'type') {
-      cmp = `${a.noteTypeLabel} ${a.note.text}`.localeCompare(`${b.noteTypeLabel} ${b.note.text}`, undefined, {
-        sensitivity: 'base',
-      });
-    } else {
-      cmp = a.codesText.localeCompare(b.codesText, undefined, { sensitivity: 'base' });
-    }
-    if (cmp !== 0) return cmp * factor;
-    return (a.timeSortValue - b.timeSortValue) * factor;
-  });
-}
-
-export function paginatePointNoteRows(
-  rows: readonly PointNoteTableRow[],
-  page: number,
-  pageSize = POINT_NOTES_PAGE_SIZE,
-): { items: PointNoteTableRow[]; page: number; totalPages: number } {
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * pageSize;
-  return {
-    items: rows.slice(start, start + pageSize),
-    page: safePage,
-    totalPages,
-  };
 }
