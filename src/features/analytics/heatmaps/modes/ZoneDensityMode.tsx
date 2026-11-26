@@ -10,7 +10,7 @@ import type {
 } from '@src/domain/opponent-report/types';
 import { attackZoneNumber } from '../../sideout/sideout-distribution';
 import { BACK_ROW_ZONE_MAP, isHighBall, scoreBeforeRallies } from '../../attack-context/attack-context';
-import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
+import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
 import { ALL_EVALUATIONS, matchesAny } from '../../dashboard/filters/dashboard-filters';
@@ -1750,9 +1750,9 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
             </FilterGroup>
             {availableCombinationCodes.length > 0 ? (
               <FilterGroup title={t('attackerViewBaseLabel')} active={attackFilters.combinationCodes.length > 0} wide>
-                <ChipSelect
+                <BaseCodeTable
                   allLabel={allLabel}
-                  options={availableCombinationCodes.map((code) => ({ value: code, label: code }))}
+                  codes={availableCombinationCodes}
                   selected={attackFilters.combinationCodes}
                   onChange={(next) => setAttackFilter('combinationCodes', next)}
                 />

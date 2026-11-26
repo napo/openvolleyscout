@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { SplitToggle } from './SplitToggle';
 import { attackerViewFilterLabel } from '../model/attacker-view-label';
-import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
+import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type { AttackSubtype } from '@src/domain/touch/types';
 import type {
   AttackerDirectionEvaluation,
@@ -257,9 +257,9 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
 
                     {combinationCodes.length > 0 ? (
                       <FilterGroup title={t('attackerViewBaseLabel')} active={Boolean(view.combinationCodes?.length)} wide>
-                        <ChipSelect
+                        <BaseCodeTable
                           allLabel={all}
-                          options={combinationCodes.map((code) => ({ value: code, label: code }))}
+                          codes={combinationCodes}
                           selected={view.combinationCodes ?? []}
                           onChange={(next) => setField(index, 'combinationCodes', next)}
                         />

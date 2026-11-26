@@ -147,6 +147,82 @@ export function ChipSelect<T extends string | number>({ options, selected, onCha
   );
 }
 
+/**
+ * Base / combination codes as a table: the letter in the first cell of a row and the codes that
+ * start with it in the cells after it (C: 5 6 D F; K: 1 2 C E). Several codes can be chosen, and a
+ * click on the letter takes or leaves the whole row. None chosen means all.
+ */
+export function BaseCodeTable({ codes, selected, onChange, allLabel, label }: {
+  codes: readonly string[];
+  selected: readonly string[];
+  onChange: (next: string[]) => void;
+  allLabel: string;
+  /** A small label before "All", when the table is not in a group of its own. */
+  label?: string;
+}) {
+  const rows = new Map<string, string[]>();
+  codes.forEach((code) => {
+    const letter = code.charAt(0);
+    rows.set(letter, [...(rows.get(letter) ?? []), code]);
+  });
+  const emit = (next: string[]) => onChange(next.length === codes.length ? [] : next);
+  const toggle = (code: string) => emit(selected.includes(code) ? selected.filter((item) => item !== code) : [...selected, code]);
+  const toggleRow = (rowCodes: readonly string[]) => {
+    const whole = rowCodes.every((code) => selected.includes(code));
+    emit(whole ? selected.filter((code) => !rowCodes.includes(code)) : [...new Set([...selected, ...rowCodes])]);
+  };
+  return (
+    <div className="filter-chips__select">
+      <div className="filter-chips__row">
+        {label ? <span className="filter-chips__row-label">{label}</span> : null}
+        <button
+          type="button"
+          className={`filter-chips__chip${selected.length === 0 ? ' is-active' : ''}`}
+          aria-pressed={selected.length === 0}
+          onClick={() => onChange([])}
+        >
+          {allLabel}
+        </button>
+      </div>
+      <table className="filter-chips__base-table">
+        <tbody>
+          {[...rows.entries()].map(([letter, rowCodes]) => {
+            const whole = rowCodes.every((code) => selected.includes(code));
+            return (
+              <tr key={letter}>
+                <th scope="row">
+                  <button
+                    type="button"
+                    className={`filter-chips__chip filter-chips__chip--letter${whole ? ' is-active' : ''}`}
+                    aria-pressed={whole}
+                    onClick={() => toggleRow(rowCodes)}
+                  >
+                    {letter}
+                  </button>
+                </th>
+                {rowCodes.map((code) => (
+                  <td key={code}>
+                    <button
+                      type="button"
+                      className={`filter-chips__chip${selected.includes(code) ? ' is-active' : ''}`}
+                      aria-pressed={selected.includes(code)}
+                      aria-label={code}
+                      title={code}
+                      onClick={() => toggle(code)}
+                    >
+                      {code.slice(1)}
+                    </button>
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /** Style of an evaluation chip: the skill's colour, full when chosen, tinted otherwise. */
 export function evaluationChipStyle(skill: SkillType | null | undefined, evaluation: SkillEvaluation, active: boolean): CSSProperties {
   const color = getEvaluationColor(skill, evaluation);

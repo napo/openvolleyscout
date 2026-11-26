@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { AttackerDirectionPhase, SetterDistributionServeType } from '@src/domain/opponent-report/types';
-import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
+import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
 import { countChangedFilters } from '@src/lib/utils/stats-scope';
 import { TOUCH_PHASES, type TouchPhase } from '@src/features/analytics/rally-phase/rally-phase-classifier';
 import type { ScoreSituation } from '@src/features/analytics/dashboard/selectors/rally-context-filters';
@@ -170,10 +170,10 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
           </>
         ) : null}
         {(key === 'set' || key === 'attack') && baseCodes.length > 0 ? (
-          <ChipSelect
+          <BaseCodeTable
             label={t('attackerViewBaseLabel')}
             allLabel={all}
-            options={baseCodes.map((value) => ({ value, label: value }))}
+            codes={baseCodes}
             selected={attributes.baseCodes ?? []}
             onChange={(next) => patchAttributes(key, { baseCodes: next })}
           />

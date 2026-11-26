@@ -226,3 +226,27 @@
   font-weight: 700;
   vertical-align: 0.05em;
 }
+
+/* Base codes as a table: a letter, then the codes that start with it. */
+.filter-chips__base-table {
+  border-collapse: separate;
+  border-spacing: 0.25rem 0.22rem;
+  margin: -0.22rem -0.25rem;
+}
+
+.filter-chips__base-table th,
+.filter-chips__base-table td {
+  padding: 0;
+  text-align: center;
+}
+
+.filter-chips__base-table .filter-chips__chip {
+  min-width: 1.9rem;
+  padding: 0.18rem 0.4rem;
+  text-align: center;
+}
+
+.filter-chips__chip--letter {
+  font-weight: 700;
+  background: var(--slate-100);
+}

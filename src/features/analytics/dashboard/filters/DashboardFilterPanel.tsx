@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useSyncExternalStore, type ReactNode, useMemo } from 'react';
 import type { SkillEvaluation } from '@src/domain/common/enums';
-import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
+import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { SkillIcon } from '@src/components/skill-icons/SkillIcon';
 import { rallyBaseCodes, sortBaseCodes } from '../selectors/base-code';
@@ -232,9 +232,9 @@ export function DashboardFilterPanel({
 
         {baseCodes.length > 0 ? (
           <FilterGroup title={t('attackerViewBaseLabel')} active={baseCodeList(filters.base).length > 0}>
-            <ChipSelect
+            <BaseCodeTable
               allLabel={all}
-              options={baseCodes.map((value) => ({ value, label: value }))}
+              codes={baseCodes}
               selected={baseCodeList(filters.base)}
               onChange={(next) => updateFilter('base', next)}
             />
