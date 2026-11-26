@@ -18,6 +18,14 @@ const project = mapDataVolleyMatchToOvsProject(parsed, { sourceName: 'demo.dvw' 
 const data = buildTeamReviewData([project], { teamName: 'Melodic Spikers' }, { withVideoLinks: false });
 const t = (key: string) => key;
 
+describe('team review positive reception', () => {
+  it('counts perfect and positive receptions together, like the match report', () => {
+    const { receive } = data.teamSummary;
+    expect(receive.positive).toBeGreaterThanOrEqual(receive.perfect);
+    expect(receive.positive).toBeLessThanOrEqual(receive.total);
+  });
+});
+
 describe('team review attack efficiency', () => {
   afterEach(() => { resetEfficiencyDefinitions(); reloadIndicatorSettings(); });
 

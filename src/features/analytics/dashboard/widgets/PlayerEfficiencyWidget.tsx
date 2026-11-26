@@ -127,7 +127,7 @@ export function PlayerEfficiencyWidget({
 
     receptionTotal: player.receive.total,
     receptionPerfect: player.receive.hash,
-    receptionPositive: player.receive.plus,
+    receptionPositive: player.receive.hash + player.receive.plus,
     receptionErrors: player.receive.equal,
     receptionEfficiency: getActiveIndicators().receptionEfficiency(player.receive),
     receptionPerfectPct: safeDivide(player.receive.hash, player.receive.total),

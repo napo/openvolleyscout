@@ -222,7 +222,8 @@ function accumulateSkillBreakdown(
 
   target.receive.total += source.receive.total;
   target.receive.perfect += source.receive.perfect;
-  target.receive.positive += source.receive.positive;
+  // Positive reception counts perfect (#) and positive (+), like the match report.
+  target.receive.positive += source.receive.perfect + source.receive.positive;
   target.receive.ok += source.receive.exclamation;
   target.receive.negative += source.receive.minus;
   target.receive.slash += source.receive.slash;

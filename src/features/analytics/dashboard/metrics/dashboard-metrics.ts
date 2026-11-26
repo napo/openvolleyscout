@@ -68,11 +68,11 @@ export function computeEfficiencyFromTeamStats(
 
     receptionTotal: qs.reception.total,
     receptionPerfect: qs.reception.perfect,
-    receptionPositive: qs.reception.positive,
+    receptionPositive: qs.reception.perfect + qs.reception.positive,
     receptionErrors: qs.reception.errors,
     receptionEfficiency: qs.reception.efficiency,
     receptionPerfectPct: qs.reception.perfectPercentage,
-    receptionPositivePct: safeDivide(qs.reception.positive, qs.reception.total),
+    receptionPositivePct: safeDivide(qs.reception.perfect + qs.reception.positive, qs.reception.total),
 
     attackAttempts: qs.attack.attempts,
     attackPoints: qs.attack.points,
@@ -118,11 +118,11 @@ export function computeEfficiencyFromSkillStats(
 
     receptionTotal: receive.total,
     receptionPerfect: receive.perfect,
-    receptionPositive: receive.positive,
+    receptionPositive: receive.perfect + receive.positive,
     receptionErrors,
     receptionEfficiency: getActiveIndicators().receptionEfficiency(receive),
     receptionPerfectPct: safeDivide(receive.perfect, receive.total),
-    receptionPositivePct: safeDivide(receive.positive, receive.total),
+    receptionPositivePct: safeDivide(receive.perfect + receive.positive, receive.total),
 
     attackAttempts: attack.total,
     attackPoints,
