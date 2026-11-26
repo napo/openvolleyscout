@@ -2,7 +2,7 @@ import { EmptyState } from '@src/components/EmptyState';
 import { choiceList } from '@src/lib/utils/choice-list';
 import { useMemo } from 'react';
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
-import { useTranslation } from '@src/i18n';
+import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { TeamSide } from '@src/domain/common/enums';
 import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
 import type { SetterDistributionServeType } from '@src/domain/opponent-report/types';
@@ -138,6 +138,19 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     [stats.setStats],
   );
 
+  // The name with the role in brackets, so the setters stand out among the other athletes.
+  const roleShortKeys: Partial<Record<string, TranslationKey>> = {
+    setter: 'roleShortSetter',
+    outside_hitter: 'roleShortOutside',
+    opposite: 'roleShortOpposite',
+    middle_blocker: 'roleShortMiddle',
+    libero: 'roleShortLibero',
+  };
+  const athleteLabel = (player: { jerseyNumber: number | string; playerName: string; role?: string }) => {
+    const roleKey = player.role ? roleShortKeys[player.role] : undefined;
+    return `${formatPlayerLabel(player.jerseyNumber, player.playerName)}${roleKey ? ` (${t(roleKey)})` : ''}`;
+  };
+
   const receiverOptions = useMemo(() => {
     const ids = new Set(
       sequences
@@ -148,9 +161,10 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
       .filter((player) => player.teamSide === filters.team && ids.has(player.playerId))
       .map((player) => ({
         playerId: player.playerId,
-        label: formatPlayerLabel(player.jerseyNumber, player.playerName),
+        label: athleteLabel(player),
+        highlight: player.role === 'setter',
       }));
-  }, [sequences, stats.playerStats, filters.team]);
+  }, [sequences, stats.playerStats, filters.team, t]);
 
   const setterOptions = useMemo(() => {
     const ids = new Set(
@@ -162,9 +176,10 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
       .filter((player) => player.teamSide === filters.team && ids.has(player.playerId))
       .map((player) => ({
         playerId: player.playerId,
-        label: formatPlayerLabel(player.jerseyNumber, player.playerName),
+        label: athleteLabel(player),
+        highlight: player.role === 'setter',
       }));
-  }, [sequences, stats.playerStats, filters.team]);
+  }, [sequences, stats.playerStats, filters.team, t]);
 
   // Sequences passing the reception filters (used by sequential view).
   const filteredSequences = useMemo(
@@ -246,7 +261,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           <FilterGroup title={t('sideOutFilterSetter')} active={choiceList(filters.setterPlayerId).length > 0}>
             <ChipSelect
               allLabel={all}
-              options={setterOptions.map((option) => ({ value: option.playerId, label: option.label }))}
+              options={setterOptions.map((option) => ({ value: option.playerId, label: option.label, highlight: option.highlight }))}
               selected={choiceList(filters.setterPlayerId)}
               onChange={(next) => setFilters({ ...filters, setterPlayerId: next })}
             />
@@ -256,7 +271,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           <FilterGroup title={t('sideOutFilterReceiver')} active={choiceList(filters.receiverPlayerId).length > 0}>
             <ChipSelect
               allLabel={all}
-              options={receiverOptions.map((option) => ({ value: option.playerId, label: option.label }))}
+              options={receiverOptions.map((option) => ({ value: option.playerId, label: option.label, highlight: option.highlight }))}
               selected={choiceList(filters.receiverPlayerId)}
               onChange={(next) => setFilters({ ...filters, receiverPlayerId: next })}
             />

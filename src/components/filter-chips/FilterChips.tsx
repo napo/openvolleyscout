@@ -56,6 +56,8 @@ export interface ChipOption<T> {
   icon?: ReactNode;
   /** Shows only the icon; the label is read on hover and by screen readers. */
   iconOnly?: boolean;
+  /** Marks the chip in yellow (for example the athletes whose role is setter). */
+  highlight?: boolean;
 }
 
 /** Zones as they sit on a half court, net at the top: front row 4 3 2, then 7 8 9, back row 5 6 1. */
@@ -99,7 +101,7 @@ export function ChipSelect<T extends string | number>({ options, selected, onCha
       <button
         key={String(option.value)}
         type="button"
-        className={`filter-chips__chip${option.iconOnly && option.icon ? ' filter-chips__chip--icon' : ''}${active ? ' is-active' : ''}`}
+        className={`filter-chips__chip${option.iconOnly && option.icon ? ' filter-chips__chip--icon' : ''}${option.highlight ? ' filter-chips__chip--highlight' : ''}${active ? ' is-active' : ''}`}
         aria-pressed={active}
         aria-label={option.iconOnly && option.icon ? option.label : undefined}
         title={option.title ?? (option.icon ? option.label : undefined)}

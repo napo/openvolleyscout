@@ -199,3 +199,20 @@
   background: var(--chip-negative);
   border-color: var(--chip-negative);
 }
+
+/* Setters among the athletes: yellow, readable in both themes. */
+.filter-chips__chip--highlight {
+  background: #fde68a;
+  border-color: #d4a106;
+  color: #422006;
+}
+
+.filter-chips__chip--highlight:hover {
+  background: #fcd34d;
+}
+
+.filter-chips__chip--highlight.is-active {
+  background: #b45309;
+  border-color: #b45309;
+  color: #ffffff;
+}
