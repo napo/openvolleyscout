@@ -1,13 +1,12 @@
 import type { PlayerRoleLookup } from '@src/domain/lineup/setter-after-substitution';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
-import { createActiveLineup, type ActiveLineup } from '@src/domain/lineup';
+import { canonicalPointEventIds, createCourtOpsReader } from '@src/domain/events/court-ops';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
 import { isRallyBreakPoint } from '../rally-phase/rally-phase-classifier';
 import { resolvePointWinnerFromTouch } from '@src/features/scouting/model/scoring-rules';
-import { rotateLineupBackward, rotateLineupForSideOut, shouldRotateLineupAfterPoint } from '@src/features/scouting/model/rally-transition';
-import { applyNormalSubstitutionToLineup, applyLiberoReplacementToLineup } from '@src/features/scouting/model/personnel';
+import { applyCourtOpToLineups, setterPositionOf, type CourtLineups } from '@src/features/scouting/model/rally-rotations';
 
 export interface PlayByPlayRow {
   id: string;
@@ -48,13 +47,8 @@ export function decisiveContacts(rally: RallyStats): PlayByPlayRow['details'] {
 export function buildPlayByPlay(stats: Pick<MatchStats, 'rallyStats' | 'setStats'>, eventLog: readonly MatchEvent[], roleOf?: PlayerRoleLookup): PlayByPlaySet[] {
   const seenIds = new Set<string>();
   const events = eventLog.filter((event) => { if (seenIds.has(event.id)) return false; seenIds.add(event.id); return true; });
-  const canonicalPoints = new Map<string, Extract<MatchEvent, { type: 'point_awarded' }>>();
-  events.forEach((event) => {
-    if (event.type !== 'point_awarded') return;
-    const key = `${event.setNumber}:${event.rallyNumber}`;
-    if ((canonicalPoints.get(key)?.createdAt ?? -Infinity) <= event.createdAt) canonicalPoints.set(key, event);
-  });
-  const canonicalEvents = events.filter((event) => event.type !== 'point_awarded' || canonicalPoints.get(`${event.setNumber}:${event.rallyNumber}`)?.id === event.id);
+  const canonicalPoints = canonicalPointEventIds(events);
+  const canonicalEvents = events.filter((event) => event.type !== 'point_awarded' || canonicalPoints.has(event.id));
   const setNumbers = new Set([...stats.setStats.map((set) => set.setNumber), ...stats.rallyStats.map((rally) => rally.setNumber)]);
   events.forEach((event) => { if ('setNumber' in event && typeof event.setNumber === 'number') setNumbers.add(event.setNumber); });
   return [...setNumbers].sort((a, b) => a - b).map((setNumber) => {
@@ -69,67 +63,51 @@ export function buildPlayByPlay(stats: Pick<MatchStats, 'rallyStats' | 'setStats
         event: { id: `derived-${setNumber}-${rally.rallyNumber}`, type: 'point_awarded', setNumber, rallyNumber: rally.rallyNumber, teamSide: rally.pointWinner!, createdAt: 0 } });
     });
     timeline.sort((a, b) => a.order - b.order);
-    let score = { home: 0, away: 0 };
-    let serving: TeamSide | null = null;
-    let lineups: Record<TeamSide, ActiveLineup | null> = { home: null, away: null };
+    // Score, serve and rotations follow the shared reading of the events (domain/events/court-ops),
+    // the same one behind the match report.
+    const court = createCourtOpsReader();
+    let lineups: CourtLineups = { home: null, away: null };
     const rows: PlayByPlayRow[] = [];
     const pointKeys = new Set<number>();
     let officialScore: PlayByPlaySet['finalScore'] | null = null;
-    const rotation = (side: TeamSide): number | null => {
-      const lineup = lineups[side];
-      return lineup?.setterPlayerId ? lineup.slots.find((slot) => slot.playerId === lineup.setterPlayerId)?.courtPosition ?? null : null;
+    const rotation = (side: TeamSide): number | null => setterPositionOf(lineups[side]) ?? null;
+    const applyToCourt = (event: MatchEvent) => {
+      for (const op of court.read(event)) lineups = applyCourtOpToLineups(lineups, op, roleOf);
     };
     for (const { event } of timeline) {
-      if (event.type === 'set_started') {
-        serving = event.servingTeam;
-        lineups = { home: createActiveLineup(event.homeLineup, { servingTeam: serving }), away: createActiveLineup(event.awayLineup, { servingTeam: serving }) };
-      } else if (event.type === 'set_ended') {
+      if (event.type === 'set_ended') {
         officialScore = { home: event.homeScore, away: event.awayScore };
-      } else if (event.type === 'substitution_made' || event.type === 'libero_replacement_made') {
-        const current = lineups[event.teamSide];
-        if (current) lineups[event.teamSide] = (event.type === 'substitution_made' ? applyNormalSubstitutionToLineup(current, event, roleOf) : applyLiberoReplacementToLineup(current, event)) ?? current;
-      } else if (event.type === 'setter_assigned') {
-        const current = lineups[event.teamSide];
-        if (current) lineups[event.teamSide] = { ...current, setterPlayerId: event.setterPlayerId };
       } else if (event.type === 'point_awarded' || event.type === 'red_card_point' || event.type === 'timeout_called' || event.type === 'manual_correction') {
         const isPoint = event.type === 'point_awarded';
         if (isPoint && pointKeys.has(event.rallyNumber!)) continue;
         const rally = 'rallyNumber' in event && event.rallyNumber ? byRally.get(event.rallyNumber) : undefined;
         const serveTouch = rally?.touches.find((touch) => touch.skill === 'serve' && touch.source !== 'inferred');
-        const beforeServing = serveTouch?.teamSide ?? serving;
+        const beforeServing = serveTouch?.teamSide ?? court.servingTeam;
         const firstTouch = isPoint ? rally?.touches[0] : undefined;
+        // The rotations the point (or the correction) was played in: before the event moves them.
         const rotations = {
           home: validRotation(firstTouch?.homeSetterPosition) ?? rotation('home'),
           away: validRotation(firstTouch?.awaySetterPosition) ?? rotation('away'),
         };
         const details = isPoint && rally ? decisiveContacts({ ...rally, pointWinner: event.teamSide }) : { home: null, away: null };
-        if (isPoint || event.type === 'red_card_point') {
-          if (isPoint) pointKeys.add(event.rallyNumber);
-          score = { ...score, [event.teamSide]: score[event.teamSide] + 1 };
-        }
-        if (event.type === 'manual_correction') {
-          if (event.correction === 'point_added') score = { ...score, [event.teamSide]: score[event.teamSide] + 1 };
-          if (event.correction === 'point_removed') score = { ...score, [event.teamSide]: Math.max(0, score[event.teamSide] - 1) };
-          const current = lineups[event.teamSide];
-          if (current && ['rotation_forward', 'rotation_backward'].includes(event.correction)) lineups[event.teamSide] = event.correction === 'rotation_forward' ? rotateLineupForSideOut(current) : rotateLineupBackward(current);
-          if (event.correction === 'serve_assigned') serving = event.teamSide;
-        }
+        if (isPoint) pointKeys.add(event.rallyNumber);
+        // A correction shows the court it leaves; a point shows who served it, so it rotates after its row.
+        if (!isPoint && event.type !== 'red_card_point') applyToCourt(event);
+        const score = isPoint || event.type === 'red_card_point'
+          ? { ...court.score, [event.teamSide]: court.score[event.teamSide] + 1 }
+          : court.score;
         rows.push({ id: event.id, kind: isPoint ? 'point' : event.type === 'red_card_point' ? 'penalty' : event.type === 'timeout_called' ? 'timeout' : 'correction',
           rallyNumber: event.rallyNumber, ...{ homeScore: score.home, awayScore: score.away }, teamSide: event.teamSide,
           servingTeam: beforeServing, serverId: serveTouch?.playerId ?? (beforeServing ? lineups[beforeServing]?.slots.find((slot) => slot.courtPosition === 1)?.playerId : undefined),
           breakPoint: isPoint && Boolean(rally) && isRallyBreakPoint({ ...rally!, servingTeam: beforeServing, pointWinner: event.teamSide }), rotations, details,
           ...(event.type === 'manual_correction' ? { correction: event.correction } : {}),
         });
-        if (isPoint || event.type === 'red_card_point') {
-          const skip = isPoint && event.skipRotation;
-          if (!skip && beforeServing && shouldRotateLineupAfterPoint(beforeServing, event.teamSide)) {
-            const current = lineups[event.teamSide];
-            if (current) lineups[event.teamSide] = rotateLineupForSideOut(current);
-          }
-          serving = event.teamSide;
-        }
+        if (isPoint || event.type === 'red_card_point') applyToCourt(event);
+      } else {
+        applyToCourt(event);
       }
     }
+    const score = court.score;
     const summary = stats.setStats.find((set) => set.setNumber === setNumber);
     const finalScore = officialScore ?? (summary && !rows.some((row) => row.kind === 'correction' || row.kind === 'penalty') ? { home: summary.homeScore, away: summary.awayScore } : score);
     return { setNumber, rows, pointCount: rows.filter((row) => row.kind === 'point').length,

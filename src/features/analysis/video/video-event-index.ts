@@ -4,6 +4,7 @@ import type { StartingLineup } from '@src/domain/lineup/types';
 import type { PlayerRoleLookup } from '@src/domain/lineup/setter-after-substitution';
 // Value import: relative on purpose (these tests run under ts-node, which cannot resolve @src/)
 import { resolveSetterAfterSubstitution } from '../../../domain/lineup/setter-after-substitution';
+import { createCourtOpsReader } from '../../../domain/events/court-ops';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { SetterDistributionServeType } from '@src/domain/opponent-report/types';
 // Value import: relative on purpose (these tests run under ts-node, which cannot resolve @src/)
@@ -93,9 +94,10 @@ function createRotationState(lineup: StartingLineup | undefined): RotationState 
   return { order, setterPlayerId: lineup.setterPlayerId };
 }
 
-function rotate(state: RotationState): void {
+function rotate(state: RotationState, direction: 'forward' | 'backward'): void {
   if (state.order.length < 6) return;
-  state.order.push(state.order.shift() as string);
+  if (direction === 'forward') state.order.push(state.order.shift() as string);
+  else state.order.unshift(state.order.pop() as string);
 }
 
 function getSetterPosition(state: RotationState): number | undefined {
@@ -424,31 +426,56 @@ export function buildVideoEventIndex(
   const entries: VideoEventEntry[] = [];
   const setNumbers = new Set<number>();
 
-  let homeScore = 0;
-  let awayScore = 0;
-  let servingTeam: TeamSide | null = null;
+  // Score, serve and rotations follow the shared reading of the events (domain/events/court-ops):
+  // red-card points, points without rotation and manual corrections count here as in the match report.
+  const court = createCourtOpsReader();
   let rotations: Record<TeamSide, RotationState> = {
     home: { order: [] },
     away: { order: [] },
   };
   let currentRallyEntries: VideoEventEntry[] = [];
+  const applyToCourt = (event: MatchEvent) => {
+    for (const op of court.read(event)) {
+      switch (op.kind) {
+        case 'set_start':
+          rotations = {
+            home: createRotationState(op.event.homeLineup),
+            away: createRotationState(op.event.awayLineup),
+          };
+          break;
+        case 'rotate':
+          rotate(rotations[op.teamSide], op.direction);
+          break;
+        case 'substitution':
+          replacePlayer(rotations[op.event.teamSide], op.event.playerOutId, op.event.playerInId, options?.roleOf);
+          break;
+        case 'libero': {
+          // A libero swap never changes the setter: swap the court slot only.
+          const rotation = rotations[op.event.teamSide];
+          const slot = rotation.order.indexOf(op.event.playerOutId);
+          if (slot >= 0) rotation.order[slot] = op.event.playerInId;
+          break;
+        }
+        case 'setter':
+          rotations[op.event.teamSide].setterPlayerId = op.event.setterPlayerId;
+          break;
+        default:
+          break;
+      }
+    }
+  };
 
   events.forEach((event) => {
     switch (event.type) {
       case 'set_started': {
-        homeScore = 0;
-        awayScore = 0;
-        servingTeam = event.servingTeam;
-        rotations = {
-          home: createRotationState(event.homeLineup),
-          away: createRotationState(event.awayLineup),
-        };
+        applyToCourt(event);
         setNumbers.add(event.setNumber);
         currentRallyEntries = [];
         break;
       }
       case 'touch_recorded': {
         const touch = event.touch;
+        const servingTeam = court.servingTeam;
         const homeSetterPosition = touch.homeSetterPosition ?? getSetterPosition(rotations.home);
         const awaySetterPosition = touch.awaySetterPosition ?? getSetterPosition(rotations.away);
         const entry: VideoEventEntry = {
@@ -456,8 +483,8 @@ export function buildVideoEventIndex(
           eventId: event.id,
           setNumber: touch.setNumber,
           rallyNumber: touch.rallyNumber,
-          homeScore,
-          awayScore,
+          homeScore: court.score.home,
+          awayScore: court.score.away,
           teamSide: touch.teamSide,
           playerId: touch.playerId,
           skill: touch.skill,
@@ -487,35 +514,12 @@ export function buildVideoEventIndex(
         applyRallyTiming(currentRallyEntries);
         linkRallyEntries(currentRallyEntries);
         currentRallyEntries = [];
-
-        if (event.teamSide === 'home') {
-          homeScore += 1;
-        } else {
-          awayScore += 1;
-        }
-
-        if (servingTeam && event.teamSide !== servingTeam && !event.skipRotation) {
-          rotate(rotations[event.teamSide]);
-        }
-        servingTeam = event.teamSide;
-        break;
-      }
-      case 'substitution_made': {
-        replacePlayer(rotations[event.teamSide], event.playerOutId, event.playerInId, options?.roleOf);
-        break;
-      }
-      case 'libero_replacement_made': {
-        // A libero swap never changes the setter: swap the court slot only.
-        const rotation = rotations[event.teamSide];
-        const slot = rotation.order.indexOf(event.playerOutId);
-        if (slot >= 0) rotation.order[slot] = event.playerInId;
-        break;
-      }
-      case 'setter_assigned': {
-        rotations[event.teamSide].setterPlayerId = event.setterPlayerId;
+        applyToCourt(event);
         break;
       }
       default:
+        // Substitutions, libero exchanges, setter changes, red-card points and manual corrections.
+        applyToCourt(event);
         break;
     }
   });

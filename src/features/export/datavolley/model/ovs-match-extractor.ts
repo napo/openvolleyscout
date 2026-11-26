@@ -1,4 +1,5 @@
 import { getAttackSubtypeOrDefault } from '../../../../domain/touch/types';
+import { createCourtOpsReader } from '../../../../domain/events/court-ops';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
@@ -24,11 +25,6 @@ type LineupState = {
   away: Array<number | undefined>;
   homeSetterPosition?: number;
   awaySetterPosition?: number;
-};
-
-type ScoreState = {
-  home: number;
-  away: number;
 };
 
 type TimedRowInput = Omit<DataVolleyScoutRow, 'time' | 'videoTime' | 'homeLineup' | 'awayLineup' | 'homeSetterPosition' | 'awaySetterPosition'> & {
@@ -702,8 +698,8 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
   const resolveTouchVideoSeconds = createTouchVideoResolver(project, videoSync);
   let currentSetNumber = 1;
   let currentLineup: LineupState | null = null;
-  let score: ScoreState = { home: 0, away: 0 };
-  let servingTeam: TeamSide | null = null;
+  // Score, serve and rotations follow the shared reading of the events (domain/events/court-ops).
+  const court = createCourtOpsReader();
   const emittedRallies = new Set<string>();
 
   const pushScoreRow = (
@@ -711,7 +707,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
     event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number; videoTimeSeconds?: number },
   ) => {
     rows.push(createTimedRow({
-      code: `${TEAM_MARKER[teamSide]}p${padNumber(score.home)}:${padNumber(score.away)}`,
+      code: `${TEAM_MARKER[teamSide]}p${padNumber(court.score.home)}:${padNumber(court.score.away)}`,
       timestamp: event.createdAt,
       // Recorded against the open video: where the rally ends (sync points,
       // when present, place the touches and the point follows them).
@@ -744,19 +740,6 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
     }));
   };
 
-  const awardPoint = (
-    teamSide: TeamSide,
-    event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number; videoTimeSeconds?: number },
-    skipRotation = false,
-  ) => {
-    score[teamSide] += 1;
-    pushScoreRow(teamSide, event);
-    if (servingTeam && servingTeam !== teamSide && !skipRotation) {
-      rotate(teamSide, 'forward', event);
-    }
-    servingTeam = teamSide;
-  };
-
   // The set-ending point does not rotate: the next set starts from its own lineup.
   const endsSet = (index: number) => (
     project.events.slice(index + 1).find((next) => next.type !== 'rally_ended')?.type === 'set_ended'
@@ -770,8 +753,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
     if (event.type === 'set_started') {
       currentSetNumber = event.setNumber;
       currentLineup = getLineupState(project, event);
-      score = { home: 0, away: 0 };
-      servingTeam = event.servingTeam;
+      court.read(event);
       const homeCaptain = getMatchRoster(project, 'home').find((player) => player.isCaptain);
       const awayCaptain = getMatchRoster(project, 'away').find((player) => player.isCaptain);
       const homeLineupPlayer = currentLineup.home.find((jersey): jersey is number => typeof jersey === 'number');
@@ -835,36 +817,14 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
       return;
     }
 
-    if (event.type === 'point_awarded') {
-      awardPoint(event.teamSide, event, event.skipRotation || endsSet(index));
-      return;
-    }
-
-    if (event.type === 'red_card_point') {
-      awardPoint(event.teamSide, event, endsSet(index));
-      return;
-    }
-
-    if (event.type === 'manual_correction') {
-      switch (event.correction) {
-        case 'point_added':
-          score[event.teamSide] += 1;
-          pushScoreRow(event.teamSide, event);
-          break;
-        case 'point_removed':
-          score[event.teamSide] = Math.max(0, score[event.teamSide] - 1);
-          pushScoreRow(event.teamSide, event);
-          break;
-        case 'rotation_forward':
-          rotate(event.teamSide, 'forward', event);
-          break;
-        case 'rotation_backward':
-          rotate(event.teamSide, 'backward', event);
-          break;
-        case 'serve_assigned':
-          // No DataVolley row: the next serve code says who serves.
-          servingTeam = event.teamSide;
-          break;
+    if (event.type === 'point_awarded' || event.type === 'red_card_point' || event.type === 'manual_correction') {
+      // A point writes its score row, then the rotation it causes ("*z4"). A manual correction
+      // writes the score or the rotation it changes; a new serving team has no DataVolley row:
+      // the next serve code says who serves.
+      const holdRotation = event.type !== 'manual_correction' && endsSet(index);
+      for (const op of court.read(event, { skipRotation: holdRotation })) {
+        if (op.kind === 'score') pushScoreRow(op.teamSide, event);
+        else if (op.kind === 'rotate') rotate(op.teamSide, op.direction, event);
       }
       return;
     }

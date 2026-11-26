@@ -1,11 +1,56 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { TeamSide } from '@src/domain/common/enums';
+import { canonicalPointEventIds, createCourtOpsReader, type CourtOp } from '@src/domain/events/court-ops';
 import type { MatchEvent } from '@src/domain/events/types';
 import { createActiveLineup, type ActiveLineup } from '@src/domain/lineup';
 import type { PlayerRoleLookup } from '@src/domain/lineup/setter-after-substitution';
 import { applyLiberoReplacementToLineup, applyNormalSubstitutionToLineup } from './personnel';
 import { rotateLineupBackward, rotateLineupForSideOut } from './rally-transition';
 import type { RallyStats, RotationNumber } from './match-stats';
+
+export type CourtLineups = Record<TeamSide, ActiveLineup | null>;
+
+/**
+ * One court operation (see domain/events/court-ops) on the active lineups, with the same personnel
+ * rules as the live court. Score and serve operations leave the lineups as they are.
+ */
+export function applyCourtOpToLineups(lineups: CourtLineups, op: CourtOp, roleOf?: PlayerRoleLookup): CourtLineups {
+  switch (op.kind) {
+    case 'set_start':
+      return {
+        home: createActiveLineup(op.event.homeLineup, { servingTeam: op.event.servingTeam }),
+        away: createActiveLineup(op.event.awayLineup, { servingTeam: op.event.servingTeam }),
+      };
+    case 'rotate': {
+      const current = lineups[op.teamSide];
+      if (!current) return lineups;
+      return { ...lineups, [op.teamSide]: op.direction === 'forward' ? rotateLineupForSideOut(current) : rotateLineupBackward(current) };
+    }
+    case 'substitution': {
+      const current = lineups[op.event.teamSide];
+      if (!current) return lineups;
+      return { ...lineups, [op.event.teamSide]: applyNormalSubstitutionToLineup(current, op.event, roleOf) ?? current };
+    }
+    case 'libero': {
+      const current = lineups[op.event.teamSide];
+      if (!current) return lineups;
+      return { ...lineups, [op.event.teamSide]: applyLiberoReplacementToLineup(current, op.event) ?? current };
+    }
+    case 'setter': {
+      const current = lineups[op.event.teamSide];
+      if (!current) return lineups;
+      return { ...lineups, [op.event.teamSide]: { ...current, setterPlayerId: op.event.setterPlayerId } };
+    }
+    default:
+      return lineups;
+  }
+}
+
+/** The rotation of a team: the court position of its setter. */
+export function setterPositionOf(lineup: ActiveLineup | null): RotationNumber | undefined {
+  if (!lineup?.setterPlayerId) return undefined;
+  return lineup.slots.find((slot) => slot.playerId === lineup.setterPlayerId)?.courtPosition;
+}
 
 export type RallyRotations = ReadonlyMap<string, Partial<Record<TeamSide, RotationNumber>>>;
 
@@ -16,13 +61,12 @@ export function buildRallyRotations(
   rallies: readonly RallyStats[] = [],
 ): RallyRotations {
   const result = new Map<string, Partial<Record<TeamSide, RotationNumber>>>();
-  let lineups: Record<TeamSide, ActiveLineup | null> = { home: null, away: null };
-  let servingTeam: TeamSide | null = null;
-  const points = new Map<string, Extract<MatchEvent, { type: 'point_awarded' }>>();
+  let lineups: CourtLineups = { home: null, away: null };
+  const court = createCourtOpsReader();
+  const canonicalPoints = canonicalPointEventIds(events);
+  const points = new Set<string>();
   for (const event of events) {
-    if (event.type !== 'point_awarded') continue;
-    const key = `${event.setNumber}:${event.rallyNumber}`;
-    if ((points.get(key)?.createdAt ?? -Infinity) <= event.createdAt) points.set(key, event);
+    if (event.type === 'point_awarded') points.add(`${event.setNumber}:${event.rallyNumber}`);
   }
   // Older imports may end rallies with a terminal touch alone. Apply that
   // derived point immediately after the last touch, before any substitutions.
@@ -40,7 +84,8 @@ export function buildRallyRotations(
       id: `derived-rotation-${key}`, type: 'point_awarded', createdAt: 0,
       setNumber: rally.setNumber, rallyNumber: rally.rallyNumber, teamSide: rally.pointWinner,
     };
-    points.set(key, event);
+    points.add(key);
+    canonicalPoints.add(event.id);
     timeline.push({ event, order: lastTouch + 0.5 });
   }
   timeline.sort((left, right) => left.order - right.order);
@@ -49,62 +94,23 @@ export function buildRallyRotations(
     if (result.has(key)) return;
     const rotations: Partial<Record<TeamSide, RotationNumber>> = {};
     for (const side of ['home', 'away'] as const) {
-      const lineup = lineups[side];
-      const position = lineup?.slots.find((slot) => slot.playerId === lineup.setterPlayerId)?.courtPosition;
+      const position = setterPositionOf(lineups[side]);
       if (position) rotations[side] = position;
     }
     result.set(key, rotations);
   };
 
   for (const { event } of timeline) {
-    switch (event.type) {
-      case 'set_started':
-        servingTeam = event.servingTeam;
-        lineups = {
-          home: createActiveLineup(event.homeLineup, { servingTeam }),
-          away: createActiveLineup(event.awayLineup, { servingTeam }),
-        };
-        break;
-      case 'substitution_made':
-      case 'libero_replacement_made': {
-        const current = lineups[event.teamSide];
-        if (current) lineups[event.teamSide] = (event.type === 'substitution_made'
-          ? applyNormalSubstitutionToLineup(current, event, roleOf)
-          : applyLiberoReplacementToLineup(current, event)) ?? current;
-        break;
-      }
-      case 'setter_assigned': {
-        const current = lineups[event.teamSide];
-        if (current) lineups[event.teamSide] = { ...current, setterPlayerId: event.setterPlayerId };
-        break;
-      }
-      case 'touch_recorded':
-        snapshot(event.touch.setNumber, event.touch.rallyNumber);
-        break;
-      case 'point_awarded':
-      case 'red_card_point': {
-        if (event.type === 'point_awarded') {
-          if (points.get(`${event.setNumber}:${event.rallyNumber}`)?.id !== event.id) break;
-          snapshot(event.setNumber, event.rallyNumber);
-        }
-        const skip = event.type === 'point_awarded' && event.skipRotation;
-        const current = lineups[event.teamSide];
-        if (current && servingTeam && servingTeam !== event.teamSide && !skip) {
-          lineups[event.teamSide] = rotateLineupForSideOut(current);
-        }
-        servingTeam = event.teamSide;
-        break;
-      }
-      case 'manual_correction': {
-        const current = lineups[event.teamSide];
-        if (current && event.correction === 'rotation_forward') lineups[event.teamSide] = rotateLineupForSideOut(current);
-        if (current && event.correction === 'rotation_backward') lineups[event.teamSide] = rotateLineupBackward(current);
-        if (event.correction === 'serve_assigned') servingTeam = event.teamSide;
-        break;
-      }
-      default:
-        break;
+    if (event.type === 'touch_recorded') {
+      snapshot(event.touch.setNumber, event.touch.rallyNumber);
+      continue;
     }
+    if (event.type === 'point_awarded') {
+      // A rally keeps one point: the others in the log neither count nor rotate.
+      if (!canonicalPoints.has(event.id)) continue;
+      snapshot(event.setNumber, event.rallyNumber);
+    }
+    for (const op of court.read(event)) lineups = applyCourtOpToLineups(lineups, op, roleOf);
   }
   return result;
 }
