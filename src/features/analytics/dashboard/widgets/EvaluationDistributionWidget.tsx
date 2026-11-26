@@ -52,7 +52,6 @@ function getEvalCount(stats: SkillStats, ev: SkillEvaluation): number {
 type TooltipItem = { dataKey?: string | number; value?: number; payload?: Record<string, number>; color?: string };
 
 function EvalTooltip({ active, payload, skill }: { active?: boolean; payload?: TooltipItem[]; skill: TrackedSkill }) {
-  const { t } = useTranslation();
   if (!active || !payload?.length) return null;
   return (
     <div className="perf-dashboard__eval-tooltip">

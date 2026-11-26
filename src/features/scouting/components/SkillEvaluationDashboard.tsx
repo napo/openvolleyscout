@@ -43,7 +43,6 @@ function DistributionTooltip({
   payload?: TooltipPayloadItem[];
   skill: SkillType;
 }) {
-  const { t } = useTranslation();
   if (!active || !payload?.length) {
     return null;
   }
