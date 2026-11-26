@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.50.0 - 2026-11-26
+
+### Added
+- New match: in "Who is on court at the start of the set?", once you mark the setter, the two positions the app will treat as middle blockers get a small C, and a line below names them. The libero comes in for these two athletes in the back row, so if they are not your middles you see it before you start. If the team list already gives the middle blocker role to other athletes, the line turns red. The middles follow the role order of the reception system assigned to your team, as during scouting.
+- Set lineup: a warning appears when the two middle blockers are next to each other instead of diagonal (P1-P4, P2-P5, P3-P6). This almost always means positions 2 and 4 were swapped when typing the lineup.
+- Set lineup: when the libero is set to come in automatically and the team list gives no middle blocker role to the athletes marked as middles, a warning names them and asks you to check, because a wrong guess sends the libero in for an outside hitter.
+
+### Changed
+- Set lineup: when you scout with the vertical court, the small court in the lineup screen is turned the same way, with the net at the top, P4 on the left and P2 on the right, so the positions match what you see while scouting.
+
 ## 0.49.0 - 2026-11-25
 
 ### Added
