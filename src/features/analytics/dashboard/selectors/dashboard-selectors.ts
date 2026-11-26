@@ -15,7 +15,7 @@ import {
   updateSkillStats,
 } from '@src/features/scouting/model/match-stats';
 import { filterTouchesByPhase } from '../../rally-phase/rally-phase-classifier';
-import type { DashboardFilters } from '../filters/dashboard-filters';
+import { baseCodeList, type DashboardFilters } from '../filters/dashboard-filters';
 import { filterTouchesByRallyContext, hasRallyContextFilter, type RallyContextFilters } from './rally-context-filters';
 
 function isTrackedSkill(skill: string): skill is TrackedSkill {
@@ -69,7 +69,7 @@ export function pickRallyContextFilters(filters: DashboardFilters): RallyContext
     server: filters.server,
     receiver: filters.receiver,
     attacker: filters.attacker,
-    base: filters.base ?? 'all',
+    base: baseCodeList(filters.base),
   };
 }
 

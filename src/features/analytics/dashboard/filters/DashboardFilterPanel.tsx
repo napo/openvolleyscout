@@ -12,6 +12,7 @@ import { getAvailablePlayers, getAvailableSets, type PlayerOption } from '../sel
 import {
   ALL_EVALUATIONS,
   PLAYER_ROLES,
+  baseCodeList,
   TOUCH_PHASES,
   getActiveFilterCount,
   type DashboardFilters,
@@ -222,13 +223,12 @@ export function DashboardFilterPanel({
         </FilterGroup>
 
         {baseCodes.length > 0 ? (
-          <FilterGroup title={t('attackerViewBaseLabel')} active={(filters.base ?? 'all') !== 'all'}>
+          <FilterGroup title={t('attackerViewBaseLabel')} active={baseCodeList(filters.base).length > 0}>
             <ChipSelect
-              single
               allLabel={all}
               options={baseCodes.map((value) => ({ value, label: value }))}
-              selected={(filters.base ?? 'all') === 'all' ? [] : [filters.base]}
-              onChange={(next) => updateFilter('base', next[0] ?? 'all')}
+              selected={baseCodeList(filters.base)}
+              onChange={(next) => updateFilter('base', next)}
             />
           </FilterGroup>
         ) : null}

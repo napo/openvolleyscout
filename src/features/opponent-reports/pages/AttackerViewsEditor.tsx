@@ -221,7 +221,8 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
                       <SplitToggle separate={view.splitBy === 'attackZones'} onChange={(separate) => patchView(index, { splitBy: separate ? 'attackZones' : undefined })} />
                       <ChipSelect
                         allLabel={all}
-                        options={ATTACK_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
+                        layout="court"
+            options={ATTACK_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
                         selected={view.attackZones ?? []}
                         onChange={(next) => setField(index, 'attackZones', next)}
                       />

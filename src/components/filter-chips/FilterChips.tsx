@@ -58,11 +58,19 @@ export interface ChipOption<T> {
   iconOnly?: boolean;
 }
 
+/** Zones as they sit on a half court, net at the top: front row 4 3 2, then 7 8 9, back row 5 6 1. */
+const COURT_ZONE_ORDER = ['4', '3', '2', '7', '8', '9', '5', '6', '1'] as const;
+/** Serve start zones along the end line, left to right as seen from behind the server. */
+const BASELINE_ZONE_ORDER = ['5', '7', '6', '9', '1'] as const;
+
 /**
  * Several values at once; none chosen means all. With `single`, one value at a time.
  * Without `allLabel` there is no "All" chip and, with `single`, a value always stays chosen.
+ * The "All" chip sits on its own row, above the values. With `layout="court"` the values are
+ * DataVolley zones drawn as a 3x3 half court (net at the top); with `layout="baseline"` they are
+ * serve start zones along the end line.
  */
-export function ChipSelect<T extends string | number>({ options, selected, onChange, allLabel, label, single = false }: {
+export function ChipSelect<T extends string | number>({ options, selected, onChange, allLabel, label, single = false, layout = 'row' }: {
   options: readonly ChipOption<T>[];
   selected: readonly T[];
   onChange: (next: T[]) => void;
@@ -70,6 +78,7 @@ export function ChipSelect<T extends string | number>({ options, selected, onCha
   /** A small label before the chips, when a group holds several rows. */
   label?: string;
   single?: boolean;
+  layout?: 'row' | 'court' | 'baseline';
 }) {
   const toggle = (value: T) => {
     if (single) {
@@ -84,36 +93,51 @@ export function ChipSelect<T extends string | number>({ options, selected, onCha
     // Every value chosen is the same as none: back to "All".
     onChange(next.length === options.length ? [] : next);
   };
-  return (
-    <div className="filter-chips__row">
-      {label ? <span className="filter-chips__row-label">{label}</span> : null}
-      {allLabel !== undefined ? (
-        <button
-          type="button"
-          className={`filter-chips__chip${selected.length === 0 ? ' is-active' : ''}`}
-          aria-pressed={selected.length === 0}
-          onClick={() => onChange([])}
-        >
-          {allLabel}
-        </button>
-      ) : null}
-      {options.map((option) => {
-        const active = selected.includes(option.value);
-        return (
-          <button
-            key={String(option.value)}
-            type="button"
-            className={`filter-chips__chip${option.iconOnly && option.icon ? ' filter-chips__chip--icon' : ''}${active ? ' is-active' : ''}`}
-            aria-pressed={active}
-            aria-label={option.iconOnly && option.icon ? option.label : undefined}
-            title={option.title ?? (option.icon ? option.label : undefined)}
-            onClick={() => toggle(option.value)}
-          >
-            {option.icon ? <span className="filter-chips__icon" aria-hidden="true">{option.icon}</span> : null}
-            {option.iconOnly && option.icon ? null : option.label}
-          </button>
-        );
+  const chip = (option: ChipOption<T>) => {
+    const active = selected.includes(option.value);
+    return (
+      <button
+        key={String(option.value)}
+        type="button"
+        className={`filter-chips__chip${option.iconOnly && option.icon ? ' filter-chips__chip--icon' : ''}${active ? ' is-active' : ''}`}
+        aria-pressed={active}
+        aria-label={option.iconOnly && option.icon ? option.label : undefined}
+        title={option.title ?? (option.icon ? option.label : undefined)}
+        onClick={() => toggle(option.value)}
+      >
+        {option.icon ? <span className="filter-chips__icon" aria-hidden="true">{option.icon}</span> : null}
+        {option.iconOnly && option.icon ? null : option.label}
+      </button>
+    );
+  };
+  const zoneOrder = layout === 'court' ? COURT_ZONE_ORDER : layout === 'baseline' ? BASELINE_ZONE_ORDER : null;
+  const values = zoneOrder ? (
+    <div className={`filter-chips__zones filter-chips__zones--${layout}`}>
+      {zoneOrder.map((zone) => {
+        const option = options.find((item) => String(item.value) === zone);
+        return option ? chip(option) : <span key={zone} className="filter-chips__zone-empty" aria-hidden="true" />;
       })}
+    </div>
+  ) : (
+    <div className="filter-chips__row">{options.map(chip)}</div>
+  );
+  if (!label && allLabel === undefined) return values;
+  return (
+    <div className="filter-chips__select">
+      <div className="filter-chips__row">
+        {label ? <span className="filter-chips__row-label">{label}</span> : null}
+        {allLabel !== undefined ? (
+          <button
+            type="button"
+            className={`filter-chips__chip${selected.length === 0 ? ' is-active' : ''}`}
+            aria-pressed={selected.length === 0}
+            onClick={() => onChange([])}
+          >
+            {allLabel}
+          </button>
+        ) : null}
+      </div>
+      {values}
     </div>
   );
 }
@@ -154,47 +178,51 @@ export function EvaluationChips({ skill, selected, onChange, allLabel, label, ev
     const next = selected.includes(evaluation) ? selected.filter((item) => item !== evaluation) : [...selected, evaluation];
     onChange(next.length === scale.length ? [] : next);
   };
+  // "All" and the groups of symbols (positive, negative) on the first row, the symbols on the second.
   return (
-    <div className="filter-chips__row">
-      {label ? <span className="filter-chips__row-label">{label}</span> : null}
-      <button
-        type="button"
-        className={`filter-chips__chip${selected.length === 0 ? ' is-active' : ''}`}
-        aria-pressed={selected.length === 0}
-        onClick={() => onChange([])}
-      >
-        {allLabel}
-      </button>
-      {presets.map((preset) => {
-        const active = isPreset(preset.value);
-        return (
-          <button
-            key={preset.label}
-            type="button"
-            className={`filter-chips__chip${active ? ' is-active' : ''}`}
-            aria-pressed={active}
-            onClick={() => onChange(scale.filter((evaluation) => preset.value.includes(evaluation)))}
-          >
-            {preset.label}
-          </button>
-        );
-      })}
-      <span className="filter-chips__divider" aria-hidden="true" />
-      {scale.map((evaluation) => {
-        const active = selected.includes(evaluation);
-        return (
-          <button
-            key={evaluation}
-            type="button"
-            className={`filter-chips__chip filter-chips__chip--eval${active ? ' is-active' : ''}`}
-            style={evaluationChipStyle(skill, evaluation, active)}
-            aria-pressed={active}
-            onClick={() => toggle(evaluation)}
-          >
-            {evaluation}
-          </button>
-        );
-      })}
+    <div className="filter-chips__select">
+      <div className="filter-chips__row">
+        {label ? <span className="filter-chips__row-label">{label}</span> : null}
+        <button
+          type="button"
+          className={`filter-chips__chip${selected.length === 0 ? ' is-active' : ''}`}
+          aria-pressed={selected.length === 0}
+          onClick={() => onChange([])}
+        >
+          {allLabel}
+        </button>
+        {presets.map((preset) => {
+          const active = isPreset(preset.value);
+          return (
+            <button
+              key={preset.label}
+              type="button"
+              className={`filter-chips__chip${active ? ' is-active' : ''}`}
+              aria-pressed={active}
+              onClick={() => onChange(scale.filter((evaluation) => preset.value.includes(evaluation)))}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="filter-chips__row">
+        {scale.map((evaluation) => {
+          const active = selected.includes(evaluation);
+          return (
+            <button
+              key={evaluation}
+              type="button"
+              className={`filter-chips__chip filter-chips__chip--eval${active ? ' is-active' : ''}`}
+              style={evaluationChipStyle(skill, evaluation, active)}
+              aria-pressed={active}
+              onClick={() => toggle(evaluation)}
+            >
+              {evaluation}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -126,7 +126,8 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
             <ChipSelect
               label={t('videoFilterServeStartZone')}
               allLabel={all}
-              options={VIDEO_FILTER_SERVE_START_ZONES.map((value) => ({ value, label: value }))}
+              layout="baseline"
+            options={VIDEO_FILTER_SERVE_START_ZONES.map((value) => ({ value, label: value }))}
               selected={attributes.serveStartZones ?? []}
               onChange={(serveStartZones) => patchAttributes(key, { serveStartZones })}
             />
@@ -136,6 +137,7 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
           <ChipSelect
             label={t('sideOutFilterReceptionZone')}
             allLabel={all}
+            layout="court"
             options={VIDEO_FILTER_RECEPTION_ZONES.map((value) => ({ value, label: value }))}
             selected={attributes.targetZones ?? []}
             onChange={(targetZones) => patchAttributes(key, { targetZones })}
@@ -153,7 +155,8 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
             <ChipSelect
               label={t('opponentReportAttackZone')}
               allLabel={all}
-              options={ATTACK_ZONES.map((value) => ({ value, label: value }))}
+              layout="court"
+            options={ATTACK_ZONES.map((value) => ({ value, label: value }))}
               selected={attributes.attackZones ?? []}
               onChange={(attackZones) => patchAttributes(key, { attackZones })}
             />

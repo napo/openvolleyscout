@@ -1,5 +1,6 @@
 import { EmptyState } from '@src/components/EmptyState';
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { choiceList } from '@src/lib/utils/choice-list';
 import { useMemo, useState } from 'react';
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useTranslation, type TranslationKey } from '@src/i18n';
@@ -214,14 +215,13 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
           </FilterGroup>
           <FilterGroup title={t('zoneAnalysisPhase')} active={filters.phase !== 'all'}>
             <ChipSelect
-              single
               allLabel={all}
               options={[
                 { value: 'reception', label: t('zoneAnalysisPhaseReception') },
                 { value: 'transition', label: t('zoneAnalysisPhaseTransition') },
               ]}
               selected={filters.phase === 'all' ? [] : [filters.phase]}
-              onChange={(next) => update({ phase: (next[0] ?? 'all') as ZoneAnalysisPhase })}
+              onChange={(next) => update({ phase: (next.length === 1 ? next[0] : 'all') as ZoneAnalysisPhase })}
             />
           </FilterGroup>
           {setNumbers.length > 1 ? (
@@ -253,13 +253,12 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
             </FilterGroup>
           ) : null}
           {attackerOptions.length > 0 ? (
-            <FilterGroup title={t('zoneAnalysisPlayer')} active={filters.playerId !== 'all'}>
+            <FilterGroup title={t('zoneAnalysisPlayer')} active={choiceList(filters.playerId).length > 0}>
               <ChipSelect
-                single
                 allLabel={all}
                 options={attackerOptions}
-                selected={filters.playerId === 'all' ? [] : [filters.playerId]}
-                onChange={(next) => update({ playerId: next[0] ?? 'all' })}
+                selected={choiceList(filters.playerId)}
+                onChange={(next) => update({ playerId: next })}
               />
             </FilterGroup>
           ) : null}

@@ -12,6 +12,7 @@
  *
  * Runs under ts-node too: relative and type-only imports only.
  */
+import { matchesChoice } from '@src/lib/utils/choice-list';
 import type { SkillEvaluation, TeamSide } from '../../../domain/common/enums';
 import type { BallTouch } from '../../../domain/touch/types';
 import { hasPlaceholderZones } from '../../../domain/touch/types';
@@ -65,7 +66,8 @@ export interface ZoneAnalysisFilters {
   /** Sets and rotations studied; an empty list means all of them. */
   setNumbers: number[];
   rotations: RotationNumber[];
-  playerId: 'all' | string;
+  /** The attackers studied (empty or 'all' = everyone; older versions saved one id). */
+  playerId: string | string[];
   /** Attacker roles kept (empty = every role). */
   roles: RoleGroup[];
   evaluations: SkillEvaluation[];
@@ -183,7 +185,7 @@ export function filterZoneAnalysisAttacks(
     if (filters.phase !== 'all' && attack.phase !== filters.phase) return false;
     if (filters.setNumbers.length > 0 && !filters.setNumbers.includes(attack.setNumber)) return false;
     if (filters.rotations.length > 0 && (attack.rotation === null || !filters.rotations.includes(attack.rotation))) return false;
-    if (filters.playerId !== 'all' && attack.touch.playerId !== filters.playerId) return false;
+    if (!matchesChoice(filters.playerId, attack.touch.playerId)) return false;
     if (filters.evaluations.length > 0
       && (!attack.touch.evaluation || !filters.evaluations.includes(attack.touch.evaluation))) return false;
     return true;

@@ -1,6 +1,7 @@
 import type { PlayerRole, TeamSide, SkillEvaluation } from '@src/domain/common/enums';
 import type { TrackedSkill, RotationNumber } from '@src/features/scouting/model/match-stats';
 import type { TouchPhase } from '../../rally-phase/rally-phase-classifier';
+import { choiceList } from '@src/lib/utils/choice-list';
 
 export type DashboardTeamFilter = 'all' | TeamSide;
 /**
@@ -23,7 +24,8 @@ export type DashboardScoreRangeFilter = ScoreSituation[];
 export type DashboardServerFilter = 'all' | string;  // playerId of server
 export type DashboardReceiverFilter = 'all' | string;  // playerId of receiver
 export type DashboardAttackerFilter = 'all' | string;  // playerId of attacker
-export type DashboardBaseFilter = 'all' | string;  // base / combination code (K1...Kn, X5...)
+/** Base / combination codes (K1...Kn, X5...), several at once; empty = all. */
+export type DashboardBaseFilter = string[];
 
 export const ALL_EVALUATIONS: readonly SkillEvaluation[] = ['=', '/', '!', '-', '+', '#'];
 
@@ -72,7 +74,7 @@ export function createDefaultFilters(): DashboardFilters {
     server: 'all',
     receiver: 'all',
     attacker: 'all',
-    base: 'all',
+    base: [],
   };
 }
 
@@ -81,6 +83,9 @@ export function matchesAny<T>(selected: readonly T[] | undefined, value: T | nul
   if (!selected || selected.length === 0) return true;
   return value !== null && value !== undefined && selected.includes(value);
 }
+
+/** The base codes chosen, also from the single value ('all' or one code) of older versions. */
+export const baseCodeList = choiceList;
 
 /** One value, 'all' or a list, as a list (what older shared links and saved filters hold). */
 function toList<T>(value: unknown, isValid: (item: unknown) => item is T): T[] {
@@ -99,6 +104,7 @@ export function normalizeDashboardFilters<T extends DashboardFilters>(filters: T
     set: toList(raw.set, (item): item is number => typeof item === 'number' && Number.isFinite(item)),
     rallyPhase: toList(raw.rallyPhase, (item): item is TouchPhase => typeof item === 'string' && item !== 'all'),
     rotation: toList(raw.rotation, (item): item is RotationNumber => typeof item === 'number' && item >= 1 && item <= 6),
+    base: baseCodeList(raw.base),
     scoreRange: toList(raw.scoreRange, (item): item is ScoreSituation => item === 'tied' || item === 'leading' || item === 'trailing' || item === 'clutch'),
   };
 }
@@ -123,7 +129,7 @@ export function isDefaultFilters(filters: DashboardFilters): boolean {
     && filters.server === 'all'
     && filters.receiver === 'all'
     && filters.attacker === 'all'
-    && (filters.base ?? 'all') === 'all'
+    && baseCodeList(filters.base).length === 0
   );
 }
 
@@ -191,7 +197,7 @@ export function getActiveFilterCount(filters: DashboardFilters): number {
     filters.server !== 'all',
     filters.receiver !== 'all',
     filters.attacker !== 'all',
-    (filters.base ?? 'all') !== 'all',
+    baseCodeList(filters.base).length > 0,
   ].filter(Boolean).length;
 }
 

@@ -2,7 +2,7 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
-import { matchesAny, type DashboardFilters, type ScoreSituation } from '../filters/dashboard-filters';
+import { baseCodeList, matchesAny, type DashboardFilters, type ScoreSituation } from '../filters/dashboard-filters';
 import { getScoreSituationSettings, isLateInSet } from '../../score-situation/score-situation-settings';
 import { rallyBaseCodes } from './base-code';
 
@@ -46,7 +46,7 @@ export function hasRallyContextFilter(filters: Partial<RallyContextFilters>): bo
     || (filters.server ?? 'all') !== 'all'
     || (filters.receiver ?? 'all') !== 'all'
     || (filters.attacker ?? 'all') !== 'all'
-    || (filters.base ?? 'all') !== 'all';
+    || baseCodeList(filters.base).length > 0;
 }
 
 function playerDid(rally: RallyStats, skill: BallTouch['skill'], playerId: string): boolean {
@@ -73,7 +73,12 @@ export function rallyMatchesContext(
   if ((filters.server ?? 'all') !== 'all' && !playerDid(rally, 'serve', filters.server!)) return false;
   if ((filters.receiver ?? 'all') !== 'all' && !playerDid(rally, 'receive', filters.receiver!)) return false;
   if ((filters.attacker ?? 'all') !== 'all' && !playerDid(rally, 'attack', filters.attacker!)) return false;
-  if ((filters.base ?? 'all') !== 'all' && !rallyBaseCodes(rally.touches, teamSide).has(filters.base!)) return false;
+  // Several bases: the rally passes when the team played any of them.
+  const bases = baseCodeList(filters.base);
+  if (bases.length > 0) {
+    const played = rallyBaseCodes(rally.touches, teamSide);
+    if (!bases.some((code) => played.has(code))) return false;
+  }
   return true;
 }
 

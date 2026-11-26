@@ -1,4 +1,5 @@
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
+import { matchesChoice } from '@src/lib/utils/choice-list';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
 // Value imports must be relative (ts-node/esm cannot resolve @src/ at runtime)
@@ -109,7 +110,8 @@ export interface SideOutStudyFilters {
   /** The sets studied; empty = every set. */
   setNumbers: number[];
   setterPosition: 'all' | number;
-  setterPlayerId: 'all' | string;
+  /** The setters studied (empty or 'all' = every setter; older versions saved one id). */
+  setterPlayerId: string | string[];
   receptionEvaluations: SkillEvaluation[];
   attackEvaluations: SkillEvaluation[];
   attackBallTypes: SideOutAttackBallType[];
@@ -119,8 +121,8 @@ export interface SideOutStudyFilters {
   serveTypes: SetterDistributionServeType[];
   /** Zones the serve went to / was received in, i.e. the serve direction (all nine = no filter). */
   receptionZones: string[];
-  /** The player who received. */
-  receiverPlayerId: 'all' | string;
+  /** The players who received (empty or 'all' = everyone; older versions saved one id). */
+  receiverPlayerId: string | string[];
 }
 
 export function createDefaultSideOutStudyFilters(team: TeamSide = 'home'): SideOutStudyFilters {
@@ -303,7 +305,7 @@ function matchesReceptionFilters(sequence: SideOutSequence, filters: SideOutStud
   if (sequence.teamSide !== filters.team) return false;
   if (filters.setNumbers.length > 0 && !filters.setNumbers.includes(sequence.setNumber)) return false;
   if (filters.setterPosition !== 'all' && sequence.setterPosition !== filters.setterPosition) return false;
-  if (filters.setterPlayerId !== 'all' && sequence.setterPlayerId !== filters.setterPlayerId) return false;
+  if (!matchesChoice(filters.setterPlayerId, sequence.setterPlayerId)) return false;
 
   if (
     filters.receptionEvaluations.length < SIDEOUT_EVALUATIONS.length
@@ -332,8 +334,7 @@ function matchesReceptionFilters(sequence: SideOutSequence, filters: SideOutStud
     if (!zone || !receptionZones.includes(zone)) return false;
   }
 
-  const receiverPlayerId = filters.receiverPlayerId ?? 'all';
-  if (receiverPlayerId !== 'all' && sequence.receive.playerId !== receiverPlayerId) return false;
+  if (!matchesChoice(filters.receiverPlayerId, sequence.receive.playerId)) return false;
 
   return true;
 }

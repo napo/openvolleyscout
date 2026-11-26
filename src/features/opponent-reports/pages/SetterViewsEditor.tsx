@@ -214,7 +214,8 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                     <SplitToggle separate={view.splitBy === 'serveStartZones'} onChange={(separate) => patchView(index, { splitBy: separate ? 'serveStartZones' : undefined })} />
                     <ChipSelect
                       allLabel={all}
-                      options={SERVE_START_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
+                      layout="baseline"
+            options={SERVE_START_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
                       selected={view.serveStartZones ?? []}
                       onChange={(next) => patchView(index, { serveStartZones: next.length > 0 ? next : undefined })}
                     />
@@ -224,7 +225,8 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                     <SplitToggle separate={view.splitBy === 'receptionZones'} onChange={(separate) => patchView(index, { splitBy: separate ? 'receptionZones' : undefined })} />
                     <ChipSelect
                       allLabel={all}
-                      options={RECEPTION_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
+                      layout="court"
+            options={RECEPTION_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
                       selected={view.receptionZones ?? []}
                       onChange={(next) => patchView(index, { receptionZones: next.length > 0 ? next : undefined })}
                     />

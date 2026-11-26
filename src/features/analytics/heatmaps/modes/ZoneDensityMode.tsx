@@ -1726,7 +1726,8 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
             <FilterGroup title={t('opponentReportAttackZone')} active={attackFilters.attackZones.length > 0}>
               <ChipSelect
                 allLabel={allLabel}
-                options={HEATMAP_ATTACK_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
+                layout="court"
+            options={HEATMAP_ATTACK_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
                 selected={attackFilters.attackZones}
                 onChange={(next) => setAttackFilter('attackZones', next)}
               />

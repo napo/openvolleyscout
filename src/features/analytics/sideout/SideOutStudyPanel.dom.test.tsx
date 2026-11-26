@@ -43,7 +43,7 @@ describe('SideOutStudyPanel serve filters', () => {
 
   it('shows the serve start zone, serve type, direction and receiver filters', () => {
     render(<I18nProvider><SideOutStudyPanel stats={stats} lockedTeam="away" /></I18nProvider>);
-    expect(labels(groupOf('Serve start zone'))).toEqual(['All', '1', '9', '6', '7', '5']);
+    expect(labels(groupOf('Serve start zone'))).toEqual(['All', '5', '7', '6', '9', '1']);
     expect(labels(groupOf('Serve type'))).toHaveLength(5);
     expect(labels(groupOf('Direction (arrival zone)'))).toHaveLength(10);
     expect(labels(groupOf('Receiver'))).toEqual(['All', '#3 Rita', '#9 Rosa']);

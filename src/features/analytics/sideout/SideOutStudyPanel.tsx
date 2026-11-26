@@ -1,4 +1,5 @@
 import { EmptyState } from '@src/components/EmptyState';
+import { choiceList } from '@src/lib/utils/choice-list';
 import { useMemo } from 'react';
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useTranslation } from '@src/i18n';
@@ -242,24 +243,22 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           </FilterGroup>
         ) : null}
         {setterOptions.length > 0 ? (
-          <FilterGroup title={t('sideOutFilterSetter')} active={filters.setterPlayerId !== 'all'}>
+          <FilterGroup title={t('sideOutFilterSetter')} active={choiceList(filters.setterPlayerId).length > 0}>
             <ChipSelect
-              single
               allLabel={all}
               options={setterOptions.map((option) => ({ value: option.playerId, label: option.label }))}
-              selected={filters.setterPlayerId === 'all' ? [] : [filters.setterPlayerId]}
-              onChange={(next) => setFilters({ ...filters, setterPlayerId: next[0] ?? 'all' })}
+              selected={choiceList(filters.setterPlayerId)}
+              onChange={(next) => setFilters({ ...filters, setterPlayerId: next })}
             />
           </FilterGroup>
         ) : null}
         {receiverOptions.length > 0 ? (
-          <FilterGroup title={t('sideOutFilterReceiver')} active={filters.receiverPlayerId !== 'all'}>
+          <FilterGroup title={t('sideOutFilterReceiver')} active={choiceList(filters.receiverPlayerId).length > 0}>
             <ChipSelect
-              single
               allLabel={all}
               options={receiverOptions.map((option) => ({ value: option.playerId, label: option.label }))}
-              selected={filters.receiverPlayerId === 'all' ? [] : [filters.receiverPlayerId]}
-              onChange={(next) => setFilters({ ...filters, receiverPlayerId: next[0] ?? 'all' })}
+              selected={choiceList(filters.receiverPlayerId)}
+              onChange={(next) => setFilters({ ...filters, receiverPlayerId: next })}
             />
           </FilterGroup>
         ) : null}
@@ -287,6 +286,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         <FilterGroup title={t('sideOutFilterServeStartZone')} active={chips(filters.serveStartZones, SERVE_START_ZONES).length > 0}>
           <ChipSelect
             allLabel={all}
+            layout="baseline"
             options={SERVE_START_ZONES.map((zone) => ({ value: zone, label: zone }))}
             selected={chips(filters.serveStartZones, SERVE_START_ZONES)}
             onChange={(next) => setFilters({ ...filters, serveStartZones: fromChips(next, SERVE_START_ZONES) })}
@@ -295,6 +295,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         <FilterGroup title={t('sideOutFilterReceptionZone')} active={chips(filters.receptionZones, SERVE_TARGET_ZONES).length > 0}>
           <ChipSelect
             allLabel={all}
+            layout="court"
             options={SERVE_TARGET_ZONES.map((zone) => ({ value: zone, label: zone }))}
             selected={chips(filters.receptionZones, SERVE_TARGET_ZONES)}
             onChange={(next) => setFilters({ ...filters, receptionZones: fromChips(next, SERVE_TARGET_ZONES) })}

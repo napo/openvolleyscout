@@ -44,18 +44,44 @@
   align-items: center;
 }
 
+.filter-chips__select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  min-width: 0;
+}
+
+/* Zones drawn as a half court: the thick top edge is the net. */
+.filter-chips__zones {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(2.4rem, max-content));
+  gap: 0.28rem;
+  padding: 0.35rem;
+  width: max-content;
+  border: 1px solid var(--slate-300);
+  border-top: 3px solid var(--slate-500);
+  border-radius: 0 0 6px 6px;
+}
+
+.filter-chips__zones--baseline {
+  grid-template-columns: repeat(5, minmax(2.2rem, max-content));
+  border-top-width: 1px;
+  border-radius: 6px;
+}
+
+.filter-chips__zones .filter-chips__chip {
+  text-align: center;
+}
+
+.filter-chips__zone-empty {
+  min-height: 1.6rem;
+}
+
 .filter-chips__row-label {
   font-size: 0.72rem;
   color: var(--slate-600);
   font-weight: 600;
   margin-inline-end: 0.15rem;
-}
-
-.filter-chips__divider {
-  width: 1px;
-  height: 1.1rem;
-  background: var(--slate-300);
-  margin: 0 0.1rem;
 }
 
 .filter-chips__chip {
