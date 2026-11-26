@@ -1,0 +1,93 @@
+/*
+ * Colour themes. The app is light by default; Settings > Appearance can switch it to dark, or make it
+ * follow the system. The choice sets data-theme="light" | "dark" on <html> (see lib/theme).
+ *
+ * Neutral colours are tokens here: the slate scale (--slate-50 is the lightest in the light theme,
+ * --slate-900 the darkest; the dark theme turns the scale over), the white surface and the two
+ * "ink" values used for translucent overlays. Stylesheets use these instead of literal greys, so a
+ * colour keeps its meaning (a border stays a border) in both themes.
+ *
+ * Courts, charts and the printed or exported documents keep their own colours in both themes.
+ */
+:root {
+  --surface-0: #ffffff;
+  --surface-0-rgb: 255, 255, 255;
+  --ink-rgb: 15, 23, 42;
+  --ink-strong: #111827;
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Night court: the navy of the logo as the ground, its cyan as the one accent. */
+  --color-primary: #22c3e6;
+  --color-primary-light: #0f3550;
+  --color-secondary: #7fdcf2;
+  --color-accent: #3b9cff;
+  --color-background: #0a1830;
+  --color-background-light: #050e1f;
+  --color-surface: #0f2140;
+  --color-text-primary: #f2f6fc;
+  --color-text-secondary: #aec2de;
+  --color-border: #2a4c7c;
+  --color-text-muted: #8fa9cf;
+  --color-surface-muted: #132a4d;
+  --color-text: #f2f6fc;
+  --team-home-soft: #5b8fd6;
+  --team-away-soft: #d98a4a;
+
+  /* Neutrals: the slate scale turned over, tinted with the navy. */
+  --surface-0: #0a1830;
+  --surface-0-rgb: 10, 24, 48;
+  --ink-rgb: 225, 234, 246;
+  --ink-strong: #f2f6fc;
+  --slate-50: #0f2140;
+  --slate-100: #132a4d;
+  --slate-200: #1b3860;
+  --slate-300: #2a4c7c;
+  --slate-400: #6d8bb8;
+  --slate-500: #8fa9cf;
+  --slate-600: #aec2de;
+  --slate-700: #c9d7ea;
+  --slate-800: #e1eaf6;
+  --slate-900: #f2f6fc;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.55), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -2px rgba(0, 0, 0, 0.45);
+}
+
+/* Controls whose light-theme colour is a dark fill need a lighter one on a dark page. */
+:root[data-theme='dark'] .filter-chips__chip.is-active {
+  background: #0b6c8c;
+  border-color: #22c3e6;
+  color: #fff;
+}
+
+:root[data-theme='dark'] .filter-chips__chip--eval.is-active {
+  box-shadow: 0 0 0 2px #22c3e6;
+}
+
+/* The accent is a light cyan: text on a filled accent button is dark, not white. */
+:root[data-theme='dark'] .btn-primary,
+:root[data-theme='dark'] .btn-primary:hover:not(:disabled) {
+  color: #04202b;
+}
+
+/* The logo's dark navy letters disappear on a dark page: it sits on a light plate. */
+:root[data-theme='dark'] .landing-logo {
+  background: #e8f1ff;
+  border-radius: 24px;
+  padding: 0.6rem;
+}

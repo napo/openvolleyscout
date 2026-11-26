@@ -7,7 +7,7 @@
 
 .opponent-reports__empty,
 .opponent-report__hint {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--slate-500));
 }
 
 .opponent-reports__list {
@@ -47,7 +47,7 @@
 
 .opponent-reports__open span {
   font-size: 0.85rem;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--slate-500));
 }
 
 .opponent-report__title {
@@ -82,7 +82,7 @@
 }
 
 .opponent-report__teams small {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--slate-500));
 }
 
 .opponent-report__scores {
@@ -108,7 +108,7 @@
 .opponent-report__score--high { background: #dcfce7; color: #166534; }
 .opponent-report__score--mid { background: #fef9c3; color: #854d0e; }
 .opponent-report__score--low { background: #fee2e2; color: #991b1b; }
-.opponent-report__score--none { background: #f1f5f9; color: #64748b; }
+.opponent-report__score--none { background: var(--slate-100); color: #64748b; }
 
 .opponent-report__summary {
   margin-top: 1rem;
@@ -123,7 +123,7 @@
 }
 
 .opponent-report__warning {
-  color: #b45309;
+  color: var(--c-b45309);
 }
 
 .opponent-report__notes textarea {
@@ -206,14 +206,14 @@
 
 .opponent-report__setter-court-sample {
   margin: 0.1rem 0;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--slate-500));
   font-size: 0.68rem;
   line-height: 1.2;
 }
 
 .opponent-report__setter-player-key {
   margin: 0.35rem 0 0.75rem;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--slate-500));
   font-size: 0.75rem;
   line-height: 1.4;
 }
@@ -280,7 +280,7 @@
 
 .opponent-report__legend {
   font-size: 0.8rem;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--slate-500));
 }
 
 .opponent-report__table-wrap {
@@ -302,14 +302,14 @@
 }
 
 .opponent-report__table th {
-  background: #eef5ff;
-  color: #002554;
+  background: var(--t-eef5ff);
+  color: var(--c-002554);
 }
 
 .opponent-report__cell--green { background: #dcfce7; }
 .opponent-report__cell--yellow { background: #fef9c3; }
 .opponent-report__cell--red { background: #fee2e2; }
-.opponent-report__cell--few { color: #94a3b8; font-style: italic; }
+.opponent-report__cell--few { color: var(--slate-400); font-style: italic; }
 
 .opponent-report__columns {
   display: grid;
@@ -355,11 +355,11 @@
 
 .opponent-report__proposals li.is-top {
   border-style: solid;
-  border-color: #93c5fd;
+  border-color: var(--t-93c5fd);
 }
 
 .opponent-report__proposals small {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--slate-500));
 }
 
 .opponent-report__key-actions {
@@ -518,7 +518,7 @@
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
   background: rgba(0, 37, 84, 0.1);
-  color: var(--color-primary, #002554);
+  color: var(--color-primary, var(--c-002554));
   white-space: nowrap;
 }
 
@@ -557,7 +557,7 @@
 .opponent-report__cell-input:focus,
 .opponent-report__cell-input:hover {
   border-color: rgba(0, 37, 84, 0.35);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(var(--surface-0-rgb),  0.7);
 }
 
 .opponent-report__cell-input--th {
@@ -605,7 +605,7 @@
   width: 100%;
   font: inherit;
   font-size: 0.8rem;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--slate-500));
   padding: 0.2rem 0.4rem;
   border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 5px;
@@ -622,7 +622,7 @@
   border: 1px solid rgba(0, 37, 84, 0.25);
   border-radius: 8px;
   padding: 0.65rem;
-  background: #ffffff;
+  background: var(--surface-0);
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
@@ -748,7 +748,7 @@
 }
 
 .opponent-report__board-quick-players small {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--slate-500));
 }
 
 .opponent-report__board-quick-player-buttons {
@@ -769,7 +769,7 @@
   border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 8px;
   padding: 0.4rem;
-  background: #fff;
+  background: var(--surface-0);
 }
 
 .opponent-report__board-svg {
@@ -881,9 +881,9 @@
 .tactical-share textarea { width: 100%; min-height: 5rem; overflow-wrap: anywhere; }
 .tactical-share__actions { display: flex; flex-wrap: wrap; gap: 0.45rem; width: 100%; }
 .tactical-share__actions > * { display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none; }
-.tactical-preview { display: block; max-width: 100%; height: auto; margin: 1rem auto; background: white; border: 1px solid #cbd5e1; }
+.tactical-preview { display: block; max-width: 100%; height: auto; margin: 1rem auto; background: var(--surface-0); border: 1px solid #cbd5e1; }
 .tactical-shared { max-width: 54rem; margin: auto; padding: 1rem; overflow-wrap: anywhere; }
-.tactical-shared__footer { margin-top: 1.5rem; padding-top: .5rem; border-top: 1px solid #cbd5e1; color: #64748b; }
+.tactical-shared__footer { margin-top: 1.5rem; padding-top: .5rem; border-top: 1px solid var(--slate-300); color: #64748b; }
 .opponent-report .team-analysis-match-item__body small { display: block; overflow-wrap: anywhere; }
 .opponent-report__video-link small { display: block; }
 .opponent-report__board-piece { min-width: 0; }
@@ -912,7 +912,7 @@
 
 
 /* Shared SVG workspace: native controls remain usable with touch and keyboards. */
-.tactical-drawing-toolbar { display: flex; flex-wrap: wrap; gap: .4rem; padding: .5rem; border: 1px solid #94a3b8; border-radius: .6rem; background: var(--panel-bg, #f1f5f9); }
+.tactical-drawing-toolbar { display: flex; flex-wrap: wrap; gap: .4rem; padding: .5rem; border: 1px solid var(--slate-400); border-radius: .6rem; background: var(--panel-bg, var(--slate-100)); }
 .tactical-toolbar-group { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem; padding-inline-end: .4rem; border-inline-end: 1px solid #94a3b8; }
 .tactical-toolbar-group:last-child { border: 0; }
 .tactical-drawing-editor .tactical-toolbar-text-button {
@@ -921,9 +921,9 @@
   gap: .35rem;
   height: 44px;
   padding: .4rem .7rem;
-  border: 1px solid #94a3b8;
+  border: 1px solid var(--slate-400);
   border-radius: .4rem;
-  background: #ffffff;
+  background: var(--surface-0);
   color: inherit;
   font-size: .85rem;
   font-weight: 600;
@@ -937,11 +937,11 @@
   width: 1.35rem;
   height: 1.35rem;
   padding: 0;
-  border: 2px solid #cbd5e1;
+  border: 2px solid var(--slate-300);
   border-radius: 50%;
   cursor: pointer;
 }
-.tactical-color-swatch.is-active { border-color: #0f172a; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #2563eb; }
+.tactical-color-swatch.is-active { border-color: var(--slate-900); box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #2563eb; }
 .tactical-drawing-editor .tactical-icon-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; height: 44px; padding: .6rem; border: 1px solid transparent; border-radius: .4rem; background: transparent; color: inherit; cursor: pointer; }
 .tactical-icon-button .ovs-action-icon { margin: 0; width: 1.25rem; height: 1.25rem; }
 .tactical-drawing-editor .tactical-icon-button:hover:not(:disabled) { background: #dbeafe; color: #1e3a8a; }
@@ -983,7 +983,7 @@
 .tactical-property input[type='color'] { height: 44px; padding: .15rem; cursor: pointer; }
 .tactical-team-picker { border: 0; padding: 0; margin: 0; display: grid; gap: .25rem; }
 .tactical-team-picker legend { font-size: .85rem; margin-block-end: .25rem; }
-.tactical-team-picker button { display: flex; align-items: center; gap: .5rem; min-height: 44px; border: 1px solid #94a3b8; border-radius: .3rem; padding: .4rem; background: transparent; color: inherit; }
+.tactical-team-picker button { display: flex; align-items: center; gap: .5rem; min-height: 44px; border: 1px solid var(--slate-400); border-radius: .3rem; padding: .4rem; background: transparent; color: inherit; }
 .tactical-team-picker button[aria-pressed='true'] { border: 2px solid #2563eb; }
 .tactical-team-picker button span { width: .9rem; height: .9rem; border-radius: 50%; flex-shrink: 0; }
 .tactical-advanced fieldset { min-width: 0; margin: .5rem 0; padding: .4rem; }
@@ -995,14 +995,14 @@
 }
 
 .tactical-priorities__list { list-style: none; padding: 0; display: grid; gap: .7rem; }
-.tactical-priority { padding: .8rem; border: 1px solid var(--border-color, #cbd5e1); border-inline-start: 5px solid #64748b; border-radius: .4rem; }
+.tactical-priority { padding: .8rem; border: 1px solid var(--border-color, #cbd5e1); border-inline-start: 5px solid var(--slate-500); border-radius: .4rem; }
 .tactical-priority--primary { border-inline-start-color: #007e80; background: #007e800b; }
 .tactical-priority--reserve { opacity: .85; }
 .tactical-priority__heading { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; margin-bottom: .5rem; }
 .tactical-priority__handle { cursor: grab; padding: .3rem; }
 .tactical-priority textarea { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; }
 .tactical-priorities .opponent-report__key-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
-.tactical-booklet-settings { margin-block: 1rem; padding: 1rem; border: 1px solid var(--border-color, #cbd5e1); border-radius: .5rem; }
+.tactical-booklet-settings { margin-block: 1rem; padding: 1rem; border: 1px solid var(--border-color, var(--slate-300)); border-radius: .5rem; }
 .tactical-booklet-settings label { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin-block: .6rem; }
 .tactical-booklet-settings select { max-width: 100%; }
 
@@ -1013,7 +1013,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.65);
+  background: rgba(var(--ink-rgb),  0.65);
   padding: 1rem;
 }
 
@@ -1022,7 +1022,7 @@
   height: 80vh;
   max-width: 80vw;
   max-height: 80vh;
-  background: #ffffff;
+  background: var(--surface-0);
   color: inherit;
   border-radius: 10px;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
@@ -1156,11 +1156,11 @@
 
 .tactical-property--prompt input {
   border-color: #d97706;
-  background: #fffbeb;
+  background: var(--t-fffbeb);
 }
 
 .tactical-legend-prompt {
-  color: #b45309;
+  color: var(--c-b45309);
   font-size: 0.78rem;
   line-height: 1.3;
 }
@@ -1180,9 +1180,9 @@
 }
 
 .setter-views-editor__body {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 10px;
-  background: #f1f5f9;
+  background: var(--slate-100);
   padding: 0.85rem;
   display: flex;
   flex-direction: column;
@@ -1196,10 +1196,10 @@
 }
 
 .setter-views-editor__card {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-left: 3.5px solid #007e80;
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--surface-0);
   padding: 0.75rem 0.85rem;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
   display: flex;
@@ -1214,7 +1214,7 @@
   align-items: flex-end;
   justify-content: space-between;
   padding-bottom: 0.45rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--slate-100);
 }
 
 .setter-views-editor__label-field {
@@ -1224,12 +1224,12 @@
   flex: 1 1 220px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--slate-700);
 }
 
 .setter-views-editor__label-field input {
   padding: 0.38rem 0.6rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 6px;
   font-size: 0.86rem;
   font-weight: 500;
@@ -1249,7 +1249,7 @@
 .opponent-report__heatmap-modal {
   width: min(36rem, 92vw);
   max-height: 85vh;
-  background: #ffffff;
+  background: var(--surface-0);
   color: inherit;
   border-radius: 10px;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
@@ -1283,15 +1283,15 @@
 }
 
 .opponent-report__heatmap-grid td {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   padding: 0.45rem 0.5rem;
   vertical-align: middle;
-  background: #f8fafc;
+  background: var(--slate-50);
 }
 
 .opponent-report__heatmap-grid td.is-hidden {
   opacity: 0.55;
-  background: #f1f5f9;
+  background: var(--slate-100);
 }
 
 .opponent-report__heatmap-cell-toggle {
@@ -1325,17 +1325,17 @@
 .tactical-export__menu, .tactical-share-menu > :not(summary) {
   position: absolute; top: calc(100% + .35rem); inset-inline-start: 0; z-index: 30;
   display: flex; flex-direction: column; gap: .4rem; min-width: 12rem; max-width: min(26rem, 90vw);
-  padding: .6rem; background: var(--color-surface, #fff); border: 1px solid #cbd5e1; border-radius: .6rem;
+  padding: .6rem; background: var(--color-surface, var(--surface-0)); border: 1px solid #cbd5e1; border-radius: .6rem;
   box-shadow: 0 10px 24px rgba(15, 23, 42, .15);
 }
-.tactical-svg-help { border-top: 1px solid #cbd5e1; margin-top: .5rem; padding-top: .5rem; font-size: .85rem; }
+.tactical-svg-help { border-top: 1px solid var(--slate-300); margin-top: .5rem; padding-top: .5rem; font-size: .85rem; }
 .tactical-svg-help h3 { font-size: .95rem; }
 .tactical-svg-editors { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-bottom: .5rem; }
 
 .tactical-share-menu .tactical-share { max-width: min(38rem, 90vw); }
 
 .report-composer { display: grid; grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr); align-items: start; gap: 1rem; }
-.report-composer__navigator { position: sticky; top: .75rem; max-height: calc(100vh - 1.5rem); overflow-y: auto; border: 1px solid #cbd5e1; border-radius: .6rem; padding: .6rem; }
+.report-composer__navigator { position: sticky; top: .75rem; max-height: calc(100vh - 1.5rem); overflow-y: auto; border: 1px solid var(--slate-300); border-radius: .6rem; padding: .6rem; }
 .report-composer__navigator > summary { cursor: pointer; font-weight: 700; padding: .35rem; }
 .report-composer__list { list-style: none; margin: .5rem 0; padding: 0; }
 .report-composer__list > li { display: flex; align-items: center; gap: .2rem; margin: .3rem 0; border: 1px solid transparent; border-radius: .4rem; }

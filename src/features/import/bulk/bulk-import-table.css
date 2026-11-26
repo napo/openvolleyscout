@@ -1,9 +1,9 @@
 .bulk-import {
   display: grid;
   gap: 0.75rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--surface-0);
   padding: 1rem;
 }
 
@@ -21,6 +21,6 @@
 
 .bulk-import__summary {
   margin: 0;
-  color: #475569;
+  color: var(--slate-600);
   font-size: 0.9rem;
 }

@@ -12,9 +12,9 @@
 }
 
 .point-notes-panel__filter {
-  border: 1px solid var(--color-border, #cbd5e1);
-  background: var(--color-surface, #ffffff);
-  color: var(--color-text, #111827);
+  border: 1px solid var(--color-border, var(--slate-300));
+  background: var(--color-surface, var(--surface-0));
+  color: var(--color-text, var(--ink-strong));
   border-radius: 999px;
   padding: 0.35rem 0.75rem;
   font-size: 0.85rem;
@@ -46,10 +46,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--color-border, var(--slate-200));
   border-radius: 8px;
   padding: 0.45rem 0.6rem;
-  background: var(--color-surface, #ffffff);
+  background: var(--color-surface, var(--surface-0));
 }
 
 .point-notes-panel__main {
@@ -93,7 +93,7 @@
 
 .point-notes-panel__tag-badge {
   background: rgba(202, 138, 4, 0.14);
-  color: #854d0e;
+  color: var(--c-854d0e);
   border-radius: 999px;
   padding: 0.15rem 0.55rem;
   font-size: 0.78rem;
@@ -102,7 +102,7 @@
 
 .point-notes-panel__text {
   font-size: 0.9rem;
-  color: var(--color-text, #111827);
+  color: var(--color-text, var(--ink-strong));
   overflow-wrap: anywhere;
 }
 
@@ -113,10 +113,10 @@
 }
 
 .point-notes-panel__chart-card {
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--color-border, var(--slate-200));
   border-radius: 10px;
   padding: 0.75rem 1rem;
-  background: var(--color-surface, #ffffff);
+  background: var(--color-surface, var(--surface-0));
 }
 
 .point-notes-panel__chart-title {
@@ -133,7 +133,7 @@
 .point-notes-panel__video-hint {
   margin: 0.25rem 0 0 0;
   font-size: 0.85rem;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, var(--slate-500));
 }
 
 .point-notes-table {

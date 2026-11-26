@@ -2,6 +2,27 @@
 <html lang="en">
 
 <head>
+    <script>
+      // The saved look before the page paints, so a dark theme does not flash light.
+      (function () {
+        try {
+          var choice = localStorage.getItem('openvolleyscout.theme');
+          var dark = choice === 'dark' || (choice !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        } catch (e) { /* the app sets it once it starts */ }
+        try {
+          var a = JSON.parse(localStorage.getItem('openvolleyscout.accessibility') || 'null');
+          var r = document.documentElement;
+          if (a) {
+            if (a.textScale > 100) { r.setAttribute('data-a11y-text', ''); r.style.setProperty('--a11y-text-scale', String(a.textScale / 100)); }
+            if (a.legibleFont) r.setAttribute('data-a11y-font', '');
+            if (a.spacing) r.setAttribute('data-a11y-spacing', '');
+            if (a.highContrast) r.setAttribute('data-a11y-contrast', '');
+            if (a.reduceMotion) r.setAttribute('data-a11y-motion', '');
+          }
+        } catch (e) { /* the app sets it once it starts */ }
+      })();
+    </script>
     <link rel="icon" href="%BASE_URL%favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%favicon-32x32.png">
     <meta charset="UTF-8" />

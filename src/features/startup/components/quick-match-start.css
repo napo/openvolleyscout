@@ -17,7 +17,7 @@
 
 .quick-start__header p {
   margin: 0;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary, var(--slate-600));
 }
 
 .quick-start__step {
@@ -26,9 +26,9 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
   padding: 1rem 1.1rem;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--color-border, var(--slate-200));
   border-radius: 14px;
-  background: var(--color-surface, #fff);
+  background: var(--color-surface, var(--surface-0));
 }
 
 .quick-start__step h2 {
@@ -56,19 +56,19 @@
 .quick-start__defaults {
   margin: 0;
   font-size: 0.88rem;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary, var(--slate-600));
 }
 
 .quick-start__note {
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
-  background: #eff6ff;
-  color: #1e3a8a;
+  background: var(--t-eff6ff);
+  color: var(--c-1e3a8a);
 }
 
 .quick-start__error {
   margin: 0;
-  color: #b91c1c;
+  color: var(--c-b91c1c);
   font-size: 0.88rem;
   font-weight: 600;
 }
@@ -84,9 +84,9 @@
   display: grid;
   gap: 0.2rem;
   padding: 0.75rem 0.9rem;
-  border: 2px solid var(--color-border, #e2e8f0);
+  border: 2px solid var(--color-border, var(--slate-200));
   border-radius: 12px;
-  background: var(--color-surface, #fff);
+  background: var(--color-surface, var(--surface-0));
   color: inherit;
   font: inherit;
   text-align: left;
@@ -95,7 +95,7 @@
 
 .quick-start__choice span {
   font-size: 0.85rem;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary, var(--slate-600));
 }
 
 .quick-start__choice.is-selected {
@@ -126,7 +126,7 @@
   font: inherit;
   font-weight: normal;
   padding: 0.55rem 0.7rem;
-  border: 1px solid var(--color-border, #cbd5e1);
+  border: 1px solid var(--color-border, var(--slate-300));
   border-radius: 8px;
 }
 
@@ -139,7 +139,7 @@
   max-width: 24rem;
   padding: 0.75rem;
   border-radius: 12px;
-  background: #e0f2fe;
+  background: var(--t-e0f2fe);
 }
 
 .quick-start__net {
@@ -148,7 +148,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #0c4a6e;
+  color: var(--c-0c4a6e);
   border-bottom: 3px solid #0c4a6e;
   padding-bottom: 0.2rem;
 }
@@ -167,7 +167,7 @@
   padding: 0.4rem;
   border: 2px dashed #7dd3fc;
   border-radius: 10px;
-  background: #fff;
+  background: var(--surface-0);
 }
 
 .quick-start__slot.is-filled {
@@ -182,7 +182,7 @@
 .quick-start__slot-label {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #0c4a6e;
+  color: var(--c-0c4a6e);
 }
 
 .quick-start__slot-input {
@@ -192,7 +192,7 @@
   min-height: 44px;
   box-sizing: border-box;
   padding: 0.35rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 8px;
   font: inherit;
   font-size: 1.2rem;
@@ -205,7 +205,7 @@
   align-items: center;
   gap: 0.2rem;
   font-size: 0.72rem;
-  color: #334155;
+  color: var(--slate-700);
 }
 
 .quick-start__footer {
@@ -238,10 +238,10 @@
 .quick-start__progress-step {
   width: 2rem;
   height: 2rem;
-  border: 2px solid var(--color-border, #cbd5e1);
+  border: 2px solid var(--color-border, var(--slate-300));
   border-radius: 50%;
-  background: var(--color-surface, #fff);
-  color: #64748b;
+  background: var(--color-surface, var(--surface-0));
+  color: var(--slate-500);
   font: inherit;
   font-weight: 800;
   cursor: pointer;
@@ -268,7 +268,7 @@
 }
 
 .quick-start__step-count {
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary, var(--slate-600));
   font-size: 0.9rem;
 }
 
@@ -293,7 +293,7 @@
 }
 
 .quick-start__slot--libero {
-  background: #fff7ed;
+  background: var(--t-fff7ed);
   border-color: #fdba74;
 }
 
@@ -313,7 +313,7 @@
 .quick-start__full-alt {
   margin: 0.25rem 0 0;
   font-size: 0.9rem;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, var(--slate-500));
 }
 
 .quick-start__full-link {
@@ -370,9 +370,9 @@
 .quick-start__video {
   margin-top: 1rem;
   padding: 0.9rem 1rem;
-  border: 1px solid var(--color-border, #e2e7f0);
+  border: 1px solid var(--color-border, var(--t-e2e7f0));
   border-radius: 0.9rem;
-  background: var(--color-surface, #fff);
+  background: var(--color-surface, var(--surface-0));
 }
 
 .quick-start__video h3 {
@@ -383,7 +383,7 @@
 .quick-start__video-hint {
   margin: 0.5rem 0 0;
   font-size: 0.8rem;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted, var(--slate-500));
 }
 
 .quick-start__role-badge {
@@ -391,7 +391,7 @@
     padding: 0 0.3rem;
     border-radius: 6px;
     background: #fbbf24;
-    color: #1f2937;
+    color: var(--c-1f2937);
     font-style: normal;
     font-weight: 700;
 }

@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   overflow: auto;
-  background: #f1f5f9;
+  background: var(--slate-100);
 }
 
 .image-tutorial__picture {

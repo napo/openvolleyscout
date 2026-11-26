@@ -5,9 +5,9 @@
   flex-direction: column;
   gap: 0.65rem;
   padding: 1rem 1.15rem;
-  border: 1px solid var(--border-color, #d5dce6);
+  border: 1px solid var(--border-color, var(--t-d5dce6));
   border-radius: 0.75rem;
-  background: var(--surface-card, #ffffff);
+  background: var(--surface-card, var(--surface-0));
 }
 
 .cloud-sync-card__title {
@@ -25,7 +25,7 @@
   margin: 0;
   font-size: 0.9rem;
   line-height: 1.45;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--slate-600));
 }
 
 .cloud-sync-card__note {
@@ -42,7 +42,7 @@
 }
 
 .cloud-sync-card__when {
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--slate-600));
 }
 
 .cloud-sync-card__dot {
@@ -70,7 +70,7 @@
 }
 
 .cloud-sync-card__dot--off {
-  background: #94a3b8;
+  background: var(--slate-400);
 }
 
 .cloud-sync-card__actions {
@@ -98,8 +98,8 @@
   gap: 0.6rem;
   padding: 0.85rem;
   border-radius: 0.6rem;
-  background: var(--surface-muted, #f8fafc);
-  border: 1px solid var(--border-color, #d5dce6);
+  background: var(--surface-muted, var(--slate-50));
+  border: 1px solid var(--border-color, var(--t-d5dce6));
 }
 
 .cloud-sync-card__points {
@@ -122,13 +122,13 @@
   padding: 0.55rem 0.75rem;
   border-radius: 0.5rem;
   font-size: 0.88rem;
-  background: #eff6ff;
-  color: #1e3a8a;
+  background: var(--t-eff6ff);
+  color: var(--c-1e3a8a);
 }
 
 .cloud-sync-card__message--warning {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--t-fef3c7);
+  color: var(--c-92400e);
 }
 
 .cloud-sync-card__danger {
@@ -152,10 +152,10 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.8rem 0.6rem;
-  border: 1px solid #d6e0ef;
+  border: 1px solid var(--t-d6e0ef);
   border-radius: 0.75rem;
-  background: #fff;
-  color: #0b1b33;
+  background: var(--surface-0);
+  color: var(--c-0b1b33);
   font: inherit;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -180,7 +180,7 @@
 
 .cloud-sync-card__provider-note {
   font-size: 0.75rem;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, var(--slate-600));
   text-align: center;
 }
 
@@ -191,7 +191,7 @@
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 0.8rem;
-  background: #e8f0fb;
+  background: var(--t-e8f0fb);
 }
 
 .cloud-sync-card__glyph .cloud-sync-card__icon {
@@ -200,7 +200,7 @@
 }
 
 .cloud-sync-card__ink {
-  fill: #0b3d91;
+  fill: var(--c-0b3d91);
 }
 
 .cloud-sync-card__accent {

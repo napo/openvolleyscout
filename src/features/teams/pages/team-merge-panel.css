@@ -2,9 +2,9 @@
 .team-merge {
   display: grid;
   gap: 1rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--surface-0);
   padding: 1.1rem;
   margin-bottom: 1rem;
 }
@@ -27,12 +27,12 @@
 }
 
 .team-merge__group {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--slate-200);
   border-radius: 8px;
   padding: 0.75rem;
   display: grid;
   gap: 0.5rem;
-  background: #f8fafc;
+  background: var(--slate-50);
 }
 
 .team-merge__group-items {
@@ -46,9 +46,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 6px;
-  background: #ffffff;
+  background: var(--surface-0);
   padding: 0.35rem 0.6rem;
   font-size: 0.88rem;
 }
@@ -70,7 +70,7 @@
   display: grid;
   gap: 0.15rem;
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--slate-600);
 }
 
 .team-merge__match-dates {
@@ -79,7 +79,7 @@
   max-height: 9rem;
   overflow-y: auto;
   font-size: 0.82rem;
-  color: #334155;
+  color: var(--slate-700);
   display: grid;
   gap: 0.15rem;
 }
@@ -91,15 +91,15 @@
 }
 
 .team-merge__verdict.is-duplicate {
-  background: #fef3c7;
+  background: var(--t-fef3c7);
   border: 1px solid #f59e0b;
-  color: #78350f;
+  color: var(--c-78350f);
 }
 
 .team-merge__verdict.is-needs-info {
-  background: #e0f2fe;
+  background: var(--t-e0f2fe);
   border: 1px solid #0284c7;
-  color: #0c4a6e;
+  color: var(--c-0c4a6e);
 }
 
 .team-merge__compare-grid {
@@ -109,12 +109,12 @@
 }
 
 .team-merge__card {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 8px;
   padding: 0.85rem;
   display: grid;
   gap: 0.45rem;
-  background: #f8fafc;
+  background: var(--slate-50);
 }
 
 .team-merge__card h3 {
@@ -125,7 +125,7 @@
 .team-merge__meta {
   margin: 0;
   font-size: 0.86rem;
-  color: #475569;
+  color: var(--slate-600);
 }
 
 .team-merge__fields {
@@ -143,7 +143,7 @@
 
 .team-merge__fields input {
   padding: 0.35rem 0.5rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 6px;
   font-weight: 400;
 }

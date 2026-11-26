@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { useLiveMenuStore } from '../store/live-menu-store';
+import { AccessibilityButton } from '@src/features/accessibility/AccessibilityPanel';
 
 const primaryNavItems = [
   { path: '/teams', labelKey: 'teams' },
@@ -119,6 +120,7 @@ export function AppNavigation({ compact = false }: { compact?: boolean }) {
                 {t(item.labelKey)}
               </NavLink>
             ))}
+            <AccessibilityButton />
           </nav>
         </div>
       </div>

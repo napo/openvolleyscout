@@ -35,7 +35,7 @@
 .quick-jersey-entry__hint {
     margin: 0;
     font-size: 0.78rem;
-    color: var(--color-text-secondary, #5a6477);
+    color: var(--color-text-secondary, var(--c-5a6477));
 }
 
 .quick-jersey-entry__message {
@@ -44,11 +44,11 @@
 }
 
 .quick-jersey-entry__message.is-success {
-    color: var(--color-success, #1a7f4b);
+    color: var(--color-success, var(--c-1a7f4b));
 }
 
 .quick-jersey-entry__message.is-error {
-    color: var(--color-danger, #b42318);
+    color: var(--color-danger, var(--c-b42318));
 }
 
 .quick-jersey-entry--compact {

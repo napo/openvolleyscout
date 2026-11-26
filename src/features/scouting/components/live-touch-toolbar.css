@@ -211,12 +211,12 @@
 /* Colour cues: error red, best result green. */
 .live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--eval-equal:not(:disabled) {
     border-color: #e5484d;
-    color: #b42318;
+    color: var(--c-b42318);
 }
 
 .live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--eval-hash:not(:disabled) {
     border-color: #2f9e6a;
-    color: #1a7f4b;
+    color: var(--c-1a7f4b);
 }
 
 .live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--evaluation.is-active {
@@ -351,7 +351,7 @@
     font-size: 1.05rem;
     font-weight: 800;
     padding: 0.45rem 1rem;
-    background: rgba(15, 23, 42, 0.9);
+    background: rgba(var(--ink-rgb),  0.9);
     color: #fff;
     border: 2px solid #facc15;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
@@ -389,8 +389,8 @@
 
 /* "いいえ" on the dark banner needs readable text. */
 .live-rally-stage--simple .live-rally-stage__suggestion .btn-secondary.live-rally-stage__suggestion-action {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.7);
+    background: rgba(var(--surface-0-rgb),  0.12);
+    border-color: rgba(var(--surface-0-rgb),  0.7);
     color: #fff;
 }
 

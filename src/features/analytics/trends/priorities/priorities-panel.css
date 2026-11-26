@@ -141,7 +141,7 @@
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    border: 1px solid rgba(15, 23, 42, 0.15);
+    border: 1px solid rgba(var(--ink-rgb),  0.15);
     border-radius: var(--border-radius-sm);
     padding: 0.3rem 0.6rem;
     font-size: var(--font-size-sm);

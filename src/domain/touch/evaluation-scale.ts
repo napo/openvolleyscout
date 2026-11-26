@@ -30,6 +30,27 @@ export const EVALUATION_SCALE_COLORS = ['#00ff00', '#90ee90', '#adff2f', '#ffff9
 /** Ink for a label drawn inside a fill: dark on the light fills, white on red. */
 export const EVALUATION_SCALE_INKS = ['#383838', '#383838', '#383838', '#383838', '#383838', '#ffffff'] as const;
 
+/** Palettes for people who tell some colours apart badly (chosen in the accessibility panel). */
+export type EvaluationPalette = 'default' | 'colorblind' | 'grayscale';
+const PALETTES: Record<EvaluationPalette, { colors: readonly string[]; inks: readonly string[] }> = {
+  default: { colors: EVALUATION_SCALE_COLORS, inks: EVALUATION_SCALE_INKS },
+  // Blue to orange to black: stays readable with protanopia, deuteranopia and tritanopia.
+  colorblind: {
+    colors: ['#56b4e9', '#a6d8f5', '#f0e442', '#e69f00', '#d55e00', '#111111'],
+    inks: ['#111111', '#111111', '#111111', '#111111', '#ffffff', '#ffffff'],
+  },
+  // Lightness only, from white (best) to black (worst).
+  grayscale: {
+    colors: ['#ffffff', '#dcdcdc', '#b8b8b8', '#8e8e8e', '#595959', '#000000'],
+    inks: ['#111111', '#111111', '#111111', '#111111', '#ffffff', '#ffffff'],
+  },
+};
+let activePalette: EvaluationPalette = 'default';
+
+export function setEvaluationPalette(palette: EvaluationPalette): void {
+  activePalette = palette;
+}
+
 /** Neutral colour for a touch with no evaluation. */
 export const EVALUATION_COLOR_NEUTRAL = '#6b7280';
 
@@ -40,13 +61,13 @@ export function getEvaluationPlace(skill: SkillType | null | undefined, evaluati
 
 export function getEvaluationColor(skill: SkillType | null | undefined, evaluation: SkillEvaluation | null | undefined): string {
   if (!evaluation) return EVALUATION_COLOR_NEUTRAL;
-  return EVALUATION_SCALE_COLORS[getEvaluationPlace(skill, evaluation)] ?? EVALUATION_COLOR_NEUTRAL;
+  return PALETTES[activePalette].colors[getEvaluationPlace(skill, evaluation)] ?? EVALUATION_COLOR_NEUTRAL;
 }
 
 /** Text colour to use on top of getEvaluationColor. */
 export function getEvaluationInk(skill: SkillType | null | undefined, evaluation: SkillEvaluation | null | undefined): string {
   if (!evaluation) return '#ffffff';
-  return EVALUATION_SCALE_INKS[getEvaluationPlace(skill, evaluation)] ?? '#383838';
+  return PALETTES[activePalette].inks[getEvaluationPlace(skill, evaluation)] ?? '#383838';
 }
 
 /**

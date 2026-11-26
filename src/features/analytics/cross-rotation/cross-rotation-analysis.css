@@ -142,7 +142,7 @@
   gap: 0.2rem;
   padding: 0.5rem 0.6rem;
   border-radius: var(--border-radius-sm);
-  background: rgba(15, 23, 42, 0.92);
+  background: rgba(var(--ink-rgb),  0.92);
   color: var(--color-background);
   font-size: var(--font-size-xs);
   box-shadow: var(--shadow-md);
@@ -172,7 +172,7 @@
     position: sticky;
     left: 0;
     z-index: 2;
-    background: #ffffff;
+    background: var(--surface-0);
     box-shadow: 2px 0 4px rgba(15, 23, 42, 0.08);
   }
 }

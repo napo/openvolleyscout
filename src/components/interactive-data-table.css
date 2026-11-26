@@ -5,9 +5,9 @@
   box-sizing: border-box;
   display: grid;
   gap: 0.75rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--surface-0);
   padding: 0.9rem;
 }
 
@@ -31,7 +31,7 @@
   max-width: 100%;
   flex: 1 1 220px;
   padding: 0.4rem 0.6rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--slate-300);
   border-radius: 6px;
 }
 
@@ -43,8 +43,8 @@
 }
 
 .interactive-table__bulk-bar {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background: var(--slate-100);
+  border: 1px solid var(--slate-300);
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
 }
@@ -62,23 +62,23 @@
 .interactive-table__table th,
 .interactive-table__table td {
   padding: 0.5rem 0.6rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--slate-200);
   text-align: left;
   vertical-align: middle;
 }
 
 .interactive-table__table th {
-  background: #f8fafc;
+  background: var(--slate-50);
   font-weight: 600;
   white-space: nowrap;
 }
 
 .interactive-table__table tr.is-selected {
-  background: #eff6ff;
+  background: var(--t-eff6ff);
 }
 
 .interactive-table__table tr.is-active {
-  background: #e0f2fe;
+  background: var(--t-e0f2fe);
 }
 
 .interactive-table__check {
@@ -105,7 +105,7 @@
 .interactive-table__pagination {
   justify-content: space-between;
   font-size: 0.85rem;
-  color: #475569;
+  color: var(--slate-600);
 }
 
 .interactive-table__page-buttons {
@@ -116,7 +116,7 @@
 .interactive-table__empty {
   padding: 1rem;
   text-align: center;
-  color: #64748b;
+  color: var(--slate-500);
 }
 
 .interactive-table__mobile-sort {
@@ -169,20 +169,20 @@
   .interactive-table__table tbody tr {
     display: grid;
     gap: 0.35rem;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--slate-300);
     border-radius: 8px;
     padding: 0.65rem 0.75rem;
     margin-bottom: 0.6rem;
-    background: #ffffff;
+    background: var(--surface-0);
   }
 
   .interactive-table__table tbody tr.is-selected {
-    background: #eff6ff;
+    background: var(--t-eff6ff);
     border-color: #60a5fa;
   }
 
   .interactive-table__table tbody tr.is-active {
-    background: #e0f2fe;
+    background: var(--t-e0f2fe);
     border-color: #38bdf8;
   }
 
@@ -192,7 +192,7 @@
     align-items: flex-start;
     gap: 0.75rem;
     padding: 0.2rem 0;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--slate-100);
     text-align: right;
   }
 
@@ -203,7 +203,7 @@
   .interactive-table__table td::before {
     content: attr(data-label);
     font-weight: 600;
-    color: #475569;
+    color: var(--slate-600);
     font-size: 0.8rem;
     text-align: left;
     flex-shrink: 0;
@@ -213,7 +213,7 @@
     width: auto;
     justify-content: flex-start;
     padding: 0;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--slate-200);
   }
 
   .interactive-table__table td.interactive-table__check::before {

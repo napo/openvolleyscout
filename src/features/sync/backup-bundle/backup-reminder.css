@@ -7,8 +7,8 @@
     padding: 0.7rem 0.9rem;
     border: 1px solid #f59e0b;
     border-radius: 12px;
-    background: #fff7e6;
-    color: #7a4b00;
+    background: var(--t-fff7e6);
+    color: var(--c-7a4b00);
     font-size: 0.9rem;
     font-weight: 600;
 }
@@ -60,8 +60,8 @@
 }
 
 .backup-reminder__action--secondary {
-    background: #fff;
-    color: #7a4b00;
+    background: var(--surface-0);
+    color: var(--c-7a4b00);
     box-shadow: inset 0 0 0 1px #d99a2b;
 }
 

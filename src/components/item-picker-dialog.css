@@ -10,7 +10,7 @@
 .item-picker__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.45);
+    background: rgba(var(--ink-rgb),  0.45);
 }
 
 .item-picker__panel {
@@ -22,7 +22,7 @@
     max-height: min(85vh, 760px);
     padding: 1.1rem;
     border-radius: 14px;
-    background: var(--color-background, #fff);
+    background: var(--color-background, var(--surface-0));
     box-shadow: 0 20px 50px rgba(15, 23, 42, 0.3);
 }
 
@@ -40,14 +40,14 @@
 
 .item-picker__description {
     margin: 0.2rem 0 0;
-    color: var(--color-text-secondary, #64748b);
+    color: var(--color-text-secondary, var(--slate-500));
     font-size: 0.9rem;
 }
 
 .item-picker__close {
     min-width: 2.25rem;
     min-height: 2.25rem;
-    border: 1px solid var(--color-border, #cbd5e1);
+    border: 1px solid var(--color-border, var(--slate-300));
     border-radius: 8px;
     background: transparent;
     cursor: pointer;
@@ -57,14 +57,14 @@
     width: 100%;
     box-sizing: border-box;
     padding: 0.65rem 0.8rem;
-    border: 1px solid var(--color-border, #cbd5e1);
+    border: 1px solid var(--color-border, var(--slate-300));
     border-radius: 10px;
     font: inherit;
 }
 
 .item-picker__count {
     margin: 0;
-    color: var(--color-text-secondary, #64748b);
+    color: var(--color-text-secondary, var(--slate-500));
     font-size: 0.8rem;
 }
 
@@ -73,7 +73,7 @@
     flex: 1 1 auto;
     min-height: 8rem;
     overflow: auto;
-    border: 1px solid var(--color-border, #e2e8f0);
+    border: 1px solid var(--color-border, var(--slate-200));
     border-radius: 10px;
 }
 
@@ -89,26 +89,26 @@
     top: 0;
     z-index: 1;
     padding: 0.55rem 0.7rem;
-    background: var(--color-background-light, #f5f8ff);
+    background: var(--color-background-light, var(--t-f5f8ff));
     text-align: start;
     font-weight: 600;
     white-space: nowrap;
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    border-bottom: 1px solid var(--color-border, var(--slate-200));
 }
 
 .item-picker__table td {
     padding: 0.5rem 0.7rem;
-    border-bottom: 1px solid var(--color-border, #eef2f7);
-    color: var(--color-text-secondary, #475569);
+    border-bottom: 1px solid var(--color-border, var(--t-eef2f7));
+    color: var(--color-text-secondary, var(--slate-600));
 }
 
 .item-picker__table tbody tr:hover,
 .item-picker__table tbody tr:focus-within {
-    background: var(--color-primary-light, #e0e7ff);
+    background: var(--color-primary-light, var(--t-e0e7ff));
 }
 
 .item-picker__table tr.is-suggested {
-    background: var(--color-primary-light, #e0e7ff);
+    background: var(--color-primary-light, var(--t-e0e7ff));
 }
 
 .item-picker__pick {
@@ -139,7 +139,7 @@
     margin: 0;
     padding: 1rem;
     text-align: center;
-    color: var(--color-text-secondary, #64748b);
+    color: var(--color-text-secondary, var(--slate-500));
 }
 
 /* Phones: secondary columns would overflow; the first two identify the item. */

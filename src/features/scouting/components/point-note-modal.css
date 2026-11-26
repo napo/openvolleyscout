@@ -3,7 +3,7 @@
   position: fixed;
   inset: 0;
   z-index: 1200;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(var(--ink-rgb),  0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12,9 +12,9 @@
 
 .point-note-modal {
   width: min(26rem, 100%);
-  background: var(--color-surface, #ffffff);
-  color: var(--color-text, #111827);
-  border: 1px solid var(--color-border, #d1d5db);
+  background: var(--color-surface, var(--surface-0));
+  color: var(--color-text, var(--ink-strong));
+  border: 1px solid var(--color-border, var(--t-d1d5db));
   border-radius: 12px;
   padding: 1rem;
   display: flex;
@@ -48,9 +48,9 @@
 }
 
 .point-note-modal__tag {
-  border: 1px solid var(--color-border, #cbd5e1);
-  background: var(--color-surface-muted, #f8fafc);
-  color: var(--color-text, #111827);
+  border: 1px solid var(--color-border, var(--slate-300));
+  background: var(--color-surface-muted, var(--slate-50));
+  color: var(--color-text, var(--ink-strong));
   border-radius: 999px;
   padding: 0.45rem 0.85rem;
   font-size: 0.88rem;
@@ -87,7 +87,7 @@
   width: 100%;
   min-height: 2.4rem;
   padding: 0.45rem 0.65rem;
-  border: 1px solid var(--color-border, #cbd5e1);
+  border: 1px solid var(--color-border, var(--slate-300));
   border-radius: 8px;
   font-size: 0.95rem;
 }
@@ -101,5 +101,5 @@
 
 .point-note-modal__delete {
   margin-right: auto;
-  color: #b91c1c;
+  color: var(--c-b91c1c);
 }

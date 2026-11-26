@@ -77,7 +77,7 @@
 }
 
 .heatmap-widget__mode-btn:hover:not(.heatmap-widget__mode-btn--active) {
-  background: var(--color-surface-hover, #f1f5f9);
+  background: var(--color-surface-hover, var(--slate-100));
   color: var(--color-text-primary);
 }
 
@@ -154,7 +154,7 @@
 }
 
 .heatmap-widget__diag-item--inferred {
-  color: var(--color-text-muted, #94a3b8);
+  color: var(--color-text-muted, var(--slate-400));
   font-style: italic;
 }
 
