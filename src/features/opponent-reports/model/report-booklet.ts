@@ -56,7 +56,7 @@ export function fitBookletCourt(svg: string, x: number, y: number, width: number
   return `<g transform="translate(${x + (width - sw * scale) / 2} ${y + (height - sh * scale) / 2}) scale(${scale})">${content}</g>`;
 }
 interface Page { title: string; elements: string[]; component: OpponentReportComponentId }
-interface Card { title: string; court?: ResolvedBoardCourt; body?: string; bandKey?: string; descriptionBelow?: boolean; descriptionLineLimit?: number; qrSvg?: string }
+interface Card { title: string; court?: ResolvedBoardCourt; body?: string; bandKey?: string; descriptionBelow?: boolean; descriptionLineLimit?: number; qrSvg?: string; note?: { id: string; body: string } }
 export interface ReportStaffNote { id: string; title: string; body: string }
 export interface ReportBookletPlan {
   staffNotes?: ReportStaffNote[];
@@ -80,7 +80,9 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const custom = settings.format === 'custom';
   const catalog = buildBoardPieceCatalog(report, view, t);
   const pages: Page[] = [];
-  const deferred: Array<{ id?: string; title: string; body: string }> = [];
+  const deferred: Array<{ id?: string; title: string; body: string; inBox?: boolean }> = [];
+  // Notes printed in full in the box beside their court: still editable, not repeated in the staff notes.
+  const notesInBox = new Set<string>();
   let component: OpponentReportComponentId = 'keys';
   const add = (title: string): Page => { const page = { title, elements: [] as string[], component }; pages.push(page); return page; };
   const prose = (title: string, paragraphs: Array<{ body: string; primary?: boolean; label?: string }>) => {
@@ -135,9 +137,27 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
           if (sample && sampleLines.length > maxLines) deferred.push({ title: card.title, body: sample });
           const availableHeight = Math.max(20, ch - headingHeight - visibleSample.length * 8 - 10);
           const vb = card.court.svg.match(/viewBox=["']([^"']+)["']/)?.[1].split(/[ ,]+/).map(Number);
-          const drawingHeight = card.descriptionBelow ? Math.min(availableHeight, svgWidth * (vb?.[3] ?? 254) / Math.max(1, vb?.[2] ?? 240)) : availableHeight;
-          page.elements.push(fitBookletCourt(card.court.svg, x, y + headingHeight + 4, svgWidth, drawingHeight, `p${pages.length}c${i}`));
-          const sampleY = card.descriptionBelow ? y + headingHeight + drawingHeight + 12 : y + ch - visibleSample.length * 8;
+          const aspect = Math.max(1, vb?.[2] ?? 240) / (vb?.[3] ?? 254);
+          // A note sits in a box beside the court, which keeps its size unless the free space is too narrow.
+          const minBox = a4 ? 100 : 72;
+          const courtWidth = card.note && card.descriptionBelow ? Math.min(cw - minBox - 6, availableHeight * aspect) : svgWidth;
+          const drawingHeight = card.descriptionBelow ? Math.min(availableHeight, courtWidth / aspect) : availableHeight;
+          // The text under the court stays level with the cards beside it, which have no note.
+          const rowHeight = card.descriptionBelow ? Math.min(availableHeight, svgWidth / aspect) : availableHeight;
+          page.elements.push(fitBookletCourt(card.court.svg, x, y + headingHeight + 4, courtWidth, drawingHeight, `p${pages.length}c${i}`));
+          if (card.note && card.descriptionBelow) {
+            const boxX = x + courtWidth + 6, boxY = y + headingHeight + 4, boxWidth = cw - courtWidth - 6, boxHeight = Math.max(drawingHeight, rowHeight);
+            const size = a4 ? 7 : 6, step = size * 1.35;
+            const noteLines = wrapBookletText(card.note.body, boxWidth - 8, size);
+            const capacity = Math.max(1, Math.floor((boxHeight - 6) / step));
+            const fits = noteLines.length <= capacity;
+            // A longer note shows its start and continues, whole, in the staff notes.
+            const shown = fits ? noteLines : [...noteLines.slice(0, capacity - 1), '…'];
+            if (fits) notesInBox.add(card.note.id);
+            page.elements.push(`<rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="3" fill="#f8fafc" stroke="#cbd5e1" stroke-width=".6" data-court-note="${xml(card.note.id)}"/>`);
+            page.elements.push(...shown.map((line, j) => text(boxX + 4, boxY + 4 + size + j * step, line, size)));
+          }
+          const sampleY = card.descriptionBelow ? y + headingHeight + Math.max(drawingHeight, rowHeight) + 12 : y + ch - visibleSample.length * 8;
           visibleSample.forEach((line, j) => page.elements.push(text(x + 4, sampleY + j * 8, line, 6)));
           if (sideText) {
             const bodyLines = wrapBookletText(card.body!, cw - svgWidth - 15, 8);
@@ -149,7 +169,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     }
   };
   const rememberNotes = (piece?: ResolvedBoardPiece) => {
-    if (piece?.note.trim()) deferred.push({ id: `${piece.id}:note`, title: piece.title, body: piece.note });
+    if (piece?.note.trim()) deferred.push({ id: `${piece.id}:note`, title: piece.title, body: piece.note, inBox: notesInBox.has(`${piece.id}:note`) });
     if (piece && report.pieceEdits?.[piece.id]?.subtitle !== undefined && piece.subtitle) deferred.push({ id: `${piece.id}:subtitle`, title: piece.title, body: piece.subtitle });
     if (piece && report.pieceEdits?.[piece.id]?.table && piece.table) deferred.push({ id: `${piece.id}:table`, title: piece.title,
       body: [piece.table.columns.join(' | '), ...piece.table.rows.map(row => row.map(formatViewCell).join(' | '))].join('\n') });
@@ -272,6 +292,11 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       descriptionBelow: true,
       descriptionLineLimit: a4 ? 5 : 3,
       qrSvg: p.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined,
+      note: (() => {
+        const id = `${p.id}:note`;
+        const body = (report.staffNoteEdits?.[id] ?? p.note).trim();
+        return body ? { id, body } : undefined;
+      })(),
     });
     if (view.attackerViews?.length) {
       for (const customView of view.attackerViews) {
@@ -548,14 +573,14 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const staffNotes: ReportStaffNote[] = [];
   const annotations: Array<{ body: string }> = [];
   for (const entry of deferred) {
-    const fingerprint = entry.title + '\u0000' + entry.body;
+    const fingerprint = entry.title + '\u0000' + entry.body + (entry.inBox ? '\u0001' : '');
     if (seen.has(fingerprint)) continue;
     seen.add(fingerprint);
     // Source-based ids keep coach edits stable across layout and language changes.
     const id = entry.id ?? `continuation:${fingerprint}`;
     const body = entry.id === 'manual' ? entry.body : report.staffNoteEdits?.[id] ?? entry.body;
     if (entry.id !== 'manual') staffNotes.push({ id, title: entry.title, body });
-    if (body.trim()) annotations.push({ body: `${entry.title}\n${body}` });
+    if (body.trim() && !entry.inBox) annotations.push({ body: `${entry.title}\n${body}` });
   }
   component = 'notes';
   // Paper has no links: one QR code per chart with synced YouTube video.

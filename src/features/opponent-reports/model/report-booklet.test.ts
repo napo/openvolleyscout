@@ -113,6 +113,29 @@ describe('booklet planning and printing',()=>{
     delete report.staffNoteEdits['attacker:1:note'];
     expect(buildReportBooklet(report,view,t).pages.join('')).toContain('Cover the short diagonal');
   });
+  it('prints a short attacker note in a box beside her court and not again in the staff notes',()=>{
+    const {report,view}=fixture();
+    report.pieceEdits={'attacker:1':{note:'Cover diagonal'}};
+    for(const a4 of [false,true]){
+      const plan=buildReportBooklet(report,view,t,'',{a4});
+      const attackPage=plan.pages.find(page=>page.includes('data-court-note="attacker:1:note"'));
+      expect(attackPage,`a4=${a4}`).toContain('>Cover diagonal<');
+      expect(plan.pages.join('').match(/Cover diagonal/g),`a4=${a4}`).toHaveLength(1);
+      expect(plan.staffNotes).toContainEqual(expect.objectContaining({id:'attacker:1:note'}));
+    }
+    expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes('data-court-note="attacker:2:note"'))).toBe(false);
+  });
+  it('starts a long attacker note in the box and prints it whole in the staff notes',()=>{
+    const {report,view}=fixture();
+    report.pieceEdits={'attacker:1':{note:`${'Block the line and dig the cross behind it. '.repeat(20)}END-MARKER`}};
+    for(const a4 of [false,true]){
+      const pages=buildReportBooklet(report,view,t,'',{a4}).pages;
+      const attackPage=pages.find(page=>page.includes('data-court-note="attacker:1:note"'))!;
+      expect(attackPage,`a4=${a4}`).toContain('…');
+      expect(attackPage,`a4=${a4}`).not.toContain('END-MARKER');
+      expect(pages.some(page=>page!==attackPage&&page.includes('END-MARKER')),`a4=${a4}`).toBe(true);
+    }
+  });
   it('shares the component order between the navigator and every export layout',()=>{
     const {report,view}=fixture();
     report.notes='Staff note moved to the beginning';
