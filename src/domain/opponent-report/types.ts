@@ -12,6 +12,7 @@ export interface OpponentReportTeamRef {
 
 /** Sheets of the report, in their default order. */
 export const OPPONENT_REPORT_SHEET_IDS = [
+  'team',
   'keys',
   'overview',
   'reception',
@@ -186,6 +187,8 @@ export interface OpponentReportBooklet {
   includeSecondSetter: boolean;
   /** Setters (ReportPlayer.key) printed with charts; the others as text. Absent = the setter with most touches. */
   setterChartKeys?: string[];
+  /** "Team" page: roster and starting rotations. On for new reports, off unless true for older ones. */
+  includeTeam?: boolean;
   /** "Zone analysis" pages (after reception, in transition); off unless true. */
   includeZones?: boolean;
   /** Coach-selected attackers retained in text without direction drawings. */
@@ -352,7 +355,7 @@ export function createOpponentReport(input: {
     freeTexts: {},
     drawings: [],
     draftStatus: 'preparing',
-    booklet: { format: 'extended', base: 'extended', includeServe: true, includeServeReserves: false, includeAttackers: true, includeSecondSetter: false, includeBoardExtras: false },
+    booklet: { format: 'extended', base: 'extended', includeServe: true, includeServeReserves: false, includeAttackers: true, includeSecondSetter: false, includeBoardExtras: false, includeTeam: true },
     sheets: createDefaultOpponentReportSheets(),
     createdAt: now,
     updatedAt: now,

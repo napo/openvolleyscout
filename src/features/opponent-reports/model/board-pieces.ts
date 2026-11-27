@@ -30,6 +30,8 @@ import { buildTacticalBoardSvg, extractEditableDrawingFromSvg } from './tactical
 import { zonesPieceId } from './report-zones';
 
 export const PIECE_KEYS_MAIN = 'keys:main';
+export const PIECE_TEAM_ROSTER = 'team:roster';
+export const PIECE_TEAM_STARTS = 'team:starts';
 export const PIECE_OVERVIEW_ROTATIONS = 'overview:rotations';
 export const PIECE_OVERVIEW_STRENGTHS = 'overview:strengths-weaknesses';
 export const PIECE_OVERVIEW_ERRORS = 'overview:errors';
@@ -182,6 +184,35 @@ export function buildBoardPieceCatalog(
       kind: 'ordered-list',
       title: edit?.title ?? t('opponentReportSheet_keys'),
       items: edit?.items ?? (report.booklet || report.keys ? view.keys.filter((entry, index) => index < 5 && (index < 3 || entry.includeInPrint !== false)) : view.keys).map((entry) => entry.text),
+      note: edit?.note ?? '',
+      isModified: hasPieceEdit(edit),
+    });
+  }
+
+  // ── 1b. Team: roster and starting rotations ───────────────────────────────
+  if (view.team?.roster.rows.length) {
+    const id = PIECE_TEAM_ROSTER;
+    const edit = edits[id];
+    catalog.set(id, {
+      id,
+      sheetId: 'team',
+      kind: 'table',
+      title: edit?.title ?? t('teamRosterTitle'),
+      table: applyTableEdit(view.team.roster, edit?.table),
+      note: edit?.note ?? '',
+      isModified: hasPieceEdit(edit),
+    });
+  }
+  if (view.team?.hasStarts) {
+    const id = PIECE_TEAM_STARTS;
+    const edit = edits[id];
+    catalog.set(id, {
+      id,
+      sheetId: 'team',
+      kind: 'table',
+      title: edit?.title ?? t('teamStartsTitle'),
+      subtitle: edit?.subtitle ?? t('teamStartsCaption'),
+      table: applyTableEdit(view.team.starts, edit?.table),
       note: edit?.note ?? '',
       isModified: hasPieceEdit(edit),
     });
@@ -533,6 +564,11 @@ export function getPieceIdsForSheet(
   view: ReportView,
 ): string[] {
   switch (sheetId) {
+    case 'team':
+      return [
+        ...(view.team?.roster.rows.length ? [PIECE_TEAM_ROSTER] : []),
+        ...(view.team?.hasStarts ? [PIECE_TEAM_STARTS] : []),
+      ];
     case 'keys':
       return [PIECE_KEYS_MAIN];
     case 'overview':
@@ -599,6 +635,10 @@ export function resolveActiveBoardPieceIds(
     if (!base.includes(id)) {
       base.push(id);
     }
+  }
+  // The booklet's "Team" option adds its page (roster and starting rotations).
+  if (report.booklet?.includeTeam) {
+    for (const id of getPieceIdsForSheet('team', report, view)) if (!base.includes(id)) base.push(id);
   }
   // The booklet's "Zone analysis" option adds its pages (phases with attacks).
   if (report.booklet?.includeZones) {

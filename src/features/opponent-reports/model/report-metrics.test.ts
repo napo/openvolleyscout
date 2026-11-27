@@ -110,6 +110,10 @@ describe('opponent report metrics', () => {
     expect(metrics.touchesByPlayer).toMatchObject({ [keyOf('a1')]: 2, [keyOf('a2')]: 3, [keyOf('a4')]: 1, [keyOf('a5')]: 1 });
   });
 
+  it('lists the athletes who played, by jersey, starters included even without a touch', () => {
+    expect(metrics.teamPlayers?.map((entry) => entry.player.jersey)).toEqual(['1', '2', '3', '4', '5', '6']);
+  });
+
   it('measures reception per receiver and per rotation', () => {
     const byName = Object.fromEntries(metrics.receivers.map((row) => [row.player.name, row.positive]));
     expect(byName.Player2).toEqual({ count: 1, total: 1, rate: 1 });

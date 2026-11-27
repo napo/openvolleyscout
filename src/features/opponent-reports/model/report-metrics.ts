@@ -184,6 +184,8 @@ export interface OpponentReportMetrics {
   sample: { matches: number; sets: number; rallies: number };
   /** Touches of every skill per player (ReportPlayer.key): ranks the setters in the report. */
   touchesByPlayer?: Record<string, number>;
+  /** Athletes who played (a touch, or in a starting line-up), by jersey, with the role of the roster. */
+  teamPlayers?: Array<{ player: ReportPlayer; role?: string; libero: boolean }>;
   /** Optional so older fixtures and stored metrics stay valid. */
   teamIndicators?: TeamIndicators;
   startingRotations: StartingRotationRow[];
@@ -392,6 +394,7 @@ export function computeOpponentReportMetrics(
   const attackers = mapOf<string, { kill: Counter; errors: Counter; skillStats: SkillStats }>(() => ({ kill: new Counter(), errors: new Counter(), skillStats: createEmptySkillStats() }));
   const errors = mapOf<string, { serve: Counter; attack: Counter }>(() => ({ serve: new Counter(), attack: new Counter() }));
   const touchCounts = new Map<string, number>();
+  const playedKeys = new Set<string>();
   const teamErrors = { serve: new Counter(), attack: new Counter() };
   // rotation -> player -> reception counters and zones
   const receptionsByRotation = mapOf<CourtPosition, Map<string, { positive: Counter; sideOut: Counter; zones: Map<string, { count: number; sideOut: Counter }> }>>(() => new Map());
@@ -450,6 +453,10 @@ export function computeOpponentReportMetrics(
         const key = playerKey(liberoId);
         if (key) liberoKeys.add(key);
       }
+      for (const slot of lineup.slots) {
+        const key = playerKey(slot.playerId);
+        if (key) playedKeys.add(key);
+      }
       const setterSlot = lineup.slots.find((slot) => slot.playerId === lineup.setterPlayerId);
       const rotation = setterSlot && setterSlot.courtPosition >= 1 && setterSlot.courtPosition <= 6
         ? setterSlot.courtPosition as CourtPosition
@@ -473,7 +480,7 @@ export function computeOpponentReportMetrics(
       for (const touch of rally.touches) {
         if (touch.teamSide !== side) continue;
         const key = playerKey(touch.playerId);
-        if (key) touchCounts.set(key, (touchCounts.get(key) ?? 0) + 1);
+        if (key) { touchCounts.set(key, (touchCounts.get(key) ?? 0) + 1); playedKeys.add(key); }
         if (touch.skill === 'serve') {
           teamErrors.serve.add(touch.evaluation === '=');
           if (key) errors.get(key).serve.add(touch.evaluation === '=');
@@ -619,6 +626,10 @@ export function computeOpponentReportMetrics(
   return {
     sample: { matches: matches.length, sets, rallies },
     touchesByPlayer: Object.fromEntries(touchCounts),
+    teamPlayers: [...players.values()]
+      .filter((player) => playedKeys.has(player.key))
+      .sort((a, b) => (Number(a.jersey) || 999) - (Number(b.jersey) || 999) || a.name.localeCompare(b.name))
+      .map((player) => ({ player, role: playerRoles.get(player.key), libero: liberoKeys.has(player.key) })),
     teamIndicators: computeTeamIndicators(matches),
     startingRotations,
     startingRotationCounts,

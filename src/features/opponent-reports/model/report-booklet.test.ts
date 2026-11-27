@@ -155,13 +155,37 @@ describe('booklet planning and printing',()=>{
     report.booklet={...report.booklet!,setterChartKeys:undefined,includeSecondSetter:true};
     expect([...new Set(setterPages(buildReportBooklet(report,view,t)).map(titleOf))]).toEqual(['#5 Player 5','#2 Player 2']);
   });
+  it('opens new reports with the Team page: roster and the sets started in each rotation',()=>{
+    const {report,view}=fixture();
+    const cell=(text:string)=>({text});
+    view.team={
+      roster:{columns:['Jersey','Player','Role'],rows:[['7','Anna Rossi','Setter'],['12','Bea Neri','Libero']].map(row=>row.map(cell))},
+      starts:{columns:['Rotation','Starting on serve','Starting on reception'],rows:[1,2,3,4,5,6].map(r=>[cell(`P${r}`),cell(String(r===1?3:0)),cell(String(r===4?2:0))])},
+      hasStarts:true,
+    };
+    for(const a4 of [false,true]){
+      const pages=buildReportBooklet(report,view,t,'',{a4}).pages;
+      const teamPage=pages[0];
+      expect(teamPage,`a4=${a4}`).toContain(`>${t('opponentReportSheet_team')}<`);
+      expect(teamPage).toContain('>Anna Rossi<');
+      expect(teamPage).toContain('>Libero<');
+      expect(teamPage).toContain('>Starting on serve<');
+      expect(teamPage.match(/<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="[\d.]+" fill="#(0f766e|1d4ed8)"/g)).toHaveLength(2);
+      expect(pages.filter(page=>page.includes('>Anna Rossi<')),`a4=${a4} roster printed once`).toHaveLength(1);
+    }
+    // Reports saved before the Team sheet keep their pages until the coach turns it on.
+    report.booklet={...report.booklet!,includeTeam:undefined};
+    expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes(`>${t('opponentReportSheet_team')}<`))).toBe(false);
+  });
   it('shares the component order between the navigator and every export layout',()=>{
     const {report,view}=fixture();
     report.notes='Staff note moved to the beginning';
     const reordered=moveReportComponent(moveReportComponent(report,'attackers','keys'),'notes','attackers');
-    expect(reportComponentOrder(reordered).slice(0,3)).toEqual(['notes','attackers','keys']);
+    expect(reportComponentOrder(reordered).slice(0,4)).toEqual(['team','notes','attackers','keys']);
     expect(moveReportComponent(reordered,'notes','notes')).toBe(reordered);
-    expect(reportComponentOrder({...report,componentOrder:['setter','setter']})).toHaveLength(10);
+    expect(reportComponentOrder({...report,componentOrder:['setter','setter']})).toHaveLength(11);
+    // A report saved before the Team sheet gets it where it belongs, not after the notes.
+    expect(reportComponentOrder({...report,componentOrder:['keys','serveTargets','attackers','setter','zones','serve','overview','reception','board','notes']})[0]).toBe('team');
     for(const a4 of [false,true]){
       const plan=buildReportBooklet(reordered,view,t,'',{a4});
       expect(plan.pages[0]).toContain('Staff note moved to the beginning');

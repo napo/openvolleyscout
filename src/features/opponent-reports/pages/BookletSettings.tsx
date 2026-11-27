@@ -22,6 +22,7 @@ export function BookletSettings({ report, plan, attackers, update }: { report: O
       </select></label>
       <label><input type="checkbox" checked={settings.includeBoardExtras} onChange={(event) => change({ includeBoardExtras: event.target.checked })} />{t('bookletBoardExtras')}</label>
     </> : null}
+    <label><input type="checkbox" checked={settings.includeTeam ?? false} onChange={(event) => change({ includeTeam: event.target.checked })} />{t('bookletTeam')}</label>
     <label><input type="checkbox" checked={settings.includeAttackers !== false} onChange={(event) => change({ includeAttackers: event.target.checked })} />{t('bookletAttackers')}</label>
     <label><input type="checkbox" checked={settings.includeServe} onChange={(event) => change({ includeServe: event.target.checked })} />{t('bookletServe')}</label>
     {settings.includeServe ? <label className="tactical-booklet-settings__sub"><input type="checkbox" checked={settings.includeServeReserves ?? false} onChange={(event) => change({ includeServeReserves: event.target.checked })} />{t('bookletServeReserves')}</label> : null}

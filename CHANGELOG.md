@@ -3,6 +3,7 @@
 ## 0.52.0 - 2026-11-27
 
 ### Added
+- Tactical report: a new "Team" page opens the report with the athletes who played (number, name, role) and two bar charts with the sets started in each rotation, on serve and on reception. It is on for new reports; for reports you already have, turn it on in Format.
 - Tactical report, setting distribution: you can filter the sets by the setter's call (K1, KC and so on) and draw one chart for each call.
 - Tactical report, Block and defence: the filters now include "Attack type" (H, M, Q, T, U, N, O). You can pick one or more types, or draw one chart for each type.
 - Tactical report, Setting distribution: a new "Setters with charts" box lets you choose which setters get charts. The first setter, the one with the most touches of any kind, has charts by default and the others are summarised in text.

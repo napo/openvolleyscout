@@ -146,6 +146,8 @@ export interface ReportView {
   };
   /** Zone analysis per rotation, after reception and in transition. */
   zones?: ReportZoneView;
+  /** "Team" sheet: athletes who played and the sets started in each rotation. */
+  team?: { roster: ViewTable; starts: ViewTable; hasStarts: boolean };
   minSample: number;
 }
 
@@ -173,6 +175,36 @@ function rateCell(value: Ratio, metric: TrafficMetric | null, thresholds: Oppone
 }
 
 const plain = (text: string | number): ViewCell => ({ text: String(text) });
+
+const ROLE_NAME_KEYS = {
+  setter: 'roleNameSetter',
+  outside_hitter: 'roleNameOutside',
+  opposite: 'roleNameOpposite',
+  middle_blocker: 'roleNameMiddle',
+  libero: 'roleNameLibero',
+} as const;
+
+function teamView(metrics: OpponentReportMetrics, t: ViewT): NonNullable<ReportView['team']> {
+  const roleName = (role: string | undefined, libero: boolean) => {
+    const key = libero ? 'roleNameLibero' : ROLE_NAME_KEYS[role as keyof typeof ROLE_NAME_KEYS];
+    return key ? t(key) : '';
+  };
+  const rotations = [1, 2, 3, 4, 5, 6] as const;
+  return {
+    roster: {
+      columns: [t('jerseyNumber'), t('opponentReportColPlayer'), t('teamColRole')],
+      rows: (metrics.teamPlayers ?? []).map(({ player, role, libero }) => [plain(player.jersey), plain(player.name), plain(roleName(role, libero))]),
+    },
+    starts: {
+      columns: [t('opponentReportColRotation'), t('teamStartsServe'), t('teamStartsReceive')],
+      rows: rotations.map((rotation) => {
+        const starts = metrics.startingRotationCounts[rotation];
+        return [plain(`P${rotation}`), plain(starts.serve), plain(starts.receive)];
+      }),
+    },
+    hasStarts: rotations.some((rotation) => metrics.startingRotationCounts[rotation].serve + metrics.startingRotationCounts[rotation].receive > 0),
+  };
+}
 
 function teamIndicatorsView(metrics: OpponentReportMetrics, thresholds: OpponentReportThresholds, t: ViewT): ViewTable {
   const columns = [t('opponentReportTeamIndicator'), t('opponentReportTeamIndicatorValue'), t('opponentReportTeamIndicatorDescription')];
@@ -1416,6 +1448,7 @@ export function buildReportView(
       return { ...serve, servers: serve.servers.map((server) => ({ ...server, videoLink: extraVideoLinks.serve?.get(server.player.key) })) };
     })(),
     ...(zones ? { zones } : {}),
+    team: teamView(metrics, t),
     minSample,
   };
 }

@@ -2,7 +2,7 @@ import type { OpponentReport, OpponentReportBooklet, OpponentReportComponentId }
 import { opponentReportTitle } from './report-title';
 import { reportComponentOrder } from './report-components';
 import { APP_METADATA } from '@src/lib/constants/app';
-import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, attackerPlayerKeyFromPieceId, attackerViewIdFromPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
+import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_TEAM_ROSTER, PIECE_TEAM_STARTS, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, attackerPlayerKeyFromPieceId, attackerViewIdFromPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
 import { formatViewCell, type ReportView, type ViewT } from './report-view';
 import { playerLabel } from './report-keys';
 import { buildQrSvg } from './qr-svg';
@@ -56,6 +56,21 @@ export function fitBookletCourt(svg: string, x: number, y: number, width: number
   return `<g transform="translate(${x + (width - sw * scale) / 2} ${y + (height - sh * scale) / 2}) scale(${scale})">${content}</g>`;
 }
 interface Page { title: string; elements: string[]; component: OpponentReportComponentId }
+
+/** A small column chart: one bar per label, the count above it, the label below. */
+function bookletBarChart(x: number, y: number, width: number, height: number, title: string, labels: readonly string[], values: readonly number[], max: number, fill: string): string {
+  const parts = [text(x, y + 8, title, 8, true)];
+  const top = y + 22, base = y + height - 12, slot = width / Math.max(1, values.length), barWidth = Math.min(28, slot * 0.6);
+  parts.push(`<line x1="${x}" y1="${base}" x2="${x + width}" y2="${base}" stroke="#94a3b8" stroke-width=".6"/>`);
+  values.forEach((value, i) => {
+    const barHeight = max > 0 ? (base - top) * value / max : 0;
+    const center = x + slot * i + slot / 2;
+    if (barHeight > 0) parts.push(`<rect x="${center - barWidth / 2}" y="${base - barHeight}" width="${barWidth}" height="${barHeight}" fill="${fill}" rx="1.5"/>`);
+    parts.push(`<text x="${center}" y="${base - barHeight - 3}" font-size="7" font-weight="bold" fill="${color}" text-anchor="middle">${value}</text>`);
+    parts.push(`<text x="${center}" y="${base + 9}" font-size="7" fill="${color}" text-anchor="middle">${xml(labels[i] ?? '')}</text>`);
+  });
+  return parts.join('');
+}
 
 type SetterGroup = ReportView['setter']['groups'][number];
 /** Setters in print order: most touches of every skill first, then most sets. */
@@ -208,6 +223,49 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const indicatorBody = [indicatorRows.slice(0, 4), indicatorRows.slice(4)]
     .map((group) => group.map((row) => `${formatViewCell(row[0])} ${formatViewCell(row[1])}`).join(' · '))
     .filter(Boolean).join('\n');
+  // "Team": the athletes who played, then the sets started in each rotation as two bar charts.
+  const teamRoster = resolvedBoardPieces.find((p) => p.id === PIECE_TEAM_ROSTER);
+  const teamStarts = resolvedBoardPieces.find((p) => p.id === PIECE_TEAM_STARTS);
+  if (teamRoster?.table || teamStarts?.table) {
+    component = 'team';
+    const page = add(t('opponentReportSheet_team'));
+    const chartBlock = teamStarts?.table ? (a4 ? 260 : 190) : 0;
+    let y = TOP;
+    if (teamRoster?.table) {
+      page.elements.push(text(M, y + 10, teamRoster.title, 10, true));
+      y += 18;
+      const size = a4 ? 9 : 8, step = size * 1.45;
+      const rows = teamRoster.table.rows.map((row) => row.map(formatViewCell));
+      const perColumn = Math.max(1, Math.floor((BOTTOM - chartBlock - y - 6) / step));
+      const columns = rows.length > perColumn ? 2 : 1;
+      const columnWidth = columns === 2 ? (WIDTH - 12) / 2 : WIDTH;
+      const shown = rows.slice(0, perColumn * columns);
+      shown.forEach((row, i) => {
+        const x = M + Math.floor(i / perColumn) * (columnWidth + 12), rowY = y + (i % perColumn) * step + size;
+        page.elements.push(text(x, rowY, row[0] ?? '', size, true));
+        const nameX = x + size * 2.6, nameWidth = Math.min(columnWidth * 0.62, size * 20) - size * 2.6;
+        page.elements.push(text(nameX, rowY, wrapBookletText(row[1] ?? '', nameWidth, size)[0] ?? '', size));
+        page.elements.push(text(nameX + nameWidth + 6, rowY, wrapBookletText(row[2] ?? '', columnWidth - nameWidth - size * 2.6 - 6, size)[0] ?? '', size, false, '#475569'));
+      });
+      if (rows.length > shown.length) deferred.push({ title: teamRoster.title, body: rows.slice(shown.length).map((row) => row.filter(Boolean).join(' ')).join('\n') });
+      rememberNotes(teamRoster);
+    }
+    if (teamStarts?.table) {
+      const table = teamStarts.table;
+      const top = BOTTOM - chartBlock + 8;
+      page.elements.push(text(M, top, teamStarts.title, 10, true));
+      const labels = table.rows.map((row) => formatViewCell(row[0]));
+      const counts = (column: number) => table.rows.map((row) => Math.max(0, Number.parseInt(formatViewCell(row[column]), 10) || 0));
+      const serve = counts(1), receive = counts(2), max = Math.max(1, ...serve, ...receive);
+      const captionLines = wrapBookletText(teamStarts.subtitle ?? '', WIDTH, 6);
+      const chartTop = top + 8, chartWidth = (WIDTH - 14) / 2, chartHeight = BOTTOM - chartTop - captionLines.length * 8 - 4;
+      page.elements.push(bookletBarChart(M, chartTop, chartWidth, chartHeight, table.columns[1] ?? '', labels, serve, max, '#0f766e'));
+      page.elements.push(bookletBarChart(M + chartWidth + 14, chartTop, chartWidth, chartHeight, table.columns[2] ?? '', labels, receive, max, '#1d4ed8'));
+      page.elements.push(...captionLines.map((line, i) => text(M, BOTTOM - captionLines.length * 8 + 6 + i * 8, line, 6, false, '#475569')));
+      rememberNotes(teamStarts);
+    }
+    component = 'keys';
+  }
   if (showKeys) {
     prose(keys?.title ?? t('opponentReportSheet_keys'), [
       ...(printable.length ? printable.map(({ body, index }) => ({ body, primary: index < 3, label: `${index + 1}. ${t(index < 3 ? 'priorityPrimary' : 'prioritySecondary')}` })) : [{ body: t('opponentReportKeysNoProposals') }]),
@@ -487,7 +545,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     deferred.push({ id: 'serve-text', title: t('opponentReportSheet_serve'), body: servers.map((p) => serveText.get(p.id) ?? p.title).join('\n') });
   }
   if (custom && settings.includeBoardExtras) {
-    const included = new Set([...zonePieces.map((p) => p.id), PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...setters.flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
+    const included = new Set([...zonePieces.map((p) => p.id), PIECE_TEAM_ROSTER, PIECE_TEAM_STARTS, PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...setters.flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
       ...(drawable.size ? servers.map(p => p.id) : [])]);
     const extraPieces = resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id));
     const extraCards: Card[] = [];
@@ -536,6 +594,9 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     const detailed = new Map(resolveBoardPieces(report, view, t).map(piece => [piece.id, piece]));
     if (!showAttackers) for (const piece of attackers) detailed.delete(piece.id);
     if (breakLines.length) detailed.delete(PIECE_OVERVIEW_BREAK_REACTION);
+    // Already drawn on the "Team" page.
+    detailed.delete(PIECE_TEAM_ROSTER);
+    detailed.delete(PIECE_TEAM_STARTS);
     for (const piece of [
       ...(showServeTargets ? [reception] : []),
       ...(showAttackers ? attackers : []),
