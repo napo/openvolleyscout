@@ -2,7 +2,7 @@ import type { OpponentReport, OpponentReportBooklet, OpponentReportComponentId }
 import { opponentReportTitle } from './report-title';
 import { reportComponentOrder } from './report-components';
 import { APP_METADATA } from '@src/lib/constants/app';
-import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_TEAM_ROSTER, PIECE_TEAM_STARTS, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, attackerPlayerKeyFromPieceId, attackerViewIdFromPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
+import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_TEAM_ROSTER, PIECE_TEAM_STARTS, PIECE_TEAM_LINEUP, PIECE_TEAM_STARTERS, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, attackerPlayerKeyFromPieceId, attackerViewIdFromPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
 import { formatViewCell, type ReportView, type ViewT } from './report-view';
 import { playerLabel } from './report-keys';
 import { buildQrSvg } from './qr-svg';
@@ -279,8 +279,11 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   // "Team": the athletes who played, then the sets started in each rotation as two bar charts.
   const teamRoster = resolvedBoardPieces.find((p) => p.id === PIECE_TEAM_ROSTER);
   const teamStarts = resolvedBoardPieces.find((p) => p.id === PIECE_TEAM_STARTS);
-  if (teamRoster?.table || teamStarts?.table) {
+  const teamLineup = resolvedBoardPieces.find((p) => p.id === PIECE_TEAM_LINEUP);
+  const teamStarters = resolvedBoardPieces.find((p) => p.id === PIECE_TEAM_STARTERS);
+  if (teamRoster?.table || teamStarts?.table || teamLineup?.lineupCells || teamStarters?.table) {
     component = 'team';
+    if (teamRoster?.table || teamStarts?.table) {
     const page = add(t('teamPageTitle', { team: report.opponent.name }));
     const chartBlock = teamStarts?.table ? (a4 ? 190 : 150) : 0;
     let y = TOP;
@@ -319,6 +322,69 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       page.elements.push(text(M, top, teamStarts.title, 10, true));
       page.elements.push(teamStartsElements(M, top + 8, WIDTH, BOTTOM - top - 8, teamStarts, view.team, report.pieceEdits?.[PIECE_TEAM_STARTS]?.chartColors, t));
       rememberNotes(teamStarts);
+    }
+    }
+    // Second page: the most used line-up drawn by zone (setter in zone 1), then the starters' statistics.
+    if (teamLineup?.lineupCells || teamStarters?.table) {
+      const second = add(t('teamPageTitle', { team: report.opponent.name }));
+      let top = TOP;
+      if (teamLineup?.lineupCells) {
+        second.elements.push(text(M, top + 10, teamLineup.title, 10, true));
+        top += 18;
+        const cells = teamLineup.lineupCells, labels = teamLineup.lineupLabels ?? [];
+        const cellWidth = (WIDTH - 12) / 3, cellHeight = a4 ? 74 : 62, gap = 6;
+        // The net above the front row: zones 4, 3, 2 in front, 5, 6, 1 behind; the liberos below.
+        second.elements.push(`<line x1="${M}" y1="${top}" x2="${M + WIDTH}" y2="${top}" stroke="${color}" stroke-width="2"/>`);
+        const drawCell = (index: number, x: number, y: number) => {
+          const athletes = cells[index] ?? [];
+          second.elements.push(`<rect x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width=".8"/>`);
+          const label = index < 6 ? `${t('teamColZone')} ${labels[index] ?? index + 1}` : labels[index] ?? 'L';
+          second.elements.push(`<text x="${x + cellWidth - 4}" y="${y + 9}" font-size="6" fill="#475569" text-anchor="end">${xml(label)}</text>`);
+          // Two athletes share the cell side by side, in the order the coach chose.
+          const part = cellWidth / Math.max(1, athletes.length);
+          athletes.forEach((athlete, n) => {
+            const left = x + n * part;
+            if (n > 0) second.elements.push(`<line x1="${left}" y1="${y + 4}" x2="${left}" y2="${y + cellHeight - 4}" stroke="#cbd5e1" stroke-width=".6"/>`);
+            const nameSize = athletes.length > 1 ? (a4 ? 8 : 7) : (a4 ? 9 : 8);
+            let lineY = y + 11;
+            second.elements.push(text(left + 4, lineY, athlete.role, 8, true, '#007e80'));
+            lineY += nameSize + 3;
+            wrapBookletText(`#${athlete.jersey} ${athlete.name}`, part - 8, nameSize).slice(0, 2).forEach((line) => { second.elements.push(text(left + 4, lineY, line, nameSize, true)); lineY += nameSize + 1.5; });
+            wrapBookletText(athlete.figures, part - 8, 6).slice(0, 2).forEach((line) => { second.elements.push(text(left + 4, lineY + 1, line, 6, false, '#475569')); lineY += 7.5; });
+            second.elements.push(text(left + 4, y + cellHeight - 5, t('teamCellMatches', { n: athlete.matches }), 6, false, '#475569'));
+          });
+        };
+        [[3, 2, 1], [4, 5, 0]].forEach((indexes, line) => indexes.forEach((index, column) => drawCell(index, M + column * (cellWidth + gap), top + 6 + line * (cellHeight + gap))));
+        let y = top + 6 + 2 * (cellHeight + gap);
+        const liberoCells = [6, 7].filter((index) => (cells[index] ?? []).length > 0);
+        liberoCells.forEach((index, n) => drawCell(index, M + n * (cellWidth + gap), y));
+        if (liberoCells.length) y += cellHeight + gap;
+        const caption = wrapBookletText(teamLineup.subtitle ?? '', WIDTH, 6);
+        caption.forEach((line, n) => second.elements.push(text(M, y + 6 + n * 8, line, 6, false, '#475569')));
+        top = y + 10 + caption.length * 8;
+        rememberNotes(teamLineup);
+      }
+      if (teamStarters?.table) {
+        const table = teamStarters.table;
+        second.elements.push(text(M, top + 12, teamStarters.title, 10, true));
+        top += 22;
+        const size = a4 ? 8 : 7, step = size * 1.6;
+        const numberWidth = size * 2.4, nameWidth = WIDTH * (a4 ? 0.3 : 0.27);
+        const valueWidth = (WIDTH - numberWidth - nameWidth) / Math.max(1, table.columns.length - 2);
+        const columnRight = (index: number) => M + numberWidth + nameWidth + valueWidth * (index - 1);
+        const drawRow = (cells: string[], y: number, header: boolean) => {
+          const fill = header ? '#475569' : color;
+          second.elements.push(text(M, y, cells[0] ?? '', size, true, fill));
+          second.elements.push(text(M + numberWidth, y, wrapBookletText(cells[1] ?? '', nameWidth - 4, size)[0] ?? '', size, header, fill));
+          cells.slice(2).forEach((value, i) => second.elements.push(`<text x="${columnRight(i + 2)}" y="${y}" font-size="${size}"${header ? ' font-weight="bold"' : ''} fill="${fill}" text-anchor="end">${xml(value)}</text>`));
+        };
+        drawRow(table.columns, top, true);
+        second.elements.push(`<line x1="${M}" y1="${top + 3}" x2="${M + WIDTH}" y2="${top + 3}" stroke="#cbd5e1" stroke-width=".6"/>`);
+        table.rows.map((row) => row.map(formatViewCell)).forEach((row, i) => {
+          if (top + (i + 1) * step < BOTTOM) drawRow(row, top + (i + 1) * step, false);
+        });
+        rememberNotes(teamStarters);
+      }
     }
     component = 'keys';
   }
@@ -601,7 +667,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     deferred.push({ id: 'serve-text', title: t('opponentReportSheet_serve'), body: servers.map((p) => serveText.get(p.id) ?? p.title).join('\n') });
   }
   if (custom && settings.includeBoardExtras) {
-    const included = new Set([...zonePieces.map((p) => p.id), PIECE_TEAM_ROSTER, PIECE_TEAM_STARTS, PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...setters.flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
+    const included = new Set([...zonePieces.map((p) => p.id), PIECE_TEAM_ROSTER, PIECE_TEAM_STARTS, PIECE_TEAM_LINEUP, PIECE_TEAM_STARTERS, PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...setters.flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
       ...(drawable.size ? servers.map(p => p.id) : [])]);
     const extraPieces = resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id));
     const extraCards: Card[] = [];
@@ -653,6 +719,8 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     // Already drawn on the "Team" page.
     detailed.delete(PIECE_TEAM_ROSTER);
     detailed.delete(PIECE_TEAM_STARTS);
+    detailed.delete(PIECE_TEAM_LINEUP);
+    detailed.delete(PIECE_TEAM_STARTERS);
     for (const piece of [
       ...(showServeTargets ? [reception] : []),
       ...(showAttackers ? attackers : []),

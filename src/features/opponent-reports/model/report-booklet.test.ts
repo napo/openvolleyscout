@@ -12,6 +12,7 @@ import { bookletImposition, buildReportBooklet, fitBookletCourt, imposeBooklet, 
 import { buildReceptionFormationSvg } from './reception-formation';
 import { buildSetterRotationCourtSvg } from './report-view';
 import { moveReportComponent, reportComponentOrder } from './report-components';
+import { assignLineupCell, resolveLineupCells } from './board-pieces';
 import { recoverArchivedSetterSheets } from './report-draft';
 import type { KeySuggestion } from './report-keys';
 const translator = (messages: Record<string,string>): ViewT => (key, params) => (messages[key] ?? key).replace(/{{(\w+)}}/g, (_, name) => String(params?.[name] ?? name));
@@ -217,6 +218,32 @@ describe('booklet planning and printing',()=>{
     // Reports saved before the Team sheet keep their pages until the coach turns it on.
     report.booklet={...report.booklet!,includeTeam:undefined};
     expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes(`>${t('teamPageTitle',{team:'Rivals'})}<`))).toBe(false);
+  });
+  it('moves an athlete to the cell where the coach puts her, at most two per cell',()=>{
+    const cells=[['a'],['b'],['c'],['d'],['e'],['f'],['l'],[]];
+    expect(assignLineupCell(cells,0,['a','g'])).toEqual([['a','g'],['b'],['c'],['d'],['e'],['f'],['l'],[]]);
+    expect(assignLineupCell(cells,1,['b','c'])).toEqual([['a'],['b','c'],[],['d'],['e'],['f'],['l'],[]]);
+    expect(assignLineupCell(cells,7,['l'])[6]).toEqual([]);
+    const known=new Map([['a',1],['b',1],['c',1]]);
+    expect(resolveLineupCells([['a','b','c'],['a'],['x']],known)).toEqual([['a','b'],[],[],[],[],[],[],[]]);
+  });
+  it('prints the line-up by zone with two athletes side by side and the starters of the cells',()=>{
+    const {report,view}=fixture();
+    const cell=(text:string)=>({text});
+    const info=(key:string,name:string,role:string,matches:number)=>({key,jersey:key,name,role,figures:'Att. 30%',matches,stats:[cell(key),cell(name),...Array.from({length:7},()=>cell('1'))]});
+    const players=[info('1','Ada Setter','P',4),info('2','Bea Out','S',4),info('3','Cia Mid','C',3),info('4','Dea Opp','O',4),info('5','Eva Out','S',2),info('6','Fra Mid','C',4),info('7','Gio Out','S',2),info('8','Ila Lib','L',4)];
+    view.team={roster:{columns:[],rows:[]},starts:{columns:[],rows:[]},hasStarts:false,basis:'',singleMatch:false,players,
+      lineupCells:[['1'],['2'],['3'],['4'],['5'],['6'],['8'],[]],liberoLabels:['L','L'],lineupCaption:'Six that started most sets together: 5 of 9 sets.',startersColumns:['#','Name','Serve','Serve eff.','Rec.','Rec. pos.','Att.','Att. eff.','Block']};
+    report.pieceEdits={'team:lineup':{lineupCells:[['1'],['2'],['3'],['4'],['5','7'],['6'],['8'],[]]}};
+    const page=buildReportBooklet(report,view,t).pages.find(p=>p.includes(`>${t('teamLineupTitle')}<`))!;
+    expect(page).toBeDefined();
+    expect(page).toContain('>#5 Eva Out<');
+    expect(page).toContain('>#7 Gio Out<');
+    expect(page).toContain(`>${t('teamCellMatches',{n:2})}<`);
+    // The starters' table follows the cells: Gio, put in by the coach, is listed after its title.
+    expect(page.indexOf('>Gio Out<')).toBeGreaterThan(page.indexOf(`>${t('teamStartersTitle')}<`));
+    // Only one libero cell is drawn when the second is empty.
+    expect(page.match(/rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width=".8"/g)).toHaveLength(7);
   });
   it('shares the component order between the navigator and every export layout',()=>{
     const {report,view}=fixture();

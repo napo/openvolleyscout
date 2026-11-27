@@ -3,6 +3,8 @@
  * screen and the PDF so both say exactly the same thing. Pure given `t`.
  */
 import { formatDisplayDate } from '@src/lib/utils/local-date';
+import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
+import type { SkillStats } from '@src/features/scouting/model/match-stats';
 import { placeSvgLabels } from '@src/lib/utils/svg-label-placement';
 import { attackerViewFilterLabel } from './attacker-view-label';
 import { reportPriorities, priorityText } from './report-priorities';
@@ -158,6 +160,17 @@ export interface ReportView {
     basis: string;
     /** One match only: its rotations are written, not drawn. */
     singleMatch: boolean;
+    /** Every athlete who played, as shown in a line-up cell and in the starters' table. */
+    players?: TeamPlayerInfo[];
+    /**
+     * The most used line-up in 8 cells: zones 1 to 6 with the setter in zone 1, then two libero cells.
+     * Each cell holds up to two athletes (ReportPlayer.key), left to right.
+     */
+    lineupCells?: string[][];
+    /** Labels of the two libero cells: "L", or "L rec." / "L def." when one receives and the other defends. */
+    liberoLabels?: [string, string];
+    lineupCaption?: string;
+    startersColumns?: string[];
   };
   minSample: number;
 }
@@ -195,6 +208,79 @@ const ROLE_NAME_KEYS = {
   libero: 'roleNameLibero',
 } as const;
 
+const ROLE_SHORT_KEYS = {
+  setter: 'roleShortSetter',
+  outside_hitter: 'roleShortOutside',
+  opposite: 'roleShortOpposite',
+  middle_blocker: 'roleShortMiddle',
+  libero: 'roleShortLibero',
+} as const;
+
+export interface TeamPlayerInfo {
+  key: string;
+  jersey: string;
+  name: string;
+  /** Short role label ("P", "S", "C", "O", "L"). */
+  role: string;
+  /** Two figures that matter for the role, as on a coach's line-up sheet. */
+  figures: string;
+  matches: number;
+  /** Row of the starters' table (number, name, serve, reception, attack, block). */
+  stats: ViewCell[];
+}
+
+function teamLineupView(metrics: OpponentReportMetrics, t: ViewT): Pick<NonNullable<ReportView['team']>, 'players' | 'lineupCells' | 'liberoLabels' | 'lineupCaption' | 'startersColumns'> {
+  const indicators = getActiveIndicators();
+  const skills = (key: string) => metrics.playerSkills?.[key];
+  const positive = (stats: SkillStats | undefined) => (stats && stats.total > 0 ? (stats.hash + stats.plus) / stats.total : null);
+  const efficiency = (stats: SkillStats | undefined, skill: 'serve' | 'attack') => (stats && stats.total > 0 ? (skill === 'serve' ? indicators.serveEfficiency(stats) : indicators.attackEfficiency(stats)) : null);
+  const keyFigures = (key: string, role: string | undefined, libero: boolean) => {
+    const s = skills(key);
+    const attack = t('teamCellAttack', { value: percent(efficiency(s?.attack, 'attack')) });
+    const serve = t('teamCellServe', { value: percent(efficiency(s?.serve, 'serve')) });
+    const reception = t('teamCellReception', { value: percent(positive(s?.receive)) });
+    const block = t('teamCellBlock', { value: s?.block.points ?? 0 });
+    if (libero || role === 'libero') return `${reception} · ${t('teamCellDigs', { value: s?.dig.total ?? 0 })}`;
+    if (role === 'setter') return `${serve} · ${block}`;
+    if (role === 'middle_blocker') return `${attack} · ${block}`;
+    if (role === 'opposite') return `${attack} · ${serve}`;
+    return `${attack} · ${reception}`;
+  };
+  const roleShort = (role: string | undefined, libero: boolean) => {
+    const key = libero ? 'roleShortLibero' : ROLE_SHORT_KEYS[role as keyof typeof ROLE_SHORT_KEYS];
+    return key ? t(key) : '';
+  };
+  const players: TeamPlayerInfo[] = (metrics.teamPlayers ?? []).map(({ player, role, libero, matches }) => {
+    const s = skills(player.key);
+    return {
+      key: player.key,
+      jersey: player.jersey,
+      name: player.name,
+      role: roleShort(role, libero),
+      figures: keyFigures(player.key, role, libero),
+      matches,
+      stats: [
+        plain(player.jersey), plain(player.name),
+        plain(s?.serve.total ?? 0), plain(percent(efficiency(s?.serve, 'serve'))),
+        plain(s?.receive.total ?? 0), plain(percent(positive(s?.receive))),
+        plain(s?.attack.total ?? 0), plain(percent(efficiency(s?.attack, 'attack'))),
+        plain(s?.block.points ?? 0),
+      ],
+    };
+  });
+  const lineup = metrics.startingLineup;
+  const split = lineup?.liberos.length === 2;
+  return {
+    players,
+    startersColumns: ['#', t('teamColName'), t('teamColServe'), t('teamColServeEff'), t('teamColReception'), t('teamColReceptionPos'), t('teamColAttack'), t('teamColAttackEff'), t('teamColBlock')],
+    liberoLabels: split ? [t('teamLiberoReception'), t('teamLiberoDefence')] : [t('roleShortLibero'), t('roleShortLibero')],
+    ...(lineup ? {
+      lineupCells: [...lineup.slots.map((player) => [player.key]), ...[0, 1].map((index) => (lineup.liberos[index] ? [lineup.liberos[index].player.key] : []))],
+      lineupCaption: t('teamLineupCaption', { n: lineup.sets, total: lineup.totalSets }),
+    } : {}),
+  };
+}
+
 function teamView(metrics: OpponentReportMetrics, t: ViewT): NonNullable<ReportView['team']> {
   const roleName = (role: string | undefined, libero: boolean) => {
     const key = libero ? 'roleNameLibero' : ROLE_NAME_KEYS[role as keyof typeof ROLE_NAME_KEYS];
@@ -220,6 +306,7 @@ function teamView(metrics: OpponentReportMetrics, t: ViewT): NonNullable<ReportV
       ? t('teamStartsSingleMatch', { team: only.facedName ?? '?', date: formatDisplayDate(only.playedAt) || '?' })
       : t('teamStartsBasis', { n: metrics.sample.matches }),
     singleMatch: Boolean(only),
+    ...teamLineupView(metrics, t),
     ...(metrics.recentStartingRotationCounts ? { recent: {
       matches: metrics.recentStartingRotationCounts.matches,
       serve: rotations.map((rotation) => metrics.recentStartingRotationCounts!.counts[rotation].serve),

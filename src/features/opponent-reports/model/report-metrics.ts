@@ -192,6 +192,18 @@ export interface OpponentReportMetrics {
   teamPlayers?: Array<{ player: ReportPlayer; role?: string; libero: boolean; matches: number }>;
   /** Starting rotations in the latest matches only (up to four, by date): breaks ties on the Team page. */
   recentStartingRotationCounts?: { matches: number; counts: Record<CourtPosition, { serve: number; receive: number }> };
+  /** Skills of each athlete of the analysed team (ReportPlayer.key): the Team page statistics. */
+  playerSkills?: Record<string, { serve: SkillStats; receive: SkillStats; attack: SkillStats; block: SkillStats; dig: SkillStats }>;
+  /**
+   * The six that started most sets together, turned so the setter is in zone 1 (slots[0] = zone 1 ... slots[5] = zone 6),
+   * and the libero: one, or two when one receives and the other defends.
+   */
+  startingLineup?: {
+    sets: number;
+    totalSets: number;
+    slots: ReportPlayer[];
+    liberos: Array<{ player: ReportPlayer; use: 'both' | 'reception' | 'defence' }>;
+  };
   /** The analysed matches, oldest first: who was faced and when. */
   matchList?: Array<{ matchId: string; facedName?: string; playedAt?: string }>;
   /** Optional so older fixtures and stored metrics stay valid. */
@@ -402,6 +414,12 @@ export function computeOpponentReportMetrics(
   const attackers = mapOf<string, { kill: Counter; errors: Counter; skillStats: SkillStats }>(() => ({ kill: new Counter(), errors: new Counter(), skillStats: createEmptySkillStats() }));
   const errors = mapOf<string, { serve: Counter; attack: Counter }>(() => ({ serve: new Counter(), attack: new Counter() }));
   const touchCounts = new Map<string, number>();
+  const playerSkills = mapOf<string, { serve: SkillStats; receive: SkillStats; attack: SkillStats; block: SkillStats; dig: SkillStats }>(() => ({
+    serve: createEmptySkillStats(), receive: createEmptySkillStats(), attack: createEmptySkillStats(), block: createEmptySkillStats(), dig: createEmptySkillStats(),
+  }));
+  // Starting six as a whole, turned to the setter in zone 1 -> sets started.
+  const lineupStarts = new Map<string, { keys: string[]; count: number }>();
+  let setsWithSetter = 0;
   // Player key -> matches in which she played (a touch, or in a starting line-up).
   const playedMatches = new Map<string, Set<string>>();
   const markPlayed = (key: string, matchId: string) => playedMatches.set(key, (playedMatches.get(key) ?? new Set()).add(matchId));
@@ -467,6 +485,20 @@ export function computeOpponentReportMetrics(
         const key = playerKey(slot.playerId);
         if (key) markPlayed(key, match.matchId);
       }
+      const setterPosition = lineup.slots.find((slot) => slot.playerId === lineup.setterPlayerId)?.courtPosition;
+      if (setterPosition && setterPosition >= 1 && setterPosition <= 6) {
+        const keys = [1, 2, 3, 4, 5, 6].map((zone) => {
+          const position = ((setterPosition - 1 + zone - 1) % 6) + 1;
+          return playerKey(lineup.slots.find((slot) => slot.courtPosition === position)?.playerId);
+        });
+        if (keys.every(Boolean)) {
+          setsWithSetter += 1;
+          const id = keys.join('|');
+          const entry = lineupStarts.get(id) ?? { keys: keys as string[], count: 0 };
+          entry.count += 1;
+          lineupStarts.set(id, entry);
+        }
+      }
       const setterSlot = lineup.slots.find((slot) => slot.playerId === lineup.setterPlayerId);
       const rotation = setterSlot && setterSlot.courtPosition >= 1 && setterSlot.courtPosition <= 6
         ? setterSlot.courtPosition as CourtPosition
@@ -490,7 +522,14 @@ export function computeOpponentReportMetrics(
       for (const touch of rally.touches) {
         if (touch.teamSide !== side) continue;
         const key = playerKey(touch.playerId);
-        if (key) { touchCounts.set(key, (touchCounts.get(key) ?? 0) + 1); markPlayed(key, match.matchId); }
+        if (key) {
+          touchCounts.set(key, (touchCounts.get(key) ?? 0) + 1);
+          markPlayed(key, match.matchId);
+          const skills = playerSkills.get(key);
+          if (touch.skill === 'serve' || touch.skill === 'receive' || touch.skill === 'attack' || touch.skill === 'block' || touch.skill === 'dig') {
+            updateSkillStats(skills[touch.skill], touch);
+          }
+        }
         if (touch.skill === 'serve') {
           teamErrors.serve.add(touch.evaluation === '=');
           if (key) errors.get(key).serve.add(touch.evaluation === '=');
@@ -636,6 +675,21 @@ export function computeOpponentReportMetrics(
   return {
     sample: { matches: matches.length, sets, rallies },
     touchesByPlayer: Object.fromEntries(touchCounts),
+    playerSkills: Object.fromEntries(playerSkills.map),
+    startingLineup: (() => {
+      const best = [...lineupStarts.values()].sort((a, b) => b.count - a.count || a.keys.join().localeCompare(b.keys.join()))[0];
+      if (!best) return undefined;
+      // Liberos: the one who receives most and the one who digs most; both when they are different athletes.
+      const liberoUse = [...liberoKeys].map((key) => ({ key, receive: playerSkills.get(key).receive.total, dig: playerSkills.get(key).dig.total }))
+        .filter((entry) => players.has(entry.key) && entry.receive + entry.dig > 0);
+      const topReceiver = [...liberoUse].sort((a, b) => b.receive - a.receive)[0];
+      const topDigger = [...liberoUse].sort((a, b) => b.dig - a.dig)[0];
+      const mostUsed = [...liberoUse].sort((a, b) => (b.receive + b.dig) - (a.receive + a.dig))[0];
+      const liberos: Array<{ player: ReportPlayer; use: 'both' | 'reception' | 'defence' }> = topReceiver && topDigger && topReceiver.key !== topDigger.key && topReceiver.receive > 0 && topDigger.dig > 0
+        ? [{ player: players.get(topReceiver.key)!, use: 'reception' }, { player: players.get(topDigger.key)!, use: 'defence' }]
+        : mostUsed ? [{ player: players.get(mostUsed.key)!, use: 'both' }] : [];
+      return { sets: best.count, totalSets: setsWithSetter, slots: best.keys.map((key) => players.get(key)!), liberos };
+    })(),
     matchList: matches
       .map((match, index) => ({ match, index }))
       .sort((a, b) => (a.match.playedAt ?? '').localeCompare(b.match.playedAt ?? '') || a.index - b.index)

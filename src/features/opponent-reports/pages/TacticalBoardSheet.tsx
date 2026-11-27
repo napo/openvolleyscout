@@ -3,7 +3,8 @@ import { nextChartRotation } from '@src/lib/utils/chart-rotation';
 import { expandAttackerViews, expandSetterViews } from '../model/split-views';
 import { BookletSettings } from './BookletSettings';
 import { chartedSetterKeys, DEFAULT_BOOKLET, rankSetterGroups, TEAM_CHART_BAR, TEAM_CHART_HIGHLIGHT, teamStartsElements, type ReportBookletPlan, type ReportStaffNote } from '../model/report-booklet';
-import { PIECE_TEAM_STARTS } from '../model/board-pieces';
+import { PIECE_TEAM_LINEUP, PIECE_TEAM_STARTS } from '../model/board-pieces';
+import { TeamLineupEditor } from './TeamLineupEditor';
 import { playerLabel } from '../model/report-keys';
 import { moveReportComponent, reportComponentOrder } from '../model/report-components';
 import { ReportPriorities } from './ReportPriorities';
@@ -786,7 +787,19 @@ export function TacticalBoardSheet({
                   </div>
                 ) : null}
 
-                {piece.kind === 'table' && piece.table ? (
+                {piece.id === PIECE_TEAM_LINEUP && piece.lineupCells ? (
+                  <TeamLineupEditor
+                    cells={piece.lineupCells}
+                    labels={piece.lineupLabels ?? []}
+                    players={view.team?.players ?? []}
+                    edited={Boolean(edit?.lineupCells)}
+                    onChange={(cells) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
+                      const next = { ...prev };
+                      if (cells) next.lineupCells = cells; else delete next.lineupCells;
+                      return next;
+                    }))}
+                  />
+                ) : piece.kind === 'table' && piece.table ? (
                   <EditableViewTable
                     table={piece.table}
                     editTable={edit?.table}

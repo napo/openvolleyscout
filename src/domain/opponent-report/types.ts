@@ -163,6 +163,8 @@ export interface OpponentReportPieceEdit {
   serveHeatmapEdits?: Record<string, ServeHeatmapCellEdit>;
   /** Colours of a bar chart (the Team page): every bar, and the highest one. */
   chartColors?: { bar?: string; highlight?: string };
+  /** Line-up chosen by the coach: 8 cells (zones 1 to 6, two libero cells), up to two athletes each, left to right. */
+  lineupCells?: string[][];
   note?: string;
 }
 

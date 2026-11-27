@@ -892,6 +892,23 @@
 .opponent-report__team-chart-editor svg { width: min(100%, 38rem); height: auto; background: #fff; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 6px; }
 .opponent-report__team-chart-colors { display: flex; flex-direction: column; gap: 0.4rem; }
 .opponent-report__team-chart-colors label { display: flex; align-items: center; gap: 0.5rem; }
+.team-lineup-editor { display: flex; flex-direction: column; gap: 0.4rem; }
+.team-lineup-editor__row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+.team-lineup-editor__row--net { border-top: 3px solid var(--slate-700, #334155); padding-top: 0.4rem; }
+.team-lineup-editor__cell { display: flex; flex-direction: column; align-items: stretch; gap: 0.2rem; min-height: 4.5rem; padding: 0.35rem 0.5rem; text-align: left; border: 1px solid rgba(148, 163, 184, 0.5); border-radius: 6px; background: var(--surface, #f8fafc); color: inherit; cursor: pointer; }
+.team-lineup-editor__cell.is-active { border-color: #007e80; box-shadow: 0 0 0 2px rgba(0, 126, 128, 0.25); }
+.team-lineup-editor__cell small { opacity: 0.7; align-self: flex-end; }
+.team-lineup-editor__athletes { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0.4rem; }
+.team-lineup-editor__athletes > span { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.team-lineup-editor__athletes strong { color: #007e80; }
+.team-lineup-editor__athletes em { font-style: normal; font-size: 0.8em; opacity: 0.75; }
+.team-lineup-editor__empty { opacity: 0.6; font-style: italic; }
+.team-lineup-editor__picker { border: 1px solid rgba(148, 163, 184, 0.5); border-radius: 6px; padding: 0.5rem 0.75rem; }
+.team-lineup-editor__choices { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; }
+.team-lineup-editor__choices label { display: inline-flex; align-items: center; gap: 0.3rem; }
+.team-lineup-editor__choices label.is-chosen { font-weight: 600; }
+.team-lineup-editor__choices small { opacity: 0.7; }
+.team-lineup-editor__actions { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
 .opponent-report__setter-charts { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; align-items: center; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 6px; padding: 0.5rem 0.75rem; margin: 0 0 0.75rem; }
 .opponent-report__setter-charts legend { font-weight: 600; padding: 0 0.25rem; }
 .opponent-report__setter-charts .opponent-report__hint { flex-basis: 100%; margin: 0; }

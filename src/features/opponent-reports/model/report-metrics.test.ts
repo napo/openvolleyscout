@@ -127,6 +127,18 @@ describe('opponent report metrics', () => {
     expect(latest.counts[1]).toEqual({ serve: 0, receive: 4 });
   });
 
+  it('finds the six that started together, turned so the setter is in zone 1, with one libero per job', () => {
+    const lineupOf = (keys: string[]) => keys.map((id) => toReportPlayer(roster.find((entry) => entry.id === id)!).key);
+    expect(metrics.startingLineup?.slots.map((player) => player.key)).toEqual(lineupOf(['a1', 'a2', 'a3', 'a4', 'a5', 'a6']));
+    expect(metrics.startingLineup).toMatchObject({ sets: 1, totalSets: 1 });
+    const liberoRoster = [...roster, ...['l1', 'l2'].map((id, index) => ({ id, jerseyNumber: 20 + index, firstName: '', lastName: `Libero${index + 1}`, isLibero: true, source: 'manual' }))] as unknown as MatchRosterPlayer[];
+    const rallies = [{ ...rallyStats[0], rallyNumber: 9, touches: [
+      touch(1, 9, 'away', 'l1', 'receive', '#'), touch(1, 9, 'away', 'l1', 'receive', '+'), touch(1, 9, 'away', 'l2', 'dig', '+'),
+    ] }];
+    const withLiberos = computeOpponentReportMetrics([{ matchId: 'm1', side: 'away', events, rallies, roster: liberoRoster, rotationStats: [] }]);
+    expect(withLiberos.startingLineup?.liberos.map((entry) => [entry.player.name, entry.use])).toEqual([['Libero1', 'reception'], ['Libero2', 'defence']]);
+  });
+
   it('measures reception per receiver and per rotation', () => {
     const byName = Object.fromEntries(metrics.receivers.map((row) => [row.player.name, row.positive]));
     expect(byName.Player2).toEqual({ count: 1, total: 1, rate: 1 });

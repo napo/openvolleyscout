@@ -23,6 +23,7 @@ import {
   SERVE_TARGETS_NOTES_KEY,
   SETTER_NOTES_KEY,
   type ReportView,
+  type TeamPlayerInfo,
   type ViewCell,
   type ViewT,
   type ViewTable } from './report-view';
@@ -32,6 +33,8 @@ import { zonesPieceId } from './report-zones';
 export const PIECE_KEYS_MAIN = 'keys:main';
 export const PIECE_TEAM_ROSTER = 'team:roster';
 export const PIECE_TEAM_STARTS = 'team:starts';
+export const PIECE_TEAM_LINEUP = 'team:lineup';
+export const PIECE_TEAM_STARTERS = 'team:starters';
 export const PIECE_OVERVIEW_ROTATIONS = 'overview:rotations';
 export const PIECE_OVERVIEW_STRENGTHS = 'overview:strengths-weaknesses';
 export const PIECE_OVERVIEW_ERRORS = 'overview:errors';
@@ -93,6 +96,9 @@ export interface ResolvedBoardPiece {
   court?: ResolvedBoardCourt;
   courts?: ResolvedBoardCourt[];
   videoLink?: AttackerVideoLink;
+  /** Team line-up: 8 cells (zones 1 to 6, two libero cells) of up to two athletes, with their labels. */
+  lineupCells?: TeamPlayerInfo[][];
+  lineupLabels?: string[];
   drawingId?: string;
   drawing?: OpponentReportDrawing;
   note: string;
@@ -216,6 +222,43 @@ export function buildBoardPieceCatalog(
       note: edit?.note ?? '',
       isModified: hasPieceEdit(edit),
     });
+  }
+
+  if (view.team?.lineupCells) {
+    const team = view.team;
+    const byKey = new Map((team.players ?? []).map((player) => [player.key, player]));
+    const cells = resolveLineupCells(edits[PIECE_TEAM_LINEUP]?.lineupCells ?? team.lineupCells!, byKey);
+    const labels = ['1', '2', '3', '4', '5', '6', ...(team.liberoLabels ?? ['L', 'L'])];
+    const lineupEdit = edits[PIECE_TEAM_LINEUP];
+    catalog.set(PIECE_TEAM_LINEUP, {
+      id: PIECE_TEAM_LINEUP,
+      sheetId: 'team',
+      kind: 'table',
+      title: lineupEdit?.title ?? t('teamLineupTitle'),
+      subtitle: lineupEdit?.subtitle ?? team.lineupCaption,
+      table: {
+        columns: [t('teamColZone'), t('teamColName')],
+        rows: cells.map((cell, index) => [{ text: labels[index] }, { text: cell.map((key) => playerLabel(byKey.get(key)!)).join(' / ') }]),
+      },
+      lineupCells: cells.map((cell) => cell.map((key) => byKey.get(key)!)),
+      lineupLabels: labels,
+      note: lineupEdit?.note ?? '',
+      isModified: hasPieceEdit(lineupEdit),
+    });
+    // The starters' statistics follow the athletes in the cells.
+    const starters = [...new Set(cells.flat())].map((key) => byKey.get(key)!);
+    const startersEdit = edits[PIECE_TEAM_STARTERS];
+    if (starters.length) {
+      catalog.set(PIECE_TEAM_STARTERS, {
+        id: PIECE_TEAM_STARTERS,
+        sheetId: 'team',
+        kind: 'table',
+        title: startersEdit?.title ?? t('teamStartersTitle'),
+        table: applyTableEdit({ columns: team.startersColumns ?? [], rows: starters.map((player) => player.stats) }, startersEdit?.table),
+        note: startersEdit?.note ?? '',
+        isModified: hasPieceEdit(startersEdit),
+      });
+    }
   }
 
   // ── 2. Overview ────────────────────────────────────────────────────────────
@@ -558,6 +601,22 @@ export function buildBoardPieceCatalog(
   return catalog;
 }
 
+/** Eight cells of at most two known athletes each; an athlete appears in one cell only (the first). */
+export function resolveLineupCells(cells: readonly (readonly string[])[], known: ReadonlyMap<string, unknown>): string[][] {
+  const seen = new Set<string>();
+  return Array.from({ length: 8 }, (_, index) => (cells[index] ?? []).filter((key) => {
+    if (!known.has(key) || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 2));
+}
+
+/** Puts these athletes (left to right, at most two) in one cell and takes them out of any other cell. */
+export function assignLineupCell(cells: readonly (readonly string[])[], index: number, keys: readonly string[]): string[][] {
+  const chosen = keys.slice(0, 2);
+  return Array.from({ length: 8 }, (_, cell) => (cell === index ? [...chosen] : (cells[cell] ?? []).filter((key) => !chosen.includes(key))));
+}
+
 export function getPieceIdsForSheet(
   sheetId: OpponentReportSheetId,
   report: OpponentReport,
@@ -568,6 +627,7 @@ export function getPieceIdsForSheet(
       return [
         ...(view.team?.roster.rows.length ? [PIECE_TEAM_ROSTER] : []),
         ...(view.team?.hasStarts ? [PIECE_TEAM_STARTS] : []),
+        ...(view.team?.lineupCells ? [PIECE_TEAM_LINEUP, PIECE_TEAM_STARTERS] : []),
       ];
     case 'keys':
       return [PIECE_KEYS_MAIN];
