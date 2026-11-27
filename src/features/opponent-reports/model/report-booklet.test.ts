@@ -168,7 +168,7 @@ describe('booklet planning and printing',()=>{
     for(const a4 of [false,true]){
       const pages=buildReportBooklet(report,view,t,'',{a4}).pages;
       const teamPage=pages[0];
-      expect(teamPage,`a4=${a4}`).toContain(`>${t('opponentReportSheet_team')}<`);
+      expect(teamPage,`a4=${a4}`).toContain(`>${t('teamPageTitle')}<`);
       expect(teamPage).toContain('>Anna Rossi<');
       expect(teamPage).toContain('>Libero<');
       expect(teamPage).toContain('>Starting on serve<');
@@ -212,7 +212,7 @@ describe('booklet planning and printing',()=>{
     expect(single).toContain('>In the match against Gela on 01/11/2026.<');
     // Reports saved before the Team sheet keep their pages until the coach turns it on.
     report.booklet={...report.booklet!,includeTeam:undefined};
-    expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes(`>${t('opponentReportSheet_team')}<`))).toBe(false);
+    expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes(`>${t('teamPageTitle')}<`))).toBe(false);
   });
   it('shares the component order between the navigator and every export layout',()=>{
     const {report,view}=fixture();

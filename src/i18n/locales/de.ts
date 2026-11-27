@@ -1760,6 +1760,7 @@ export const de = {
   opponentReportSheet_setter: "Zuspielverteilung",
   opponentReportSheet_zones: "Zonenanalyse",
   opponentReportSheet_team: "Mannschaft",
+  teamPageTitle: "Kader",
   bookletTeam: "Mannschaft: Kader und Startrotationen",
   teamRosterTitle: "Kader",
   teamColRole: "Position",

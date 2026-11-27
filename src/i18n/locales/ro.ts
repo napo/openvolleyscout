@@ -1762,6 +1762,7 @@ export const ro = {
   opponentReportSheet_setter: "Distribuția paselor",
   opponentReportSheet_zones: "Analiza zonelor",
   opponentReportSheet_team: "Echipa",
+  teamPageTitle: "Lot",
   bookletTeam: "Echipa: lot și rotații de start",
   teamRosterTitle: "Lot",
   teamColRole: "Rol",

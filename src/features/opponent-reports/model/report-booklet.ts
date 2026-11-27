@@ -281,7 +281,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const teamStarts = resolvedBoardPieces.find((p) => p.id === PIECE_TEAM_STARTS);
   if (teamRoster?.table || teamStarts?.table) {
     component = 'team';
-    const page = add(t('opponentReportSheet_team'));
+    const page = add(t('teamPageTitle'));
     const chartBlock = teamStarts?.table ? (a4 ? 190 : 150) : 0;
     let y = TOP;
     if (teamRoster?.table) {

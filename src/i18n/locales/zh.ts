@@ -1760,6 +1760,7 @@ export const zh = {
   opponentReportSheet_setter: "传球分配",
   opponentReportSheet_zones: "区域分析",
   opponentReportSheet_team: "球队",
+  teamPageTitle: "名单",
   bookletTeam: "球队：名单与开局轮次",
   teamRosterTitle: "名单",
   teamColRole: "位置",

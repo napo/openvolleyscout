@@ -1762,6 +1762,7 @@ export const es = {
   opponentReportSheet_setter: "Distribución de colocación",
   opponentReportSheet_zones: "Análisis de zonas",
   opponentReportSheet_team: "Equipo",
+  teamPageTitle: "Plantilla",
   bookletTeam: "Equipo: plantilla y rotaciones de inicio",
   teamRosterTitle: "Plantilla",
   teamColRole: "Rol",

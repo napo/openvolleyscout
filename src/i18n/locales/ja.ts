@@ -1758,6 +1758,7 @@ export const ja = {
   opponentReportSheet_setter: "トス配分",
   opponentReportSheet_zones: "ゾーン分析",
   opponentReportSheet_team: "チーム",
+  teamPageTitle: "登録選手",
   bookletTeam: "チーム：登録選手とスタートローテーション",
   teamRosterTitle: "登録選手",
   teamColRole: "ポジション",

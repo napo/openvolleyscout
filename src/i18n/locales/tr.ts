@@ -1756,6 +1756,7 @@ export const tr = {
   opponentReportSheet_setter: "Pas dağılımı",
   opponentReportSheet_zones: "Bölge analizi",
   opponentReportSheet_team: "Takım",
+  teamPageTitle: "Kadro",
   bookletTeam: "Takım: kadro ve başlangıç rotasyonları",
   teamRosterTitle: "Kadro",
   teamColRole: "Görev",

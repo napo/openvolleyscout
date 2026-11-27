@@ -1800,6 +1800,7 @@ export const it = {
   opponentReportSheet_setter: "Distribuzione in alzata",
   opponentReportSheet_zones: "Analisi zone",
   opponentReportSheet_team: "Squadra",
+  teamPageTitle: "Roster",
   bookletTeam: "Squadra: rosa e rotazioni di partenza",
   teamRosterTitle: "Rosa",
   teamColRole: "Ruolo",

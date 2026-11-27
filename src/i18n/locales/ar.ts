@@ -1762,6 +1762,7 @@ export const ar = {
   opponentReportSheet_setter: "توزيع الإعداد",
   opponentReportSheet_zones: "تحليل المناطق",
   opponentReportSheet_team: "الفريق",
+  teamPageTitle: "القائمة",
   bookletTeam: "الفريق: القائمة ودورانات البداية",
   teamRosterTitle: "القائمة",
   teamColRole: "المركز",
