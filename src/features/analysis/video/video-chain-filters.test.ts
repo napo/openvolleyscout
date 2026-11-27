@@ -159,7 +159,9 @@ describe('choosing the skill shown in the chain', () => {
   it('filters sets and attacks by base / combination (setter calls K1...Kn, attack codes)', () => {
     const codes = availableBaseCodes(items);
     expect(codes.length).toBeGreaterThan(0);
-    const code = codes[0]!;
+    // The bases (K..) come first in the list; an attack carries its own combination code.
+    const code = items.find((item) => item.entry.skill === 'attack' && item.baseCode)?.baseCode!;
+    expect(codes).toContain(code);
     const attacks = filter({ chain: ['attack'] });
     const withCode = filter({ chain: ['attack'], attributes: { attack: { baseCodes: [code] } } });
     expect(withCode.length).toBeGreaterThan(0);

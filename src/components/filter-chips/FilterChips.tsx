@@ -7,6 +7,7 @@ import {
   getEvaluationScale,
   getEvaluationTint,
 } from '@src/domain/touch/evaluation-scale';
+import { isSetterCallCode } from '@src/domain/match/code-tables';
 import { useTranslation } from '@src/i18n';
 import './filter-chips.css';
 
@@ -149,7 +150,8 @@ export function ChipSelect<T extends string | number>({ options, selected, onCha
 
 /**
  * Base / combination codes as a table: the letter in the first cell of a row and the codes that
- * start with it in the cells after it (C: 5 6 D F; K: 1 2 C E). Several codes can be chosen, and a
+ * start with it in the cells after it (C: 5 6 D F; K: 1 2 C E). The bases (the setter calls, K..)
+ * come first under their own heading, then the combinations. Several codes can be chosen, and a
  * click on the letter takes or leaves the whole row. None chosen means all.
  */
 export function BaseCodeTable({ codes, selected, onChange, allLabel, label }: {
@@ -160,11 +162,17 @@ export function BaseCodeTable({ codes, selected, onChange, allLabel, label }: {
   /** A small label before "All", when the table is not in a group of its own. */
   label?: string;
 }) {
+  const { t } = useTranslation();
   const rows = new Map<string, string[]>();
   codes.forEach((code) => {
     const letter = code.charAt(0);
     rows.set(letter, [...(rows.get(letter) ?? []), code]);
   });
+  const groups = [
+    { key: 'bases', title: t('baseCodesBases'), rows: [...rows.entries()].filter(([, rowCodes]) => isSetterCallCode(rowCodes[0])) },
+    { key: 'combinations', title: t('baseCodesCombinations'), rows: [...rows.entries()].filter(([, rowCodes]) => !isSetterCallCode(rowCodes[0])) },
+  ].filter((group) => group.rows.length > 0);
+  const columns = Math.max(1, ...[...rows.values()].map((rowCodes) => rowCodes.length)) + 1;
   const emit = (next: string[]) => onChange(next.length === codes.length ? [] : next);
   const toggle = (code: string) => emit(selected.includes(code) ? selected.filter((item) => item !== code) : [...selected, code]);
   const toggleRow = (rowCodes: readonly string[]) => {
@@ -186,7 +194,9 @@ export function BaseCodeTable({ codes, selected, onChange, allLabel, label }: {
       </div>
       <table className="filter-chips__base-table">
         <tbody>
-          {[...rows.entries()].map(([letter, rowCodes]) => {
+          {groups.flatMap((group) => [
+            ...(groups.length > 1 ? [<tr key={`${group.key}-heading`}><th colSpan={columns} scope="colgroup" className="filter-chips__base-heading">{group.title}</th></tr>] : []),
+            ...group.rows.map(([letter, rowCodes]) => {
             const whole = rowCodes.every((code) => selected.includes(code));
             return (
               <tr key={letter}>
@@ -216,7 +226,8 @@ export function BaseCodeTable({ codes, selected, onChange, allLabel, label }: {
                 ))}
               </tr>
             );
-          })}
+            }),
+          ])}
         </tbody>
       </table>
     </div>

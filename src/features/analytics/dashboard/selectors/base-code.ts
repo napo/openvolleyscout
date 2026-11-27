@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
+import { isSetterCallCode } from '@src/domain/match/code-tables';
 
 const cleanCode = (code: string | undefined) => (code?.trim() ? code.trim().toUpperCase() : null);
 
@@ -36,7 +37,10 @@ export function rallyBaseCodes(touches: readonly BallTouch[], teamSide: TeamSide
   return codes;
 }
 
-/** Sorted list of codes: K1, K2 ... K10, then the others. */
+/** Sorted list of codes: the bases (K1, K2 ... K10) first, then the combinations. */
 export function sortBaseCodes(codes: Iterable<string>): string[] {
-  return [...new Set(codes)].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+  return [...new Set(codes)].sort((left, right) => (
+    Number(isSetterCallCode(right)) - Number(isSetterCallCode(left))
+    || left.localeCompare(right, undefined, { numeric: true })
+  ));
 }

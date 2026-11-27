@@ -246,6 +246,14 @@
   text-align: center;
 }
 
+.filter-chips__base-table .filter-chips__base-heading {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--slate-500, #64748b);
+  padding-top: 0.15rem;
+}
+
 .filter-chips__chip--letter {
   font-weight: 700;
   background: var(--slate-100);
