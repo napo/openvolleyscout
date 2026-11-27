@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.52.0 - 2026-11-27
+
+### Added
+- Tactical report, setting distribution: you can filter the sets by the setter's call (K1, KC and so on) and draw one chart for each call.
+- Tactical report, Block and defence: the filters now include "Attack type" (H, M, Q, T, U, N, O). You can pick one or more types, or draw one chart for each type.
+- Tactical report, Setting distribution: a new "Setters with charts" box lets you choose which setters get charts. The first setter, the one with the most touches of any kind, has charts by default and the others are summarised in text.
+- Tactical report, Block and defence: the note of each attacker is now printed in a box beside her court, in the A5 booklet and in A4. A note too long for the box continues, in full, in the staff notes.
+
+### Changed
+- Manage sheets groups the pieces by sheet and keeps each group closed until you open it, with the number of pieces included in the report.
+- In the base and combination filter the bases (the setter's calls) come first under their own heading, then the combinations. It works the same in the tactical report, the Analysis page, the heatmaps and Video analysis.
+- The group called "Ball type" in the attack filters is now "Hit type" (hard, placed, tip), so it is not confused with the new "Attack type". "High ball" is no longer offered among the situations: use the attack type H. Saved views that already use it give the same numbers as before.
+- The first setter in a report is now the one with the most touches of any kind, not the one with the most sets. The checkbox "Extra: charts of the other setters" is gone: tick the setters you want in "Setters with charts". Reports saved with the checkbox on keep charts for all setters.
+- The app now starts with the light theme. Dark theme and "Follow the system" are still in Settings; if you had chosen "Follow the system" before, choose it again.
+
 ## 0.51.0 - 2026-11-26
 
 ### Added

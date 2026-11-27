@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
-import { isSetterCallCode } from '@src/domain/match/code-tables';
+import { isSetterCallCode } from '../../../../domain/match/code-tables';
 
 const cleanCode = (code: string | undefined) => (code?.trim() ? code.trim().toUpperCase() : null);
 
