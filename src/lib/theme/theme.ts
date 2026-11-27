@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * The look of the app: light, dark, or following the system. The choice is kept in this browser;
+ * The look of the app: light (the default), dark, or following the system. The choice is kept in this browser;
  * the resolved theme is written on <html> (data-theme) where the stylesheets read it.
  */
 export type ThemeChoice = 'system' | 'light' | 'dark';
@@ -15,9 +15,9 @@ const isChoice = (value: unknown): value is ThemeChoice => THEME_CHOICES.include
 export function readThemeChoice(): ThemeChoice {
   try {
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
-    return isChoice(stored) ? stored : 'system';
+    return isChoice(stored) ? stored : 'light';
   } catch {
-    return 'system';
+    return 'light';
   }
 }
 
@@ -37,8 +37,7 @@ export function applyTheme(choice: ThemeChoice): ResolvedTheme {
 
 export function saveThemeChoice(choice: ThemeChoice): void {
   try {
-    if (choice === 'system') window.localStorage.removeItem(STORAGE_KEY);
-    else window.localStorage.setItem(STORAGE_KEY, choice);
+    window.localStorage.setItem(STORAGE_KEY, choice);
   } catch {
     // Private mode: the choice lasts until the page closes.
   }
