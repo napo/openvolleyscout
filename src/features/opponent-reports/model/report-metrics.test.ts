@@ -112,6 +112,9 @@ describe('opponent report metrics', () => {
 
   it('lists the athletes who played, by jersey, starters included even without a touch', () => {
     expect(metrics.teamPlayers?.map((entry) => entry.player.jersey)).toEqual(['1', '2', '3', '4', '5', '6']);
+    expect(metrics.teamPlayers?.every((entry) => entry.matches === 1)).toBe(true);
+    const twice = computeOpponentReportMetrics(['m1', 'm2'].map((matchId) => ({ matchId, side: 'away' as const, events, rallies: rallyStats, roster, rotationStats: [] })));
+    expect(twice.teamPlayers?.[0].matches).toBe(2);
   });
 
   it('counts the starting rotations of the latest matches, ordered by date', () => {

@@ -205,8 +205,8 @@ function teamView(metrics: OpponentReportMetrics, t: ViewT): NonNullable<ReportV
   const only = metrics.sample.matches === 1 ? metrics.matchList?.[0] : undefined;
   return {
     roster: {
-      columns: [t('jerseyNumber'), t('opponentReportColPlayer'), t('teamColRole')],
-      rows: (metrics.teamPlayers ?? []).map(({ player, role, libero }) => [plain(player.jersey), plain(player.name), plain(roleName(role, libero))]),
+      columns: [t('jerseyNumber'), t('opponentReportColPlayer'), t('teamColRole'), t('teamColMatches')],
+      rows: (metrics.teamPlayers ?? []).map(({ player, role, libero, matches }) => [plain(player.jersey), plain(player.name), plain(roleName(role, libero)), plain(matches)]),
     },
     starts: {
       columns: [t('opponentReportColRotation'), t('teamStartsServe'), t('teamStartsReceive')],

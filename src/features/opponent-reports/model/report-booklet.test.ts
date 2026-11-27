@@ -159,7 +159,7 @@ describe('booklet planning and printing',()=>{
     const {report,view}=fixture();
     const cell=(text:string)=>({text});
     view.team={
-      roster:{columns:['Jersey','Player','Role'],rows:[['7','Anna Rossi','Setter'],['12','Bea Neri','Libero']].map(row=>row.map(cell))},
+      roster:{columns:['Jersey','Player','Role','Matches'],rows:[['7','Anna Rossi','Setter','3'],['12','Bea Neri','Libero','2']].map(row=>row.map(cell))},
       starts:{columns:['Rotation','Starting on serve','Starting on reception'],rows:[1,2,3,4,5,6].map(r=>[cell(`P${r}`),cell(String(r===1?3:0)),cell(String(r===4?2:0))])},
       hasStarts:true,
       basis:t('teamStartsBasis',{n:5}),
@@ -171,6 +171,8 @@ describe('booklet planning and printing',()=>{
       expect(teamPage,`a4=${a4}`).toContain(`>${t('teamPageTitle')}<`);
       expect(teamPage).toContain('>Anna Rossi<');
       expect(teamPage).toContain('>Libero<');
+      expect(teamPage).toContain('text-anchor="end">Matches<');
+      expect(teamPage).toContain('text-anchor="end">3<');
       expect(teamPage).toContain('>Starting on serve<');
       // Grey bars, the highest of each chart in the accent colour.
       expect(teamPage.match(/<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="[\d.]+" fill="#007e80"/g)).toHaveLength(2);

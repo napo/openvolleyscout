@@ -287,6 +287,8 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     if (teamRoster?.table) {
       page.elements.push(text(M, y + 10, teamRoster.title, 10, true));
       y += 18;
+      const header = teamRoster.table.columns[3];
+      if (header) y += 9;
       const size = a4 ? 9 : 8, step = size * 1.45;
       const rows = teamRoster.table.rows.map((row) => row.map(formatViewCell));
       const perColumn = Math.max(1, Math.floor((BOTTOM - chartBlock - y - 6) / step));
@@ -296,9 +298,13 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       shown.forEach((row, i) => {
         const x = M + Math.floor(i / perColumn) * (columnWidth + 12), rowY = y + (i % perColumn) * step + size;
         page.elements.push(text(x, rowY, row[0] ?? '', size, true));
-        const nameX = x + size * 2.6, nameWidth = Math.min(columnWidth * 0.62, size * 20) - size * 2.6;
+        const nameX = x + size * 2.6, nameWidth = Math.min(columnWidth * 0.5, size * 20) - size * 2.6;
+        const roleX = nameX + nameWidth + 6, roleWidth = Math.min(size * 11, columnWidth - (roleX - x) - size * 3);
         page.elements.push(text(nameX, rowY, wrapBookletText(row[1] ?? '', nameWidth, size)[0] ?? '', size));
-        page.elements.push(text(nameX + nameWidth + 6, rowY, wrapBookletText(row[2] ?? '', columnWidth - nameWidth - size * 2.6 - 6, size)[0] ?? '', size, false, '#475569'));
+        page.elements.push(text(roleX, rowY, wrapBookletText(row[2] ?? '', roleWidth, size)[0] ?? '', size, false, '#475569'));
+        const matchesX = roleX + roleWidth + size * 2.4;
+        if (header && i % perColumn === 0) page.elements.push(`<text x="${matchesX}" y="${y - 3}" font-size="6.5" fill="#475569" text-anchor="end">${xml(header)}</text>`);
+        if (row[3]) page.elements.push(`<text x="${matchesX}" y="${rowY}" font-size="${size}" fill="${color}" text-anchor="end">${xml(row[3])}</text>`);
       });
       if (rows.length > shown.length) deferred.push({ title: teamRoster.title, body: rows.slice(shown.length).map((row) => row.filter(Boolean).join(' ')).join('\n') });
       rememberNotes(teamRoster);
