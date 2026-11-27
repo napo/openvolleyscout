@@ -2440,6 +2440,7 @@ export const ja = {
   tacticalAdviceColumn: "戦術の指示",
   tacticalManageSheets: "シートを管理",
   tacticalManageSheetsHelp: "含めるシートを選択するか、追加シートを作成します。文章と図はレポート内で直接編集できます。",
+  opponentReportCatalogGroupCount: "レポートに {{on}} / {{total}}",
   tacticalEditorPan: "表示を移動",
   tacticalEditorZoomOut: "縮小",
   tacticalEditorZoom: "ズーム",

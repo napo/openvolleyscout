@@ -888,7 +888,9 @@
 .opponent-report__video-link small { display: block; }
 .opponent-report__board-piece { min-width: 0; }
 .opponent-report__board-piece-title { min-width: 0; }
-.opponent-report__board-catalog-list { max-height: 28rem; overflow: auto; }
+.opponent-report__board-catalog-groups { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; max-height: 28rem; overflow: auto; }
+.opponent-report__board-catalog-group > summary { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.35rem 0.55rem; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 6px; font-weight: 600; font-size: 0.9rem; }
+.opponent-report__board-catalog-group > summary small { font-weight: 400; opacity: 0.75; }
 @media (max-width: 600px) {
   .opponent-report .team-analysis-match-item { flex-wrap: wrap; }
   .opponent-report .team-analysis-match-item__body { min-width: 0; flex-basis: 75%; }

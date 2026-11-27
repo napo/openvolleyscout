@@ -2461,6 +2461,7 @@ export const ro = {
   tacticalAdviceColumn: "Indicație tactică",
   tacticalManageSheets: "Gestionează foile",
   tacticalManageSheetsHelp: "Alege foile incluse sau adaugă o foaie suplimentară. Editează textele și desenele direct în raport.",
+  opponentReportCatalogGroupCount: "{{on}} din {{total}} în raport",
   tacticalEditorPan: "Mută vederea",
   tacticalEditorZoomOut: "Micșorează",
   tacticalEditorZoom: "Zoom",

@@ -2459,6 +2459,7 @@ export const sl = {
   tacticalAdviceColumn: "Taktično navodilo",
   tacticalManageSheets: "Upravljaj liste",
   tacticalManageSheetsHelp: "Izberi vključene liste ali dodaj dodatni list. Besedila in risbe urejaj neposredno v poročilu.",
+  opponentReportCatalogGroupCount: "{{on}} od {{total}} v poročilu",
   tacticalEditorPan: "Premakni pogled",
   tacticalEditorZoomOut: "Pomanjšaj",
   tacticalEditorZoom: "Povečava",

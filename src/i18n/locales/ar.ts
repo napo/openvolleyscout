@@ -2461,6 +2461,7 @@ export const ar = {
   tacticalAdviceColumn: "التوجيه التكتيكي",
   tacticalManageSheets: "إدارة الأوراق",
   tacticalManageSheetsHelp: "اختيار الأوراق المطلوبة أو إضافة ورقة إضافية. يمكن تعديل النصوص والرسوم مباشرة في التقرير.",
+  opponentReportCatalogGroupCount: "{{on}} من {{total}} في التقرير",
   tacticalEditorPan: "تحريك العرض",
   tacticalEditorZoomOut: "تصغير",
   tacticalEditorZoom: "التكبير",

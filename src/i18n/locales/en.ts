@@ -2499,6 +2499,7 @@ export const en = {
   tacticalAdviceColumn: "Tactical instruction",
   tacticalManageSheets: "Manage sheets",
   tacticalManageSheetsHelp: "Choose which sheets to include or add an extra sheet. Edit text and drawings directly in the report.",
+  opponentReportCatalogGroupCount: "{{on}} of {{total}} in the report",
   tacticalEditorPan: "Pan",
   tacticalEditorZoomOut: "Zoom out",
   tacticalEditorZoom: "Zoom",

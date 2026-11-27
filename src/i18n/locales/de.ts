@@ -2459,6 +2459,7 @@ export const de = {
   tacticalAdviceColumn: "Taktische Anweisung",
   tacticalManageSheets: "Blätter verwalten",
   tacticalManageSheetsHelp: "Wähle enthaltene Blätter oder füge ein Zusatzblatt hinzu. Texte und Zeichnungen bearbeitest du direkt im Bericht.",
+  opponentReportCatalogGroupCount: "{{on}} von {{total}} im Bericht",
   tacticalEditorPan: "Ansicht verschieben",
   tacticalEditorZoomOut: "Verkleinern",
   tacticalEditorZoom: "Zoom",

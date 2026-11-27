@@ -2459,6 +2459,7 @@ export const zh = {
   tacticalAdviceColumn: "战术建议",
   tacticalManageSheets: "管理页面",
   tacticalManageSheetsHelp: "选择要包含的页面或添加附加页面。可直接在报告中编辑文字和绘图。",
+  opponentReportCatalogGroupCount: "报告中 {{on}} / {{total}}",
   tacticalEditorPan: "平移视图",
   tacticalEditorZoomOut: "缩小",
   tacticalEditorZoom: "缩放",

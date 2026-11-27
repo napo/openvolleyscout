@@ -2455,6 +2455,7 @@ export const tr = {
   tacticalAdviceColumn: "Taktik talimat",
   tacticalManageSheets: "Sayfaları yönet",
   tacticalManageSheetsHelp: "Dahil edilecek sayfaları seç veya ek sayfa ekle. Metin ve çizimleri doğrudan raporda düzenle.",
+  opponentReportCatalogGroupCount: "Raporda {{on}} / {{total}}",
   tacticalEditorPan: "Görünümü kaydır",
   tacticalEditorZoomOut: "Uzaklaştır",
   tacticalEditorZoom: "Yakınlaştırma",

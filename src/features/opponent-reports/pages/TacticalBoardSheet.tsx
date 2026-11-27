@@ -222,6 +222,16 @@ export function TacticalBoardSheet({
   const [editingHeatmapPieceId, setEditingHeatmapPieceId] = useState<string | null>(null);
 
   const catalog = useMemo(() => buildBoardPieceCatalog(report, view, viewT), [report, view, viewT]);
+  const catalogGroups = useMemo(() => {
+    const groups = new Map<ResolvedBoardPiece['sheetId'], { sheetId: ResolvedBoardPiece['sheetId']; pieces: ResolvedBoardPiece[]; onBoard: number }>();
+    for (const piece of catalog.values()) {
+      const group = groups.get(piece.sheetId) ?? { sheetId: piece.sheetId, pieces: [], onBoard: 0 };
+      group.pieces.push(piece);
+      if (isPieceOnBoard(report, view, piece.id)) group.onBoard += 1;
+      groups.set(piece.sheetId, group);
+    }
+    return [...groups.values()];
+  }, [catalog, report, view]);
   const activePieces = useMemo(() => resolveBoardPieces(report, view, viewT), [report, view, viewT]);
   const [selectedComponent, setSelectedComponent] = useState<OpponentReportComponentId | 'format'>('keys');
   const [draggedComponent, setDraggedComponent] = useState<OpponentReportComponentId | null>(null);
@@ -387,21 +397,27 @@ export function TacticalBoardSheet({
         <summary><ActionIcon name="manage" />{t('tacticalManageSheets')}</summary>
         <p className="opponent-report__hint">{t('tacticalManageSheetsHelp')}</p>
         <button type="button" className="btn-secondary" onClick={handleAddExtraSheet}><ActionIcon name="add" />{t('opponentReportBoardAddExtraSheet')}</button>
-        <div className="opponent-report__board-catalog-list">
-          {[...catalog.values()].map((piece) => {
-            const onBoard = isPieceOnBoard(report, view, piece.id);
-            return (
-              <label key={piece.id} className="opponent-report__board-catalog-item">
-                <input
-                  type="checkbox"
-                  checked={onBoard}
-                  onChange={() => update((current) => toggleBoardPiece(current, view, piece.id))}
-                />
-                <span className="opponent-report__board-piece-badge">{t(`opponentReportSheet_${piece.sheetId}`)}</span>
-                <span>{piece.title}</span>
-              </label>
-            );
-          })}
+        <div className="opponent-report__board-catalog-groups">
+          {catalogGroups.map((group) => (
+            <details key={group.sheetId} className="opponent-report__board-catalog-group">
+              <summary>
+                <span>{t(`opponentReportSheet_${group.sheetId}`)}</span>
+                <small>{t('opponentReportCatalogGroupCount', { on: group.onBoard, total: group.pieces.length })}</small>
+              </summary>
+              <div className="opponent-report__board-catalog-list">
+                {group.pieces.map((piece) => (
+                  <label key={piece.id} className="opponent-report__board-catalog-item">
+                    <input
+                      type="checkbox"
+                      checked={isPieceOnBoard(report, view, piece.id)}
+                      onChange={() => update((current) => toggleBoardPiece(current, view, piece.id))}
+                    />
+                    <span>{piece.title}</span>
+                  </label>
+                ))}
+              </div>
+            </details>
+          ))}
         </div>
       </details>
 

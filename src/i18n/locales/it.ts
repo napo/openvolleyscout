@@ -2499,6 +2499,7 @@ export const it = {
   tacticalAdviceColumn: "Indicazione tattica",
   tacticalManageSheets: "Gestisci fogli",
   tacticalManageSheetsHelp: "Scegli quali fogli includere o aggiungi un foglio extra. Modifica testi e disegni direttamente nel report.",
+  opponentReportCatalogGroupCount: "{{on}} su {{total}} nel report",
   tacticalEditorPan: "Sposta vista",
   tacticalEditorZoomOut: "Riduci zoom",
   tacticalEditorZoom: "Zoom",
