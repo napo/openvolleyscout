@@ -183,8 +183,10 @@ export interface OpponentReportBooklet {
   format: 'compact' | 'extended' | 'custom';
   base: 'compact' | 'extended';
   includeServe: boolean;
-  /** Add a sheet with the servers beyond the six main ones (otherwise listed as text). */
+  /** Legacy switch: charts for the servers beyond the six main ones. Read only while serveChartKeys is absent. */
   includeServeReserves?: boolean;
+  /** Servers (ReportPlayer.key) printed with their serve chart; the others as text. Absent = the six main ones. */
+  serveChartKeys?: string[];
   /** "Block and defence" attack-direction sheet; included unless false. */
   includeAttackers?: boolean;
   /** Legacy switch: charts for every setter. Read only while setterChartKeys is absent. */

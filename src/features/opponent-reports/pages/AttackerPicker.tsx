@@ -17,10 +17,12 @@ interface AttackerPickerProps {
   onApplyAll: (keys: string[]) => void;
 }
 
-function AthleteChecks({ athletes, chosen, onToggle }: {
-  athletes: PickerView['attackers'];
+/** Athletes with a checkbox and, beside the name, their actions in this section. */
+export function AthleteChecks({ athletes, chosen, onToggle, countLabel }: {
+  athletes: ReadonlyArray<{ key: string; label: string; attacks: number }>;
   chosen: ReadonlySet<string>;
   onToggle: (key: string) => void;
+  countLabel?: (n: number) => string;
 }) {
   const { t } = useTranslation();
   return (
@@ -28,7 +30,7 @@ function AthleteChecks({ athletes, chosen, onToggle }: {
       {athletes.map((athlete) => (
         <label key={athlete.key}>
           <input type="checkbox" checked={chosen.has(athlete.key)} onChange={() => onToggle(athlete.key)} />
-          {athlete.label} <small>{t('attackerPickerAttacks', { n: athlete.attacks })}</small>
+          {athlete.label} <small>{countLabel ? countLabel(athlete.attacks) : t('attackerPickerAttacks', { n: athlete.attacks })}</small>
         </label>
       ))}
     </div>

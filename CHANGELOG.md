@@ -12,6 +12,8 @@
 
 ### Changed
 - Tactical report, Block and defence: the athletes are chosen in the section itself, with their number of attacks. Tick them and press "Apply to all views" to use the same athletes everywhere, or change the athletes of one view only. Manage sheets no longer lists one row per athlete card. Reports you already have keep the athletes you had ticked.
+- Tactical report, How they serve: tick the servers who get their serve chart, with their number of serves beside the name. By default they are the six with most serves, as before; beyond six the charts continue on another page and the servers not ticked are listed as text. The option "sheet for the other servers" in Format is gone: reports that had it on keep the charts of every server.
+- Tactical report, Reception: tick the receivers who get their own card, with their number of receptions. The reception table and drawings stay complete.
 - Manage sheets groups the pieces by sheet and keeps each group closed until you open it, with the number of pieces included in the report.
 - In the base and combination filter the bases (the setter's calls) come first under their own heading, then the combinations. It works the same in the tactical report, the Analysis page, the heatmaps and Video analysis.
 - The group called "Ball type" in the attack filters is now "Hit type" (hard, placed, tip), so it is not confused with the new "Attack type". "High ball" is no longer offered among the situations: use the attack type H. Saved views that already use it give the same numbers as before.

@@ -67,7 +67,7 @@ export interface ReportView {
     good: string[];
     bad: string[];
     receivers: ViewTable;
-    individual?: Array<{ player: ReportPlayer; table: ViewTable; videoLink?: AttackerVideoLink }>;
+    individual?: Array<{ player: ReportPlayer; table: ViewTable; videoLink?: AttackerVideoLink; receptions?: number }>;
     firstBall: ViewTable;
     positiveReception: ViewTable;
     serveTargets: string[];
@@ -141,6 +141,7 @@ export interface ReportView {
       highlights: ViewTable;
       /** Serves with both start and target zone: without them the court is not drawn. */
       hasDirections: boolean;
+      serves?: number;
       /** One line with whatever was scouted: type, start zone preference, aces, errors, run. */
       textSummary: string;
       videoLink?: AttackerVideoLink;
@@ -1234,6 +1235,7 @@ function serveDistributionView(
       player: server.player,
       courtSvg: buildServerCourtSvg(server, t, report.pieceEdits?.[`serve:${server.player.key}`]?.serveHeatmapEdits),
       hasDirections: server.routes.length > 0,
+      serves: server.serves,
       textSummary: [
         playerLabel(server.player),
         ...server.types.slice(0, 2).map((entry) => `${translateServeType(entry.value, t)} ${percent(entry.share)}`),
@@ -1521,6 +1523,7 @@ export function buildReportView(
         player: row.player,
         table: { columns: receivers.columns, rows: [receivers.rows[index]] },
         videoLink: receptionVideoLinks.get(row.player.key),
+        receptions: row.receptions,
       })),
       firstBall,
       positiveReception: positiveTable,

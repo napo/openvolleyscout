@@ -125,6 +125,14 @@ export function teamStartsElements(x: number, y: number, width: number, height: 
   noteLines.forEach((line, i) => parts.push(text(x, y + height - noteLines.length * 8 + 6 + i * 8, line, 6, false, '#475569')));
   return parts.join('');
 }
+/** Servers printed with their serve chart: the coach's choice, else the six main ones (or all, old switch). */
+export function chartedServerKeys(booklet: Partial<OpponentReportBooklet> | undefined, servers: ReportView['serve']['servers']): string[] {
+  const drawable = servers.filter((server) => server.hasDirections).map((server) => server.player.key);
+  if (booklet?.serveChartKeys) return drawable.filter((key) => booklet.serveChartKeys!.includes(key));
+  return booklet?.includeServeReserves ? drawable : drawable.slice(0, 6);
+}
+const serverKeyOf = (pieceId: string) => pieceId.slice('serve:'.length);
+
 type SetterGroup = ReportView['setter']['groups'][number];
 /** Setters in print order: most touches of every skill first, then most sets. */
 export function rankSetterGroups<G extends Pick<SetterGroup, 'player' | 'attempts' | 'touches'>>(groups: readonly G[]): G[] {
@@ -638,7 +646,8 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     component = 'serve';
     const serveCard = (p: ResolvedBoardPiece) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: 2, qrSvg: p.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined });
     const withDirections = servers.filter((p) => drawable.has(p.id));
-    const starters = withDirections.slice(0, 6), reserves = withDirections.slice(6);
+    const chartedServers = new Set(chartedServerKeys(settings, view.serve.servers));
+    const starters = withDirections.filter((p) => chartedServers.has(serverKeyOf(p.id))), reserves = withDirections.filter((p) => !chartedServers.has(serverKeyOf(p.id)));
     const textOnly = servers.filter((p) => !drawable.has(p.id));
     const serveDrawings = withDirections.map((p) => p.court?.drawing);
     const serveHowLegendSvg = buildServeHowLegendSvg(
@@ -654,12 +663,12 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       },
     );
     const servePageStart = pages.length;
-    grids(t('opponentReportSheet_serve'), starters.map(serveCard), 2, 3, BOTTOM - 38);
-    if (reserves.length && settings.includeServeReserves) grids(`${t('opponentReportSheet_serve')} · ${t('serveHowReserves')}`, reserves.map(serveCard), 2, 3, BOTTOM - 38);
+    // Six servers per page: the chosen ones (the six main ones unless the coach picked others).
+    if (starters.length) grids(t('opponentReportSheet_serve'), starters.map(serveCard), 2, 3, BOTTOM - 38);
     if (pages.length > servePageStart) {
       pages[pages.length - 1].elements.push(fitBookletCourt(serveHowLegendSvg, M, BOTTOM - 32, WIDTH, 32, 'serve-how-legend'));
     }
-    const listed = [...(settings.includeServeReserves ? [] : reserves), ...textOnly];
+    const listed = [...reserves, ...textOnly];
     if (listed.length) deferred.push({ id: 'serve-reserves', title: t('serveHowReserves'), body: listed.map((p) => serveText.get(p.id) ?? p.title).join('\n') });
     servers.forEach(rememberNotes);
   } else if (settings.includeServe && servers.length) {

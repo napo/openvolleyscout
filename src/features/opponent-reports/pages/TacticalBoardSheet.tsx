@@ -2,9 +2,9 @@ import { Modal } from '@src/components/Modal';
 import { nextChartRotation } from '@src/lib/utils/chart-rotation';
 import { expandAttackerViews, expandSetterViews } from '../model/split-views';
 import { BookletSettings } from './BookletSettings';
-import { chartedSetterKeys, DEFAULT_BOOKLET, rankSetterGroups, TEAM_CHART_BAR, TEAM_CHART_HIGHLIGHT, teamStartsElements, type ReportBookletPlan, type ReportStaffNote } from '../model/report-booklet';
+import { chartedServerKeys, chartedSetterKeys, DEFAULT_BOOKLET, rankSetterGroups, TEAM_CHART_BAR, TEAM_CHART_HIGHLIGHT, teamStartsElements, type ReportBookletPlan, type ReportStaffNote } from '../model/report-booklet';
 import { attackerBoardViews, PIECE_TEAM_LINEUP, PIECE_TEAM_STARTS, selectedAttackers, setSelectedAttackers } from '../model/board-pieces';
-import { AttackerPicker } from './AttackerPicker';
+import { AthleteChecks, AttackerPicker } from './AttackerPicker';
 import { TeamLineupEditor } from './TeamLineupEditor';
 import { playerLabel } from '../model/report-keys';
 import { moveReportComponent, reportComponentOrder } from '../model/report-components';
@@ -232,7 +232,7 @@ export function TacticalBoardSheet({
     const groups = new Map<ResolvedBoardPiece['sheetId'], { sheetId: ResolvedBoardPiece['sheetId']; pieces: ResolvedBoardPiece[]; onBoard: number }>();
     for (const piece of catalog.values()) {
       // Block and defence athletes are chosen in the section itself.
-      if (piece.sheetId === 'attackers') continue;
+      if (piece.sheetId === 'attackers' || piece.kind === 'player-card' && (piece.sheetId === 'serve' || piece.id.startsWith('receiver:'))) continue;
       const group = groups.get(piece.sheetId) ?? { sheetId: piece.sheetId, pieces: [], onBoard: 0 };
       group.pieces.push(piece);
       if (isPieceOnBoard(report, view, piece.id)) group.onBoard += 1;
@@ -443,6 +443,35 @@ export function TacticalBoardSheet({
         <label className="report-composer__notes">{t('opponentReportNotes')}<textarea rows={6} value={report.notes} placeholder={t('opponentReportNotesPlaceholder')} onChange={event => update(current => ({...current, notes:event.target.value}))} /></label>
       </section> : (
         <>
+          {selected === 'serve' && view.serve.servers.some((server) => server.hasDirections) ? (
+            <section className="attacker-picker" aria-label={t('servePickerTitle')}>
+              <h4>{t('servePickerTitle')}</h4>
+              <p className="opponent-report__hint">{t('servePickerHint')}</p>
+              <AthleteChecks
+                athletes={view.serve.servers.filter((server) => server.hasDirections).map((server) => ({ key: server.player.key, label: playerLabel(server.player), attacks: server.serves ?? 0 }))}
+                chosen={new Set(chartedServerKeys(report.booklet, view.serve.servers))}
+                countLabel={(n) => t('athletePickerServes', { n })}
+                onToggle={(key) => update((current) => {
+                  const chosen = new Set(chartedServerKeys(current.booklet, view.serve.servers));
+                  if (chosen.has(key)) chosen.delete(key); else chosen.add(key);
+                  const serveChartKeys = view.serve.servers.map((server) => server.player.key).filter((entry) => chosen.has(entry));
+                  return { ...current, booklet: { ...DEFAULT_BOOKLET, ...current.booklet, serveChartKeys } };
+                })}
+              />
+            </section>
+          ) : null}
+          {selected === 'reception' && view.reception.individual?.length ? (
+            <section className="attacker-picker" aria-label={t('receiverPickerTitle')}>
+              <h4>{t('receiverPickerTitle')}</h4>
+              <p className="opponent-report__hint">{t('receiverPickerHint')}</p>
+              <AthleteChecks
+                athletes={view.reception.individual.map((receiver) => ({ key: receiver.player.key, label: playerLabel(receiver.player), attacks: receiver.receptions ?? 0 }))}
+                chosen={new Set(view.reception.individual.filter((receiver) => isPieceOnBoard(report, view, `receiver:${receiver.player.key}`)).map((receiver) => receiver.player.key))}
+                countLabel={(n) => t('athletePickerReceptions', { n })}
+                onToggle={(key) => update((current) => toggleBoardPiece(current, view, `receiver:${key}`))}
+              />
+            </section>
+          ) : null}
           {selected === 'setter' && view.setter.groups.length > 1 ? (
             <fieldset className="opponent-report__setter-charts">
               <legend>{t('setterChartsTitle')}</legend>

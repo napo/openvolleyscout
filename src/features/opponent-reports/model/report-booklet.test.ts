@@ -502,6 +502,20 @@ describe('persistent multilingual priorities',()=>{
     report.booklet={...report.booklet!,includeServeReserves:true};
     expect(buildReportBooklet(report,view,t).pages.filter(page=>page.includes('How they serve'))).toHaveLength(2);
   });
+  it('prints the servers the coach chooses, six per page, and lists the others as text',()=>{
+    const {report,view,svg,player}=fixture();
+    report.booklet={...report.booklet!,includeServe:true};
+    view.serve.servers=Array.from({length:8},(_,i)=>({player:player(`s${i}`),courtSvg:svg,courtSample:'serves',highlights:{columns:[],rows:[]},hasDirections:true,textSummary:`Server ${i} · Jump float 80%`,serves:80-i}));
+    const servePages=(plan:ReturnType<typeof buildReportBooklet>)=>plan.pages.filter(page=>page.includes('>How they serve<'));
+    report.booklet={...report.booklet!,serveChartKeys:['s7','s2']};
+    const two=buildReportBooklet(report,view,t);
+    expect(servePages(two)).toHaveLength(1);
+    expect(servePages(two)[0].match(/native-marker/g)).toHaveLength(2);
+    expect(two.staffNotes?.find(note=>note.id==='serve-reserves')?.body).toContain('Server 0');
+    expect(two.staffNotes?.find(note=>note.id==='serve-reserves')?.body).not.toContain('Server 7');
+    report.booklet={...report.booklet!,serveChartKeys:['s0','s1','s2','s3','s4','s5','s6']};
+    expect(servePages(buildReportBooklet(report,view,t))).toHaveLength(2);
+  });
   it('leaves out the serve sheet without directions but keeps the known serve facts as text',()=>{
     const {report,view,svg,player}=fixture();
     report.booklet={...report.booklet!,includeServe:true};
