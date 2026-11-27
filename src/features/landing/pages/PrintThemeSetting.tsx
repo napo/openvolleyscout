@@ -2,7 +2,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { PrintThemePicker } from '@src/components/PrintThemePicker';
 import { useTranslation } from '@src/i18n';
-import { prepareLogoDataUrl } from '@src/lib/theme/print-logo-file';
+import { LOGO_MAX_RATIO, prepareLogoDataUrl } from '@src/lib/theme/print-logo-file';
 import {
   readPrintLogo,
   savePrintLogo,
@@ -29,6 +29,7 @@ export function PrintThemeSetting() {
   const choice = useSyncExternalStore(subscribePrintTheme, snapshot, () => null);
   const logo = useSyncExternalStore(subscribePrintTheme, readPrintLogo, () => null);
   const [logoError, setLogoError] = useState(false);
+  const [logoNote, setLogoNote] = useState<'' | 'trimmed' | 'wide'>('');
   return (
     <section className="settings-page__section" id="settings-print-theme">
       <span className="form-label">{t('printThemeTitle')}</span>
@@ -53,11 +54,15 @@ export function PrintThemeSetting() {
               if (!file) return;
               const prepared = await prepareLogoDataUrl(file);
               setLogoError(!prepared);
-              if (prepared) savePrintLogo(prepared);
+              if (!prepared) return;
+              savePrintLogo(prepared.dataUrl);
+              const ratio = Math.max(prepared.ratio, 1 / prepared.ratio);
+              setLogoNote(ratio > LOGO_MAX_RATIO ? 'wide' : prepared.trimmed ? 'trimmed' : '');
             }}
           />
         </label>
-        {logo ? <button type="button" className="btn-secondary btn-small" onClick={() => savePrintLogo(null)}>{t('printLogoRemove')}</button> : null}
+        {logo ? <button type="button" className="btn-secondary btn-small" onClick={() => { savePrintLogo(null); setLogoNote(''); }}>{t('printLogoRemove')}</button> : null}
+        {logo && logoNote ? <p className="settings-page__text" role="status">{t(logoNote === 'wide' ? 'printLogoWide' : 'printLogoTrimmed')}</p> : null}
         {logoError ? <p className="settings-page__text" role="alert">{t('printLogoError')}</p> : null}
         <p className="settings-page__text">{t('printLogoHint')}</p>
       </div>
