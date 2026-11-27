@@ -200,6 +200,7 @@ export function TacticalBoardSheet({
   viewT,
   rosterPlayers,
   attackCombinationCodes = [],
+  setterCallCodes = [],
   suggestions,
   update,
 }: {
@@ -210,6 +211,7 @@ export function TacticalBoardSheet({
   viewT: ViewT;
   rosterPlayers: readonly ReportPlayer[];
   attackCombinationCodes?: readonly string[];
+  setterCallCodes?: readonly string[];
   suggestions: readonly KeySuggestion[];
   update: Update;
 }) {
@@ -435,9 +437,10 @@ export function TacticalBoardSheet({
             <SetterViewsEditor
               views={report.setterViews}
               receivers={view.reception.individual?.map((entry) => entry.player) ?? []}
+              setterCallCodes={setterCallCodes}
               onChange={(nextViews) => update((current) => {
                 const targetKeys = nextViews && nextViews.length > 0
-                  ? expandSetterViews(nextViews, () => '').map((v) => v.id)
+                  ? expandSetterViews(nextViews, () => '', setterCallCodes).map((v) => v.id)
                   : ['positive', 'negative'];
                 const setterPlayerKeys = view.setter.groups.map((g) => g.player.key);
                 const nextSetterPieceIds = setterPlayerKeys.flatMap((playerKey) =>

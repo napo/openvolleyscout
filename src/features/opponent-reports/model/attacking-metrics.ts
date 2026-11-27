@@ -603,8 +603,51 @@ function finishSetterBand(band: MutableSetterBand): SetterReceptionBandMetrics {
   };
 }
 
+function resolveMatchSetters(match: ReportMatchInput) {
+  const playerById = new Map<string, ReportPlayer>();
+  const rosterSetterIds = new Set<string>();
+  const nonSetterIds = new Set<string>();
+  for (const entry of match.roster) {
+    const player = toReportPlayer(entry);
+    playerById.set(entry.id, player);
+    if (entry.role === 'setter') rosterSetterIds.add(entry.id);
+    if (entry.isLibero || entry.role === 'libero' || entry.role === 'middle_blocker') {
+      nonSetterIds.add(entry.id);
+    }
+  }
+  for (const event of match.events) {
+    if (event.type === 'setter_assigned' && event.teamSide === match.side) nonSetterIds.delete(event.setterPlayerId);
+    if (event.type === 'set_started') {
+      const lineup = event.homeLineup.teamSide === match.side ? event.homeLineup : event.awayLineup;
+      if (lineup.setterPlayerId) nonSetterIds.delete(lineup.setterPlayerId);
+    }
+  }
+  const setterIds = collectSetterPlayerIds(match.events, rosterSetterIds, match.side, nonSetterIds);
+  const setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
+    home: match.side === 'home' ? setterIds : new Set(),
+    away: match.side === 'away' ? setterIds : new Set(),
+  };
+  return { playerById, nonSetterIds, setterIds, setterPlayerIds };
+}
+
+const normalizeSetterCall = (code: string | null | undefined): string | undefined => code?.trim().toUpperCase() || undefined;
+
+/** The setter calls ('K1', 'KC', ...) the opponent's sets were called with after a reception, sorted. */
+export function collectSetterCallCodes(inputs: readonly ReportMatchInput[]): string[] {
+  const codes = new Set<string>();
+  for (const match of inputs) {
+    const { setterPlayerIds } = resolveMatchSetters(match);
+    for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
+      if (sequence.teamSide !== match.side || !['#', '+', '!', '-'].includes(sequence.receive.evaluation ?? '')) continue;
+      const code = normalizeSetterCall(sequence.callCode);
+      if (code) codes.add(code);
+    }
+  }
+  return [...codes].sort((a, b) => a.localeCompare(b));
+}
+
 export function matchesSetterDistributionFilter(
-  sequence: { serve?: BallTouch; receive: BallTouch; receiverKey?: string },
+  sequence: { serve?: BallTouch; receive: BallTouch; receiverKey?: string; callCode?: string | null },
   filter: SetterDistributionViewConfig,
 ): boolean {
   const evalCode = sequence.receive.evaluation ?? '';
@@ -640,6 +683,11 @@ export function matchesSetterDistributionFilter(
     if (!sequence.receiverKey || !filter.receiverKeys.includes(sequence.receiverKey)) return false;
   }
 
+  if (filter.setterCalls && filter.setterCalls.length > 0) {
+    const call = normalizeSetterCall(sequence.callCode);
+    if (!call || !filter.setterCalls.some((code) => normalizeSetterCall(code) === call)) return false;
+  }
+
   return true;
 }
 
@@ -663,29 +711,7 @@ export function computeSetterDistributionViews(
   }>();
 
   for (const match of inputs) {
-    const playerById = new Map<string, ReportPlayer>();
-    const rosterSetterIds = new Set<string>();
-    const nonSetterIds = new Set<string>();
-    for (const entry of match.roster) {
-      const player = toReportPlayer(entry);
-      playerById.set(entry.id, player);
-      if (entry.role === 'setter') rosterSetterIds.add(entry.id);
-      if (entry.isLibero || entry.role === 'libero' || entry.role === 'middle_blocker') {
-        nonSetterIds.add(entry.id);
-      }
-    }
-    for (const event of match.events) {
-      if (event.type === 'setter_assigned' && event.teamSide === match.side) nonSetterIds.delete(event.setterPlayerId);
-      if (event.type === 'set_started') {
-        const lineup = event.homeLineup.teamSide === match.side ? event.homeLineup : event.awayLineup;
-        if (lineup.setterPlayerId) nonSetterIds.delete(lineup.setterPlayerId);
-      }
-    }
-    const setterIds = collectSetterPlayerIds(match.events, rosterSetterIds, match.side, nonSetterIds);
-    const setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
-      home: match.side === 'home' ? setterIds : new Set(),
-      away: match.side === 'away' ? setterIds : new Set(),
-    };
+    const { playerById, nonSetterIds, setterIds, setterPlayerIds } = resolveMatchSetters(match);
     const touchContext = buildTouchCourtContext(match.events, setterPlayerIds);
     const serveByRally = new Map<string, BallTouch>();
     const wonByRally = new Map<string, boolean>();
@@ -732,7 +758,7 @@ export function computeSetterDistributionViews(
       const won = wonByRally.get(rallyKey) === true;
       const receiverKey = sequence.receive.playerId ? playerById.get(sequence.receive.playerId)?.key : undefined;
       for (const view of views) {
-        if (!matchesSetterDistributionFilter({ serve, receive: sequence.receive, receiverKey }, view)) continue;
+        if (!matchesSetterDistributionFilter({ serve, receive: sequence.receive, receiverKey, callCode: sequence.callCode }, view)) continue;
         let rotMap = entry.views.get(view.id);
         if (!rotMap) {
           rotMap = new Map();

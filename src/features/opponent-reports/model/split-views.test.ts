@@ -26,6 +26,21 @@ describe('draw separately', () => {
     expect(views).toHaveLength(5);
     expect(views[0].serveStartZones).toEqual(['1']);
   });
+
+  it('splits setter views by the setter calls found in the matches, or by the chosen ones', () => {
+    const base = { id: 's', label: 'S', receptionBand: 'all' as const, splitBy: 'setterCalls' as const };
+    const all = expandSetterViews([base], (_, value) => String(value), ['K1', 'KC', 'K7']);
+    expect(all.map((view) => view.id)).toEqual(['s~K1', 's~KC', 's~K7']);
+    expect(all[1].setterCalls).toEqual(['KC']);
+    expect(all[1].label).toBe('S · KC');
+    const chosen = expandSetterViews([{ ...base, setterCalls: ['K7', 'K1'] }], (_, value) => String(value), ['K1', 'KC', 'K7']);
+    expect(chosen.map((view) => view.id)).toEqual(['s~K7', 's~K1']);
+  });
+
+  it('keeps one card when the matches hold no setter call to split by', () => {
+    const views = expandSetterViews([{ id: 's', label: 'S', receptionBand: 'all', splitBy: 'setterCalls' }], (_, value) => String(value));
+    expect(views.map((view) => view.id)).toEqual(['s']);
+  });
 });
 
 describe('report title', () => {

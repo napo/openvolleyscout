@@ -11,6 +11,7 @@ import type { MatchRosterPlayer } from '@src/domain/match/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import {
   collectAttackCombinationCodes,
+  collectSetterCallCodes,
   computeAttackerDirectionViews,
   computeAttackingReportMetrics,
   computeSetterDistributionViews,
@@ -620,6 +621,33 @@ describe('opponent attacking metrics', () => {
     expect(custom[0].views[1].rotations[0].band.attempts).toBe(1);
     expect(custom[0].views[1].rotations[0].band.topZone).toBe(2);
     expect(custom[0].views[1].rotations[0].band.sideOut).toMatchObject({ count: 1, total: 1, rate: 1 });
+  });
+
+  it('filters custom setter distribution views by the setter call and lists the calls found', () => {
+    const sideOut = (rally: number, order: number, call: string | undefined): RallyStats => ({
+      setNumber: 1,
+      rallyNumber: rally,
+      touches: [
+        touch(`s${rally}`, order, 'h1', 'serve', '+', { teamSide: 'home', rallyNumber: rally }),
+        touch(`r${rally}`, order + 1, 'a4', 'receive', '+', { awaySetterPosition: 1, rallyNumber: rally }),
+        touch(`set${rally}`, order + 2, 'a1', 'set', '#', { rallyNumber: rally, ...(call ? { setterCallCode: call } : {}) }),
+        touch(`atk${rally}`, order + 3, 'a4', 'attack', '#', { startZoneCode: '4', rallyNumber: rally }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    });
+    const fixture = match([sideOut(1, 1, 'K1'), sideOut(2, 10, 'kc'), sideOut(3, 20, 'K1'), sideOut(4, 30, undefined)], 'm1', 'a1');
+    expect(collectSetterCallCodes([fixture])).toEqual(['K1', 'KC']);
+    const metrics = computeAttackingReportMetrics([fixture]);
+    const attempts = (view: Parameters<typeof computeSetterDistributionViews>[1][number]) => (
+      computeSetterDistributionViews([fixture], [view], metrics.setters)[0].views[0].rotations[0].band.attempts
+    );
+    expect(attempts({ id: 'all', label: 'All', receptionBand: 'all' })).toBe(4);
+    expect(attempts({ id: 'k1', label: 'K1', receptionBand: 'all', setterCalls: ['K1'] })).toBe(2);
+    expect(attempts({ id: 'kc', label: 'KC', receptionBand: 'all', setterCalls: ['KC'] })).toBe(1);
+    expect(attempts({ id: 'both', label: 'K1 + KC', receptionBand: 'all', setterCalls: ['K1', 'KC'] })).toBe(3);
   });
 
   it('keeps attacks against an open block (players at net 4) apart from the others', () => {

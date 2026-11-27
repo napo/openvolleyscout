@@ -12,7 +12,7 @@ import type {
  * its own card. "Draw together" (no split) keeps one card for all values.
  */
 export type AttackerSplitField = 'attackZones' | 'rotations' | 'phases';
-export type SetterSplitField = 'serveStartZones' | 'receptionZones' | 'serveTypes';
+export type SetterSplitField = 'serveStartZones' | 'receptionZones' | 'serveTypes' | 'setterCalls';
 
 export const ATTACKER_SPLIT_VALUES: { [K in AttackerSplitField]: ReadonlyArray<NonNullable<AttackerDirectionViewConfig[K]>[number]> } = {
   attackZones: ['4', '3', '2', '6', '1', '5'],
@@ -20,7 +20,8 @@ export const ATTACKER_SPLIT_VALUES: { [K in AttackerSplitField]: ReadonlyArray<N
   phases: ['after_receive', 'after_dig', 'high_ball', 'late_set'] as AttackerDirectionPhase[],
 };
 
-export const SETTER_SPLIT_VALUES: { [K in SetterSplitField]: ReadonlyArray<NonNullable<SetterDistributionViewConfig[K]>[number]> } = {
+/** The setter calls have no fixed list: they are the ones found in the matches (see `collectSetterCallCodes`). */
+export const SETTER_SPLIT_VALUES: { [K in Exclude<SetterSplitField, 'setterCalls'>]: ReadonlyArray<NonNullable<SetterDistributionViewConfig[K]>[number]> } = {
   serveStartZones: ['1', '9', '6', '7', '5'],
   receptionZones: ['1', '6', '5', '9', '8', '7', '2', '3', '4'],
   serveTypes: ['jump_spin', 'jump_float', 'float', 'other'] as SetterDistributionServeType[],
@@ -38,6 +39,7 @@ function expand<V extends SplittableView>(
     if (!field || !allValues[field]) return [view];
     const chosen = (view as unknown as Record<string, Array<string | number> | undefined>)[field];
     const values = chosen && chosen.length > 0 ? chosen : allValues[field];
+    if (values.length === 0) return [view];
     return values.map((value) => ({
       ...view,
       id: `${view.id}~${value}`,
@@ -58,6 +60,7 @@ export function expandAttackerViews(
 export function expandSetterViews(
   views: readonly SetterDistributionViewConfig[],
   valueLabel: (field: SetterSplitField, value: string | number) => string,
+  setterCallCodes: readonly string[] = [],
 ): SetterDistributionViewConfig[] {
-  return expand(views, SETTER_SPLIT_VALUES, valueLabel as (field: string, value: string | number) => string);
+  return expand(views, { ...SETTER_SPLIT_VALUES, setterCalls: setterCallCodes }, valueLabel as (field: string, value: string | number) => string);
 }

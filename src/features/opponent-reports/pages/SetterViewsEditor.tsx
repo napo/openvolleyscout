@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { SplitToggle } from './SplitToggle';
-import { ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
+import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type {
   SetterDistributionReceptionEval,
   SetterDistributionServeType,
@@ -36,10 +36,11 @@ function getEffectiveReceptionEvals(view: SetterDistributionViewConfig): SetterD
 interface SetterViewsEditorProps {
   views: readonly SetterDistributionViewConfig[] | undefined;
   receivers?: readonly ReportPlayer[];
+  setterCallCodes?: readonly string[];
   onChange: (nextViews: SetterDistributionViewConfig[] | undefined) => void;
 }
 
-export function SetterViewsEditor({ views, receivers = [], onChange }: SetterViewsEditorProps) {
+export function SetterViewsEditor({ views, receivers = [], setterCallCodes = [], onChange }: SetterViewsEditorProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const all = t('setterViewFilterAll');
@@ -88,6 +89,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
           serveStartZones: base.serveStartZones ? [...base.serveStartZones] : undefined,
           receptionZones: base.receptionZones ? [...base.receptionZones] : undefined,
           receiverKeys: base.receiverKeys ? [...base.receiverKeys] : undefined,
+          setterCalls: base.setterCalls ? [...base.setterCalls] : undefined,
         }
       : {
           id,
@@ -231,6 +233,18 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                       onChange={(next) => patchView(index, { receptionZones: next.length > 0 ? next : undefined })}
                     />
                   </FilterGroup>
+
+                  {setterCallCodes.length > 0 ? (
+                    <FilterGroup title={t('setterCall')} active={Boolean(view.setterCalls?.length)} wide>
+                      <SplitToggle separate={view.splitBy === 'setterCalls'} onChange={(separate) => patchView(index, { splitBy: separate ? 'setterCalls' : undefined })} />
+                      <BaseCodeTable
+                        allLabel={all}
+                        codes={setterCallCodes}
+                        selected={view.setterCalls ?? []}
+                        onChange={(next) => patchView(index, { setterCalls: next.length > 0 ? next : undefined })}
+                      />
+                    </FilterGroup>
+                  ) : null}
 
                   {receivers.length > 0 ? (
                     <FilterGroup title={t('setterViewReceiversLabel')} active={Boolean(view.receiverKeys?.length)} wide>

@@ -21,7 +21,7 @@ import { buildReportSimilarities, listReportScopes, matchScopeKey, type MatchTea
 import { buildReportMatchInputs } from '../model/report-inputs';
 import { computeOpponentReportMetrics, toReportPlayer, type ReportPlayer } from '../model/report-metrics';
 import { expandAttackerViews, expandSetterViews } from '../model/split-views';
-import { collectAttackCombinationCodes, computeAttackerDirectionViews, computeAttackingReportMetrics, computeSetterDistributionViews } from '../model/attacking-metrics';
+import { collectAttackCombinationCodes, collectSetterCallCodes, computeAttackerDirectionViews, computeAttackingReportMetrics, computeSetterDistributionViews } from '../model/attacking-metrics';
 import { computeServingReportMetrics } from '../model/serving-metrics';
 import { buildPlayerSkillVideoLinks, videoLinkWatchKey, setterBandFilter, type AttackerVideoLink } from '../model/attacker-video-links';
 import { buildKeySuggestions, compareReportPlayers } from '../model/report-keys';
@@ -186,11 +186,12 @@ export function OpponentReportEditorPage() {
         return links;
     }, [inputs, attacking.setters, displayTitle, videoLinkTime]);
     const system = findReceptionSystemForTeam(systems, report?.opponent.archivedTeamId) ?? DEFAULT_RECEPTION_SYSTEM_BLOCK;
+    const setterCallCodes = useMemo(() => collectSetterCallCodes(inputs), [inputs]);
     const setterCustomGroups = useMemo(
         () => report?.setterViews?.length
-            ? computeSetterDistributionViews(inputs, expandSetterViews(report.setterViews, (field, value) => field === 'serveTypes' ? t(SPLIT_SERVE_TYPE_KEYS[value as keyof typeof SPLIT_SERVE_TYPE_KEYS]) : `${t('zone')} ${value}`), attacking.setters)
+            ? computeSetterDistributionViews(inputs, expandSetterViews(report.setterViews, (field, value) => field === 'serveTypes' ? t(SPLIT_SERVE_TYPE_KEYS[value as keyof typeof SPLIT_SERVE_TYPE_KEYS]) : field === 'setterCalls' ? String(value) : `${t('zone')} ${value}`, setterCallCodes), attacking.setters)
             : [],
-        [inputs, report?.setterViews, attacking.setters, t],
+        [inputs, report?.setterViews, attacking.setters, setterCallCodes, t],
     );
     const attackCombinationCodes = useMemo(() => collectAttackCombinationCodes(inputs), [inputs]);
     const attackerCustomViews = useMemo(
@@ -369,7 +370,7 @@ export function OpponentReportEditorPage() {
       {sample.actions < thresholds.minSample ? <p className="opponent-report__warning">{t('opponentReportLowSampleWarning', { n: thresholds.minSample })}</p> : null}
       {preview.length ? <details open><summary><ActionIcon name="preview" />{t('tacticalPreview')}</summary>{preview.map((svg, index) => <img className="tactical-preview" key={index} alt={`${opponentReportTitle(report)} · ${index + 1}`} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}/>)}</details> : null}
 
-      <TacticalBoardSheet report={report} plan={booklet!} staffNotes={fullPlan?.staffNotes ?? []} view={view} viewT={viewT} rosterPlayers={players} attackCombinationCodes={attackCombinationCodes} suggestions={suggestions} update={update}/>
+      <TacticalBoardSheet report={report} plan={booklet!} staffNotes={fullPlan?.staffNotes ?? []} view={view} viewT={viewT} rosterPlayers={players} attackCombinationCodes={attackCombinationCodes} setterCallCodes={setterCallCodes} suggestions={suggestions} update={update}/>
     </>}
   </AppPageLayout>;
 }

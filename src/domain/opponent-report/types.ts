@@ -211,8 +211,10 @@ export interface SetterDistributionViewConfig {
   receptionZones?: string[];
   /** Empty or omitted = all receivers (ReportPlayer.key). */
   receiverKeys?: string[];
+  /** Setter calls ('K1', 'KC', ...) the set was called with. Empty or omitted = every set, called or not. */
+  setterCalls?: string[];
   /** Draw one card per value of this filter ("draw separately"); omitted = one card ("draw together"). */
-  splitBy?: 'serveStartZones' | 'receptionZones' | 'serveTypes';
+  splitBy?: 'serveStartZones' | 'receptionZones' | 'serveTypes' | 'setterCalls';
 }
 
 /** Custom attacker direction view filter (phase, reception, rotation, zone, subtype, base/combination, blockers, evaluation). */
