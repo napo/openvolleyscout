@@ -1762,7 +1762,7 @@ export const zh = {
   opponentReportSheet_team: "球队",
   teamPageTitle: "球队 - {{team}}",
   bookletTeam: "球队：名单与开局轮次",
-  teamRosterTitle: "名单",
+  teamRosterTitle: "球队",
   teamColMatches: "出场比赛",
   teamColName: "姓名",
   teamColRole: "位置",

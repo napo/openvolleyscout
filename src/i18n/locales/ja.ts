@@ -1760,7 +1760,7 @@ export const ja = {
   opponentReportSheet_team: "チーム",
   teamPageTitle: "チーム - {{team}}",
   bookletTeam: "チーム：登録選手とスタートローテーション",
-  teamRosterTitle: "登録選手",
+  teamRosterTitle: "チーム",
   teamColMatches: "出場試合",
   teamColName: "名前",
   teamColRole: "ポジション",

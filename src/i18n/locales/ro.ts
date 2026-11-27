@@ -1764,7 +1764,7 @@ export const ro = {
   opponentReportSheet_team: "Echipa",
   teamPageTitle: "Echipa - {{team}}",
   bookletTeam: "Echipa: lot și rotații de start",
-  teamRosterTitle: "Lot",
+  teamRosterTitle: "Echipa",
   teamColMatches: "Meciuri jucate",
   teamColName: "Nume",
   teamColRole: "Rol",

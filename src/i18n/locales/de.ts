@@ -1762,7 +1762,7 @@ export const de = {
   opponentReportSheet_team: "Mannschaft",
   teamPageTitle: "Mannschaft - {{team}}",
   bookletTeam: "Mannschaft: Kader und Startrotationen",
-  teamRosterTitle: "Kader",
+  teamRosterTitle: "Mannschaft",
   teamColMatches: "Gespielte Spiele",
   teamColName: "Name",
   teamColRole: "Position",

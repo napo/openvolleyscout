@@ -1764,7 +1764,7 @@ export const ar = {
   opponentReportSheet_team: "الفريق",
   teamPageTitle: "الفريق - {{team}}",
   bookletTeam: "الفريق: القائمة ودورانات البداية",
-  teamRosterTitle: "القائمة",
+  teamRosterTitle: "الفريق",
   teamColMatches: "المباريات الملعوبة",
   teamColName: "الاسم",
   teamColRole: "المركز",

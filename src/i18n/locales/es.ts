@@ -1764,7 +1764,7 @@ export const es = {
   opponentReportSheet_team: "Equipo",
   teamPageTitle: "Equipo - {{team}}",
   bookletTeam: "Equipo: plantilla y rotaciones de inicio",
-  teamRosterTitle: "Plantilla",
+  teamRosterTitle: "Equipo",
   teamColMatches: "Partidos jugados",
   teamColName: "Nombre",
   teamColRole: "Rol",

@@ -1762,7 +1762,7 @@ export const sl = {
   opponentReportSheet_team: "Ekipa",
   teamPageTitle: "Ekipa - {{team}}",
   bookletTeam: "Ekipa: seznam igralk in začetne rotacije",
-  teamRosterTitle: "Seznam igralk",
+  teamRosterTitle: "Ekipa",
   teamColMatches: "Odigrane tekme",
   teamColName: "Ime",
   teamColRole: "Vloga",

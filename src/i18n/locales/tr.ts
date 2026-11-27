@@ -1758,7 +1758,7 @@ export const tr = {
   opponentReportSheet_team: "Takım",
   teamPageTitle: "Takım - {{team}}",
   bookletTeam: "Takım: kadro ve başlangıç rotasyonları",
-  teamRosterTitle: "Kadro",
+  teamRosterTitle: "Takım",
   teamColMatches: "Oynanan maçlar",
   teamColName: "Ad",
   teamColRole: "Görev",

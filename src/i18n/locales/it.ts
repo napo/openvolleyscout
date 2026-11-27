@@ -1802,7 +1802,7 @@ export const it = {
   opponentReportSheet_team: "Squadra",
   teamPageTitle: "Squadra - {{team}}",
   bookletTeam: "Squadra: rosa e rotazioni di partenza",
-  teamRosterTitle: "Rosa",
+  teamRosterTitle: "Squadra",
   teamColMatches: "Gare giocate",
   teamColName: "Nome",
   teamColRole: "Ruolo",
