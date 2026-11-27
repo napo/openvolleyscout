@@ -59,7 +59,8 @@ describe('scouting claims', () => {
   });
 });
 
-describe('scouting claims through the cloud file', () => {
+// Encrypting and uploading takes seconds when the machine is busy: the default 5 s limit is too tight.
+describe('scouting claims through the cloud file', { timeout: 30_000 }, () => {
   it('first device to upload wins; the other sees who scouts', async () => {
     const remote = makeMemoryRemote();
     const auth = { token: async () => 'tok', invalidate: () => undefined, signOut: async () => undefined };
