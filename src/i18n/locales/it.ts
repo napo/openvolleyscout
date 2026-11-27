@@ -2701,7 +2701,7 @@ export const it = {
   attackerViewPhaseLabel: "Fase",
   attackerViewBaseLabel: "Base / Combinazione",
   setterChartsTitle: "Palleggiatori con i grafici",
-  setterChartsHelp: "Di base ha i grafici chi ha più tocchi. Gli altri sono riassunti in testo.",
+  setterChartsHelp: "Di base ha i grafici il primo alzatore, cioè chi ha più tocchi. Gli altri sono riassunti in testo.",
   setterChartsTouches: "{{n}} tocchi",
   reportComponentSetterCount: "{{charts}} con grafici, {{text}} in testo",
   baseCodesBases: "Basi",

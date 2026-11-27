@@ -2701,7 +2701,7 @@ export const en = {
   attackerViewPhaseLabel: "Phase",
   attackerViewBaseLabel: "Base / Combination",
   setterChartsTitle: "Setters with charts",
-  setterChartsHelp: "The setter with most touches has charts by default. The others are summarised in text.",
+  setterChartsHelp: "By default the first setter, the one with most touches, has charts. The others are summarised in text.",
   setterChartsTouches: "{{n}} touches",
   reportComponentSetterCount: "{{charts}} with charts, {{text}} as text",
   baseCodesBases: "Bases",
