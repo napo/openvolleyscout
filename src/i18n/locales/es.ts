@@ -93,7 +93,7 @@ export const es = {
   printLogoReplace: "Cambiar el logo",
   printLogoRemove: "Quitar el logo",
   printLogoError: "Este archivo no es una imagen utilizable.",
-  printLogoHint: "Mejor una imagen cuadrada de al menos 256 × 256 px, con fondo transparente. El borde vacío se recorta solo y el logo se reduce a una imagen pequeña. Se imprime a la derecha de la banda de los informes y en la cabecera de los PDF, junto al logo de OpenVolleyScout. Las presentaciones (PPTX, ODP) aún no lo muestran.",
+  printLogoHint: "Mejor una imagen cuadrada de al menos 256 × 256 px, con fondo transparente. El borde vacío se recorta solo y el logo se reduce a una imagen pequeña. Se imprime a la derecha de la banda de los informes y en la cabecera de los PDF y de las presentaciones, junto al logo de OpenVolleyScout.",
   printLogoTrimmed: "Se ha recortado el borde vacío alrededor del logo.",
   printLogoWide: "El logo es mucho más ancho (o alto) que alto: en la banda se imprime pequeño. Funciona mejor una versión cuadrada del logo.",
   printLogoShowInReport: "Mostrar el logo del club",

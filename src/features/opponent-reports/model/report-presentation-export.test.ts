@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { unzipSync, strFromU8 } from 'fflate';
 import { posix } from 'node:path';
 import { buildReportOdp, buildReportPptx } from './report-presentation-export';
-import { markerViewportScale, type PresentationScene } from './report-presentation-scene';
+import { embeddedImage, embeddedImageSize, fitImageBox, markerViewportScale, type PresentationScene } from './report-presentation-scene';
 const paint={fill:'EAF3F3',fillOpacity:.4,stroke:'142E42',strokeOpacity:1,strokeWidth:1,dashed:true};
 const scene:PresentationScene={width:419.528,height:595.276,pages:[[
  {kind:'rect',x:20,y:40,width:210,height:210,radius:4,paint},
@@ -57,5 +57,40 @@ describe('editable report presentation exports',()=>{
   expect(content).toContain('نص');expect(content).toContain('日本語');
   expect(content).not.toContain('<draw:image');
   expect(strFromU8(entries['styles.xml'])).toContain('fo:page-width="14.80002cm"');
+ });
+
+ it('reads the size of a PNG or JPEG from its header and fits it like SVG preserveAspectRatio',()=>{
+  const png=new Uint8Array(24);png.set([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,0,0,0,13,0x49,0x48,0x44,0x52]);
+  new DataView(png.buffer).setUint32(16,200);new DataView(png.buffer).setUint32(20,100);
+  expect(embeddedImageSize(png)).toEqual({width:200,height:100});
+  const jpeg=Uint8Array.from([0xff,0xd8,0xff,0xe0,0,4,0,0,0xff,0xc0,0,17,8,0,50,0,150,3,0,0,0,0,0,0]);
+  expect(embeddedImageSize(jpeg)).toEqual({width:150,height:50});
+  expect(embeddedImageSize(Uint8Array.from([1,2,3,4]))).toBeNull();
+  expect(fitImageBox({x:10,y:10,width:52,height:52},{width:200,height:100},'xMaxYMid meet')).toEqual({x:10,y:23,width:52,height:26});
+  expect(fitImageBox({x:0,y:0,width:40,height:40},{width:100,height:200},'xMaxYMid meet')).toEqual({x:20,y:0,width:20,height:40});
+  expect(fitImageBox({x:0,y:0,width:40,height:40},{width:100,height:200},'none')).toEqual({x:0,y:0,width:40,height:40});
+  expect(embeddedImage('data:image/svg+xml;base64,PHN2Zz4=')).toBeNull();
+ });
+ it('embeds the club logo once in PPTX and ODP, with every reference resolved',()=>{
+  const logo='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const withLogo:PresentationScene={...scene,pages:[[...scene.pages[0],{kind:'image',href:logo,x:350,y:7,width:52,height:52}],[{kind:'image',href:logo,x:350,y:7,width:52,height:52}]]};
+  const pptx=unzipSync(buildReportPptx(withLogo,'Logo'));
+  expect(Object.keys(pptx).filter(p=>p.startsWith('ppt/media/'))).toEqual(['ppt/media/image1.png']);
+  expect(strFromU8(pptx['[Content_Types].xml'])).toContain('<Default Extension="png" ContentType="image/png"/>');
+  for(const i of [1,2]){
+   const slide=strFromU8(pptx[`ppt/slides/slide${i}.xml`]);
+   expect(slide).toContain('<p:pic>');expect(slide).toContain('r:embed="rIdPicture1"');
+   expect(strFromU8(pptx[`ppt/slides/_rels/slide${i}.xml.rels`])).toContain('Target="../media/image1.png"');
+  }
+  for(const [path,bytes] of Object.entries(pptx).filter(([path])=>path.endsWith('.rels'))){
+   const base=path==='_rels/.rels'?'':posix.dirname(posix.dirname(path));
+   for(const match of strFromU8(bytes).matchAll(/Target="([^"]+)"/g))expect(pptx[posix.normalize(posix.join(base,match[1]))],`${path} -> ${match[1]}`).toBeDefined();
+  }
+  const odp=unzipSync(buildReportOdp(withLogo,'Logo'));
+  expect(odp['Pictures/image1.png']).toBeDefined();
+  const content=strFromU8(odp['content.xml']);
+  expect(content.match(/<draw:image xlink:href="Pictures\/image1.png"/g)).toHaveLength(2);
+  expect(content).toContain('xmlns:xlink="http://www.w3.org/1999/xlink"');
+  expect(strFromU8(odp['META-INF/manifest.xml'])).toContain('manifest:full-path="Pictures/image1.png" manifest:media-type="image/png"');
  });
 });

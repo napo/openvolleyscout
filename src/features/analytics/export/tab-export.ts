@@ -3,8 +3,9 @@ import { toPng } from 'html-to-image';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { saveFile } from '@src/lib/utils/save-file';
 import { buildReportPptx } from '@src/features/opponent-reports/model/report-presentation-export';
+import { embeddedImage, embeddedImageSize, fitImageBox } from '@src/features/opponent-reports/model/report-presentation-scene';
 import { buildClubLogoColumn, buildPdfLogo, loadPdfMakeApi, preparePdfFont } from '@src/features/scouting/model/pdf-branding';
-import { activePrintTheme } from '@src/lib/theme/print-theme';
+import { activePrintTheme, readPrintLogo } from '@src/lib/theme/print-theme';
 import type { WidgetPdfMeta } from './widget-pdf-export';
 import { inlineSvgStylesForCapture, serializeSvgForPdf } from './widget-vector-content';
 import type { SharedStatsBarItem, SharedStatsBlock, SharedStatsKpiItem } from './stats-share-link';
@@ -383,12 +384,20 @@ export function buildTabSvg(
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${totalHeight}" viewBox="0 0 ${width} ${totalHeight}"><title>${xml(title)}</title><rect width="100%" height="100%" fill="white"/><rect width="100%" height="65" fill="${tabTheme().primary}"/><text x="20" y="20" font-family="sans-serif" font-size="11" font-weight="bold" fill="${tabTheme().onPrimary}">${xml(headerSubtitle)}</text><text x="20" y="44" font-family="sans-serif" font-size="18" font-weight="bold" fill="${tabTheme().onPrimary}">${xml(title)}</text><text x="20" y="80" font-family="sans-serif" font-size="11" fill="${tabTheme().ink}">${xml(matchLabel)}</text>${objects.join('')}<line x1="20" y1="${lineY}" x2="${Math.max(20, width - 20)}" y2="${lineY}" stroke="#cbd5e1"/><text x="20" y="${lineY + 14}" font-family="sans-serif" font-size="10" fill="${tabTheme().ink}">${xml(footer)}</text><text x="20" y="${lineY + 26}" font-family="sans-serif" font-size="10" fill="${tabTheme().ink}">1 / 1</text></svg>`;
 }
 
+function logoSize(logo: string): { width: number; height: number } | null {
+  const image = embeddedImage(logo);
+  return image ? embeddedImageSize(image.bytes) : null;
+}
+
 /** Reuse the existing OOXML package, adding one visual snapshot per slide with the tactical header and footer. */
 export function buildTabPptx(
   images: readonly { base64: string; width: number; height: number }[],
   title: string,
-  options: { headerSubtitle?: string; context?: string; footer?: string } = {},
+  options: { headerSubtitle?: string; context?: string; footer?: string; logo?: string | null } = {},
 ): Uint8Array {
+  const logo = options.logo !== undefined ? options.logo : readPrintLogo();
+  // The club logo at the right of the band; titles leave it room.
+  const textWidth = logo ? 876 : 920;
   const headerSubtitle = options.headerSubtitle ?? '';
   const context = options.context ?? '';
   const footer = options.footer ?? defaultTacticalFooter();
@@ -404,12 +413,13 @@ export function buildTabPptx(
         height: 44,
         paint: { fill: hex6(tabTheme().primary), fillOpacity: 1, strokeOpacity: 0, strokeWidth: 0, dashed: false },
       },
+      ...(logo ? [{ kind: 'image' as const, href: logo, ...fitImageBox({ x: 904, y: 4, width: 36, height: 36 }, logoSize(logo), 'xMaxYMid meet') }] : []),
       ...(headerSubtitle ? [{
         kind: 'text' as const,
         text: headerSubtitle,
         x: 20,
         y: 4,
-        width: 920,
+        width: textWidth,
         height: 12,
         fontSize: 8,
         bold: true,
@@ -421,7 +431,7 @@ export function buildTabPptx(
         text: title,
         x: 20,
         y: headerSubtitle ? 16 : 10,
-        width: 920,
+        width: textWidth,
         height: 24,
         fontSize: Math.min(15, 1650 / Math.max(title.length, 1)),
         bold: true,
@@ -472,7 +482,9 @@ export function buildTabPptx(
       },
     ]),
   }, title));
-  files['[Content_Types].xml'] = strToU8(new TextDecoder().decode(files['[Content_Types].xml']).replace('</Types>', '<Default Extension="png" ContentType="image/png"/></Types>'));
+  const contentTypes = new TextDecoder().decode(files['[Content_Types].xml']);
+  // The logo may already have declared PNG pictures.
+  if (!contentTypes.includes('Extension="png"')) files['[Content_Types].xml'] = strToU8(contentTypes.replace('</Types>', '<Default Extension="png" ContentType="image/png"/></Types>'));
   images.forEach((image, index) => {
     const slide = `ppt/slides/slide${index + 1}.xml`;
     const scale = Math.min(912 / image.width, 450 / image.height);

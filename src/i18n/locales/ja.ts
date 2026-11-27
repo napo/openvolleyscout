@@ -93,7 +93,7 @@ export const ja = {
   printLogoReplace: "ロゴを変更",
   printLogoRemove: "ロゴを削除",
   printLogoError: "このファイルは使用できる画像ではありません。",
-  printLogoHint: "256 × 256 px 以上の正方形で、背景が透明な画像がおすすめです。周りの余白は自動で切り取られ、小さな画像に縮小されます。レポートの帯の右側とPDFのヘッダーに、OpenVolleyScoutのロゴと並べて印刷されます。プレゼンテーション（PPTX、ODP）にはまだ表示されません。",
+  printLogoHint: "256 × 256 px 以上の正方形で、背景が透明な画像がおすすめです。周りの余白は自動で切り取られ、小さな画像に縮小されます。レポートの帯の右側とPDFとプレゼンテーションのヘッダーに、OpenVolleyScoutのロゴと並べて印刷されます。",
   printLogoTrimmed: "ロゴの周りの余白を切り取りました。",
   printLogoWide: "ロゴが高さに比べてかなり横長（または縦長）です。帯の中では小さく印刷されます。正方形のロゴの方が見やすくなります。",
   printLogoShowInReport: "クラブのロゴを表示",

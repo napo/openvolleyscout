@@ -93,7 +93,7 @@ export const de = {
   printLogoReplace: "Logo ändern",
   printLogoRemove: "Logo entfernen",
   printLogoError: "Diese Datei ist kein verwendbares Bild.",
-  printLogoHint: "Am besten ein quadratisches Bild mit mindestens 256 × 256 px und transparentem Hintergrund. Ein leerer Rand wird automatisch abgeschnitten und das Logo verkleinert. Es wird rechts im Kopfband der Berichte und in der Kopfzeile der PDFs gedruckt, neben dem OpenVolleyScout-Logo. Präsentationen (PPTX, ODP) zeigen es noch nicht.",
+  printLogoHint: "Am besten ein quadratisches Bild mit mindestens 256 × 256 px und transparentem Hintergrund. Ein leerer Rand wird automatisch abgeschnitten und das Logo verkleinert. Es wird rechts im Kopfband der Berichte und in der Kopfzeile der PDFs und Präsentationen gedruckt, neben dem OpenVolleyScout-Logo.",
   printLogoTrimmed: "Der leere Rand um das Logo wurde abgeschnitten.",
   printLogoWide: "Das Logo ist viel breiter (oder höher) als hoch: Im Kopfband wird es klein gedruckt. Eine quadratische Version funktioniert besser.",
   printLogoShowInReport: "Vereinslogo anzeigen",

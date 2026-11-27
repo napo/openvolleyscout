@@ -93,7 +93,7 @@ export const tr = {
   printLogoReplace: "Logoyu değiştir",
   printLogoRemove: "Logoyu kaldır",
   printLogoError: "Bu dosya kullanılabilir bir görsel değil.",
-  printLogoHint: "En iyisi en az 256 × 256 px boyutunda, şeffaf arka planlı kare bir görsel. Boş kenar kendiliğinden kesilir ve logo küçük bir görsele indirgenir. Raporların bandının sağında ve PDF başlıklarında, OpenVolleyScout logosunun yanında basılır. Sunumlar (PPTX, ODP) henüz göstermez.",
+  printLogoHint: "En iyisi en az 256 × 256 px boyutunda, şeffaf arka planlı kare bir görsel. Boş kenar kendiliğinden kesilir ve logo küçük bir görsele indirgenir. Raporların bandının sağında ve PDF ve sunum başlıklarında, OpenVolleyScout logosunun yanında basılır.",
   printLogoTrimmed: "Logonun etrafındaki boş kenar kesildi.",
   printLogoWide: "Logo yüksekliğinden çok daha geniş (veya uzun): bantta küçük basılacak. Logonun kare bir sürümü daha iyi olur.",
   printLogoShowInReport: "Kulüp logosunu göster",

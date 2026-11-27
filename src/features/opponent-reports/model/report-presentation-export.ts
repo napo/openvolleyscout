@@ -3,7 +3,7 @@ import { zipSync, strToU8, type Zippable } from 'fflate';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { saveFile } from '@src/lib/utils/save-file';
 import { BOOKLET_WIDTH, BOOKLET_HEIGHT, type ReportBookletPlan } from './report-booklet';
-import { svgPagesToPresentationScene, type PresentationScene, type SceneObject, type ScenePaint } from './report-presentation-scene';
+import { embeddedImage, svgPagesToPresentationScene, type PresentationScene, type SceneObject, type ScenePaint } from './report-presentation-scene';
 const xml = (s: string) => s.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[ch]!));
 const declaration='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 const A='http://schemas.openxmlformats.org/drawingml/2006/main',P='http://schemas.openxmlformats.org/presentationml/2006/main',R='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
@@ -14,8 +14,23 @@ const emptyTree='<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/><
 const open=(tag:string)=>`${declaration}<p:${tag} xmlns:a="${A}" xmlns:r="${R}" xmlns:p="${P}">`;
 const solid=(color:string,opacity=1)=>`<a:solidFill><a:srgbClr val="${color}"><a:alpha val="${Math.round(Math.max(0,Math.min(1,opacity))*100000)}"/></a:srgbClr></a:solidFill>`;
 const paintPpt=(paint:ScenePaint)=>`${paint.fill?solid(paint.fill,paint.fillOpacity):'<a:noFill/>'}<a:ln w="${emu(paint.strokeWidth)}">${paint.stroke?solid(paint.stroke,paint.strokeOpacity):'<a:noFill/>'}${paint.dashed?'<a:prstDash val="dash"/>':''}</a:ln>`;
-function pptObject(object:SceneObject,index:number):string {
+/** One media file per distinct embedded picture, shared by every page that shows it. */
+function sceneMedia(scene:PresentationScene){
+  const media=new Map<string,{name:string;bytes:Uint8Array;mime:string}>();
+  for(const object of scene.pages.flat()){
+    if(object.kind!=='image'||media.has(object.href))continue;
+    const image=embeddedImage(object.href);
+    if(image)media.set(object.href,{name:`image${media.size+1}.${image.extension==='jpeg'?'jpg':'png'}`,bytes:image.bytes,mime:image.mime});
+  }
+  return media;
+}
+function pptObject(object:SceneObject,index:number,pictureId:(href:string)=>string|undefined=()=>undefined):string {
   let x:number,y:number,width:number,height:number,geometry:string;
+  if(object.kind==='image'){
+    const id=pictureId(object.href);
+    if(!id)return '';
+    return `<p:pic><p:nvPicPr><p:cNvPr id="${index+2}" name="image ${index+1}"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${id}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="${emu(object.x)}" y="${emu(object.y)}"/><a:ext cx="${emu(Math.max(.01,object.width))}" cy="${emu(Math.max(.01,object.height))}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`;
+  }
   if(object.kind==='path'){
     x=Math.min(...object.points.map(p=>p.x));y=Math.min(...object.points.map(p=>p.y));
     width=Math.max(.01,Math.max(...object.points.map(p=>p.x))-x);height=Math.max(.01,Math.max(...object.points.map(p=>p.y))-y);
@@ -34,9 +49,12 @@ function pptObject(object:SceneObject,index:number):string {
 /** Implements the PresentationML package relationships described by ISO/IEC 29500. */
 export function buildReportPptx(scene:PresentationScene,title:string):Uint8Array {
   const files:Zippable={};const put=(path:string,value:string)=>{files[path]=strToU8(value);};
+  const media=sceneMedia(scene);
+  media.forEach(({name,bytes})=>{files[`ppt/media/${name}`]=bytes;});
+  const pictureTypes=[...new Set([...media.values()].map(({name,mime})=>`<Default Extension="${name.split('.').pop()}" ContentType="${mime}"/>`))].join('');
   const types=[['/ppt/presentation.xml','presentationml.presentation.main'],['/ppt/slideMasters/slideMaster1.xml','presentationml.slideMaster'],['/ppt/slideLayouts/slideLayout1.xml','presentationml.slideLayout'],['/ppt/presProps.xml','presentationml.presProps'],['/ppt/theme/theme1.xml','theme']];
   scene.pages.forEach((_,i)=>types.push([`/ppt/slides/slide${i+1}.xml`,'presentationml.slide']));
-  put('[Content_Types].xml',`${declaration}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${types.map(([path,type])=>`<Override PartName="${path}" ContentType="application/vnd.openxmlformats-officedocument.${type}+xml"/>`).join('')}<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`);
+  put('[Content_Types].xml',`${declaration}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${pictureTypes}${types.map(([path,type])=>`<Override PartName="${path}" ContentType="application/vnd.openxmlformats-officedocument.${type}+xml"/>`).join('')}<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`);
   put('_rels/.rels',relationships([['rId1','officeDocument','ppt/presentation.xml']]).replace('</Relationships>','<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>'));
   put('docProps/core.xml',`${declaration}<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${xml(title)}</dc:title><dc:creator>${xml(APP_METADATA.author.name)}</dc:creator><dc:description>${xml(APP_METADATA.name+' · '+APP_METADATA.urls.webApp+' · GNU AGPL v3 or later ('+APP_METADATA.license+')')}</dc:description></cp:coreProperties>`);
   put('ppt/presentation.xml',`${open('presentation')}<p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst>${scene.pages.map((_,i)=>`<p:sldId id="${256+i}" r:id="rId${i+2}"/>`).join('')}</p:sldIdLst><p:sldSz cx="${emu(scene.width)}" cy="${emu(scene.height)}" type="custom"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>`);
@@ -50,21 +68,32 @@ export function buildReportPptx(scene:PresentationScene,title:string):Uint8Array
   const fills=Array.from({length:3},()=>'<a:solidFill><a:schemeClr val="phClr"/></a:solidFill>').join('');
   const fonts='<a:latin typeface="Ubuntu"/><a:ea typeface="Ubuntu"/><a:cs typeface="Ubuntu"/>';
   put('ppt/theme/theme1.xml',`${declaration}<a:theme xmlns:a="${A}" name="OpenVolleyScout"><a:themeElements><a:clrScheme name="OpenVolleyScout">${Object.entries(palette).map(([key,value])=>`<a:${key}><a:srgbClr val="${value}"/></a:${key}>`).join('')}</a:clrScheme><a:fontScheme name="Ubuntu"><a:majorFont>${fonts}</a:majorFont><a:minorFont>${fonts}</a:minorFont></a:fontScheme><a:fmtScheme name="OpenVolleyScout"><a:fillStyleLst>${fills}</a:fillStyleLst><a:lnStyleLst>${Array.from({length:3},()=>'<a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln>').join('')}</a:lnStyleLst><a:effectStyleLst>${'<a:effectStyle><a:effectLst/></a:effectStyle>'.repeat(3)}</a:effectStyleLst><a:bgFillStyleLst>${fills}</a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>`);
+  const names=[...media.keys()];
+  const pictureId=(href:string)=>media.has(href)?`rIdPicture${names.indexOf(href)+1}`:undefined;
   scene.pages.forEach((page,i)=>{
-    put(`ppt/slides/slide${i+1}.xml`,`${open('sld')}<p:cSld><p:spTree>${emptyTree}${page.map(pptObject).join('')}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`);
-    put(`ppt/slides/_rels/slide${i+1}.xml.rels`,relationships([['rId1','slideLayout','../slideLayouts/slideLayout1.xml']]));
+    put(`ppt/slides/slide${i+1}.xml`,`${open('sld')}<p:cSld><p:spTree>${emptyTree}${page.map((object,index)=>pptObject(object,index,pictureId)).join('')}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`);
+    const used=[...new Set(page.flatMap(object=>object.kind==='image'&&media.has(object.href)?[object.href]:[]))];
+    put(`ppt/slides/_rels/slide${i+1}.xml.rels`,relationships([['rId1','slideLayout','../slideLayouts/slideLayout1.xml'],...used.map((href):[string,string,string]=>[pictureId(href)!,'image',`../media/${media.get(href)!.name}`])]));
   });
   return zipSync(files,{level:6});
 }
 
 const ODP='application/vnd.oasis.opendocument.presentation';
-const namespaces='xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:presentation="urn:oasis:names:tc:opendocument:xmlns:presentation:1.0"';
-/** OpenDocument 1.3 native text objects and editable vector geometry. */
+const namespaces='xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:presentation="urn:oasis:names:tc:opendocument:xmlns:presentation:1.0" xmlns:xlink="http://www.w3.org/1999/xlink"';
+/** OpenDocument 1.3 native text objects, editable vector geometry and the embedded club logo. */
 export function buildReportOdp(scene:PresentationScene,title:string):Uint8Array {
   const files:Zippable={mimetype:[strToU8(ODP),{level:0}]};
   const styles:string[]=[];
+  const media=sceneMedia(scene);
+  media.forEach(({name,bytes})=>{files[`Pictures/${name}`]=[bytes,{level:0}];});
   const pages=scene.pages.map((page,pageIndex)=>`<draw:page draw:name="Page ${pageIndex+1}" draw:master-page-name="Default">${page.map((object,index)=>{
     const id=`s${pageIndex}_${index}`;
+    if(object.kind==='image'){
+      const picture=media.get(object.href);
+      if(!picture)return '';
+      styles.push(`<style:style style:name="${id}" style:family="graphic"><style:graphic-properties draw:stroke="none" draw:fill="none"/></style:style>`);
+      return `<draw:frame draw:name="Image ${index+1}" draw:style-name="${id}" svg:x="${cm(object.x)}" svg:y="${cm(object.y)}" svg:width="${cm(object.width)}" svg:height="${cm(object.height)}"><draw:image xlink:href="Pictures/${picture.name}" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"/></draw:frame>`;
+    }
     if(object.kind==='text'){
       styles.push(`<style:style style:name="${id}" style:family="graphic"><style:graphic-properties draw:stroke="none" draw:fill="none" draw:textarea-vertical-align="top" fo:padding-top="0cm" fo:padding-bottom="0cm" fo:padding-left="0cm" fo:padding-right="0cm" fo:wrap-option="no-wrap" draw:fit-to-size="false" fo:min-width="0cm" fo:min-height="0cm" draw:auto-grow-height="false" draw:auto-grow-width="false"/></style:style><style:style style:name="p${id}" style:family="paragraph"><style:paragraph-properties fo:margin="0cm" fo:line-height="100%" fo:text-align="${object.rtl?'end':'start'}" style:writing-mode="${object.rtl?'rl-tb':'lr-tb'}"/><style:text-properties fo:font-family="Ubuntu" style:font-name="Ubuntu" fo:font-size="${object.fontSize.toFixed(3)}pt" style:font-size-asian="${object.fontSize.toFixed(3)}pt" style:font-size-complex="${object.fontSize.toFixed(3)}pt" fo:font-style="${object.italic?'italic':'normal'}" style:font-style-asian="${object.italic?'italic':'normal'}" style:font-style-complex="${object.italic?'italic':'normal'}" fo:font-weight="${object.bold?'bold':'normal'}" style:font-weight-asian="${object.bold?'bold':'normal'}" style:font-weight-complex="${object.bold?'bold':'normal'}" fo:color="#${object.color}"/></style:style>`);
       const value=object.text.split(/( +)/).map(token=>/^ +$/.test(token)?`<text:s text:c="${token.length}"/>`:xml(token)).join('');
@@ -85,7 +114,7 @@ export function buildReportOdp(scene:PresentationScene,title:string):Uint8Array 
   files['content.xml']=strToU8(`${declaration}<office:document-content ${namespaces} office:version="1.3"><office:font-face-decls><style:font-face style:name="Ubuntu" svg:font-family="Ubuntu"/></office:font-face-decls><office:automatic-styles>${styles.join('')}</office:automatic-styles><office:body><office:presentation>${pages.join('')}</office:presentation></office:body></office:document-content>`);
   files['styles.xml']=strToU8(`${declaration}<office:document-styles ${namespaces} office:version="1.3"><office:styles><draw:stroke-dash draw:name="Dash" draw:style="rect" draw:dots1="1" draw:dots1-length="0.06cm" draw:distance="0.05cm"/></office:styles><office:automatic-styles><style:page-layout style:name="Layout"><style:page-layout-properties fo:page-width="${cm(scene.width)}" fo:page-height="${cm(scene.height)}" fo:margin="0cm" style:print-orientation="portrait"/></style:page-layout></office:automatic-styles><office:master-styles><style:master-page style:name="Default" style:page-layout-name="Layout"/></office:master-styles></office:document-styles>`);
   files['meta.xml']=strToU8(`${declaration}<office:document-meta xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" office:version="1.3"><office:meta><dc:title>${xml(title)}</dc:title><dc:creator>${xml(APP_METADATA.author.name)}</dc:creator></office:meta></office:document-meta>`);
-  files['META-INF/manifest.xml']=strToU8(`${declaration}<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.3"><manifest:file-entry manifest:full-path="/" manifest:version="1.3" manifest:media-type="${ODP}"/>${['content.xml','styles.xml','meta.xml'].map(file=>`<manifest:file-entry manifest:full-path="${file}" manifest:media-type="text/xml"/>`).join('')}</manifest:manifest>`);
+  files['META-INF/manifest.xml']=strToU8(`${declaration}<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.3"><manifest:file-entry manifest:full-path="/" manifest:version="1.3" manifest:media-type="${ODP}"/>${['content.xml','styles.xml','meta.xml'].map(file=>`<manifest:file-entry manifest:full-path="${file}" manifest:media-type="text/xml"/>`).join('')}${[...media.values()].map(({name,mime})=>`<manifest:file-entry manifest:full-path="Pictures/${name}" manifest:media-type="${mime}"/>`).join('')}</manifest:manifest>`);
   return zipSync(files,{level:6});
 }
 

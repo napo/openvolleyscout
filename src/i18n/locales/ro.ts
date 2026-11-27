@@ -93,7 +93,7 @@ export const ro = {
   printLogoReplace: "Schimbă sigla",
   printLogoRemove: "Elimină sigla",
   printLogoError: "Acest fișier nu este o imagine utilizabilă.",
-  printLogoHint: "Ideal o imagine pătrată de cel puțin 256 × 256 px, cu fundal transparent. Marginea goală este tăiată automat, iar sigla este redusă la o imagine mică. Se tipărește în dreapta benzii rapoartelor și în antetul PDF-urilor, lângă sigla OpenVolleyScout. Prezentările (PPTX, ODP) încă nu o arată.",
+  printLogoHint: "Ideal o imagine pătrată de cel puțin 256 × 256 px, cu fundal transparent. Marginea goală este tăiată automat, iar sigla este redusă la o imagine mică. Se tipărește în dreapta benzii rapoartelor și în antetul PDF-urilor și al prezentărilor, lângă sigla OpenVolleyScout.",
   printLogoTrimmed: "Marginea goală din jurul siglei a fost tăiată.",
   printLogoWide: "Sigla este mult mai lată (sau mai înaltă) decât înaltă: în bandă va fi tipărită mică. O versiune pătrată a siglei funcționează mai bine.",
   printLogoShowInReport: "Arată sigla clubului",

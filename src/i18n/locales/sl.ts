@@ -93,7 +93,7 @@ export const sl = {
   printLogoReplace: "Zamenjaj logotip",
   printLogoRemove: "Odstrani logotip",
   printLogoError: "Ta datoteka ni uporabna slika.",
-  printLogoHint: "Najbolje kvadratna slika vsaj 256 × 256 px s prozornim ozadjem. Prazen rob se odreže samodejno, logotip pa se pomanjša. Natisne se desno v pasu poročil in v glavi PDF-jev, poleg logotipa OpenVolleyScout. Predstavitve (PPTX, ODP) ga še ne prikazujejo.",
+  printLogoHint: "Najbolje kvadratna slika vsaj 256 × 256 px s prozornim ozadjem. Prazen rob se odreže samodejno, logotip pa se pomanjša. Natisne se desno v pasu poročil in v glavi PDF-jev in predstavitev, poleg logotipa OpenVolleyScout.",
   printLogoTrimmed: "Prazen rob okoli logotipa je bil odrezan.",
   printLogoWide: "Logotip je veliko širši (ali višji) kot visok: v pasu bo natisnjen majhen. Bolje deluje kvadratna različica logotipa.",
   printLogoShowInReport: "Pokaži logotip kluba",

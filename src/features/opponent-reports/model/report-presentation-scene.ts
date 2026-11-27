@@ -5,7 +5,9 @@ interface SceneBox { x: number; y: number; width: number; height: number }
 export type SceneObject =
   | ({ kind: 'text'; text: string; fontSize: number; bold: boolean; italic?: boolean; color: string; rtl: boolean } & SceneBox)
   | ({ kind: 'rect' | 'ellipse'; radius?: number; paint: ScenePaint } & SceneBox)
-  | { kind: 'path'; points: ScenePoint[]; closed: boolean; paint: ScenePaint };
+  | { kind: 'path'; points: ScenePoint[]; closed: boolean; paint: ScenePaint }
+  /** An embedded PNG or JPEG (the club logo), already fitted in its box. */
+  | ({ kind: 'image'; href: string } & SceneBox);
 export interface PresentationScene { width: number; height: number; pages: SceneObject[][] }
 const number = (element: Element, name: string, fallback = 0) => {
   const length = (element as unknown as Record<string, { baseVal?: { value?: number } }>)[name]?.baseVal;
@@ -51,6 +53,47 @@ function linearPath(element: SVGPathElement): Array<{ points: ScenePoint[]; clos
     paths[paths.length - 1]?.points.push({ x, y });
   }
   return paths;
+}
+
+const EMBEDDED_IMAGE = /^data:image\/(png|jpeg);base64,([A-Za-z0-9+/=]+)$/;
+
+/** The bytes and type of an embedded PNG or JPEG data URL, or null for anything else. */
+export function embeddedImage(href: string): { bytes: Uint8Array; extension: 'png' | 'jpeg'; mime: string } | null {
+  const match = href.match(EMBEDDED_IMAGE);
+  if (!match) return null;
+  try {
+    const binary = atob(match[2]);
+    return { bytes: Uint8Array.from(binary, (ch) => ch.charCodeAt(0)), extension: match[1] as 'png' | 'jpeg', mime: `image/${match[1]}` };
+  } catch {
+    return null;
+  }
+}
+
+/** Pixel size read from the PNG or JPEG header, without decoding the picture. */
+export function embeddedImageSize(bytes: Uint8Array): { width: number; height: number } | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (bytes.length >= 24 && view.getUint32(0) === 0x89504e47) return { width: view.getUint32(16), height: view.getUint32(20) };
+  if (bytes.length < 4 || view.getUint16(0) !== 0xffd8) return null;
+  for (let offset = 2; offset + 9 < bytes.length;) {
+    if (bytes[offset] !== 0xff) return null;
+    const marker = bytes[offset + 1];
+    if (marker === 0xff) { offset += 1; continue; }
+    // Start-of-frame markers carry the size; DHT, JPG and DAC share the range but do not.
+    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) return { width: view.getUint16(offset + 7), height: view.getUint16(offset + 5) };
+    offset += 2 + view.getUint16(offset + 2);
+  }
+  return null;
+}
+
+/** The box an image really covers inside its viewport, following SVG preserveAspectRatio (meet; 'none' stretches). */
+export function fitImageBox(box: { x: number; y: number; width: number; height: number }, natural: { width: number; height: number } | null, preserveAspectRatio = 'xMidYMid meet') {
+  const align = preserveAspectRatio.trim().split(/\s+/)[0] ?? 'xMidYMid';
+  if (!natural || natural.width <= 0 || natural.height <= 0 || align === 'none') return { ...box };
+  const scale = Math.min(box.width / natural.width, box.height / natural.height);
+  const width = natural.width * scale, height = natural.height * scale;
+  const along = (part: string, room: number) => part === 'Min' ? 0 : part === 'Max' ? room : room / 2;
+  const [, ax = 'Mid', ay = 'Mid'] = align.match(/^x(Min|Mid|Max)Y(Min|Mid|Max)$/) ?? [];
+  return { x: box.x + along(ax, box.width - width), y: box.y + along(ay, box.height - height), width, height };
 }
 
 /** An omitted marker viewBox uses its own coordinates, including Firefox's null baseVal. */
@@ -104,6 +147,17 @@ export async function svgPagesToPresentationScene(pages: readonly string[], widt
           objects.push({ kind:'text', text:value, x:baseline.x-(anchor==='middle'?advance/2:anchor==='end'?advance:0),
             y:baseline.y-size*.905, width:Math.max(1,advance+size*.05), height:size*1.4,
             fontSize:size,italic:style.fontStyle==='italic'||style.fontStyle==='oblique',bold:Number(style.fontWeight)>=600||style.fontWeight==='bold',color:paint.fill??'000000',rtl:/[\u0600-\u06ff]/.test(value) });
+          return;
+        }
+        if (tag === 'image') {
+          // Only embedded PNG/JPEG pictures (the club logo); anything else is left out.
+          const href = element.getAttribute('href') ?? element.getAttributeNS('http://www.w3.org/1999/xlink', 'href') ?? '';
+          const image = embeddedImage(href);
+          if (!image) return;
+          const a = point(number(element,'x'), number(element,'y'));
+          const b = point(number(element,'x') + number(element,'width'), number(element,'y') + number(element,'height'));
+          const box = { x: Math.min(a.x,b.x), y: Math.min(a.y,b.y), width: Math.abs(b.x-a.x), height: Math.abs(b.y-a.y) };
+          objects.push({ kind: 'image', href, ...fitImageBox(box, embeddedImageSize(image.bytes), element.getAttribute('preserveAspectRatio') ?? undefined) });
           return;
         }
         let paths: Array<{ points: ScenePoint[]; closed: boolean }> = [];

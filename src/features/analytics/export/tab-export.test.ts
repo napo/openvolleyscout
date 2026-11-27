@@ -39,6 +39,19 @@ describe('statistics tab exports', () => {
     }
   });
 
+  it('puts the club logo at the right of the band of every slide, declaring PNG once', () => {
+    const logo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    const files = unzipSync(buildTabPptx([{ base64: btoa('chart'), width: 1000, height: 400 }], 'Squadra', { logo }));
+    const slide = strFromU8(files['ppt/slides/slide1.xml']);
+    expect(slide).toContain('r:embed="rIdPicture1"');
+    expect(slide).toContain('r:embed="rIdImage"');
+    expect(files['ppt/media/image1.png']).toBeDefined();
+    expect(strFromU8(files['[Content_Types].xml']).match(/Extension="png"/g)).toHaveLength(1);
+    const rels = strFromU8(files['ppt/slides/_rels/slide1.xml.rels']);
+    expect(rels).toContain('Target="../media/image1.png"');
+    expect(rels).toContain('Target="../media/tab1.png"');
+  });
+
   it('packs 2-3 charts per A4 landscape page without splitting individual charts', () => {
     const threeCharts = packImagesIntoA4Pages([
       { base64: 'a', width: 600, height: 500 },
