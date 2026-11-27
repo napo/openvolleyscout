@@ -281,14 +281,14 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const teamStarts = resolvedBoardPieces.find((p) => p.id === PIECE_TEAM_STARTS);
   if (teamRoster?.table || teamStarts?.table) {
     component = 'team';
-    const page = add(t('teamPageTitle'));
+    const page = add(t('teamPageTitle', { team: report.opponent.name }));
     const chartBlock = teamStarts?.table ? (a4 ? 190 : 150) : 0;
     let y = TOP;
     if (teamRoster?.table) {
       page.elements.push(text(M, y + 10, teamRoster.title, 10, true));
       y += 18;
-      const header = teamRoster.table.columns[3];
-      if (header) y += 9;
+      const headers = teamRoster.table.columns;
+      y += 9;
       const size = a4 ? 9 : 8, step = size * 1.45;
       const rows = teamRoster.table.rows.map((row) => row.map(formatViewCell));
       const perColumn = Math.max(1, Math.floor((BOTTOM - chartBlock - y - 6) / step));
@@ -302,8 +302,13 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
         const roleX = nameX + nameWidth + 6, roleWidth = Math.min(size * 11, columnWidth - (roleX - x) - size * 3);
         page.elements.push(text(nameX, rowY, wrapBookletText(row[1] ?? '', nameWidth, size)[0] ?? '', size));
         page.elements.push(text(roleX, rowY, wrapBookletText(row[2] ?? '', roleWidth, size)[0] ?? '', size, false, '#475569'));
-        const matchesX = roleX + roleWidth + size * 2.4;
-        if (header && i % perColumn === 0) page.elements.push(`<text x="${matchesX}" y="${y - 3}" font-size="6.5" fill="#475569" text-anchor="end">${xml(header)}</text>`);
+        const matchesX = roleX + roleWidth + size * 4;
+        if (i % perColumn === 0) {
+          // Column headings above each column of athletes.
+          const headingY = y - 3;
+          [[x, headers[0]], [nameX, headers[1]], [roleX, headers[2]]].forEach(([left, label]) => { if (label) page.elements.push(text(left as number, headingY, label as string, 6.5, true, '#475569')); });
+          if (headers[3]) page.elements.push(`<text x="${matchesX}" y="${headingY}" font-size="6.5" font-weight="bold" fill="#475569" text-anchor="end">${xml(headers[3])}</text>`);
+        }
         if (row[3]) page.elements.push(`<text x="${matchesX}" y="${rowY}" font-size="${size}" fill="${color}" text-anchor="end">${xml(row[3])}</text>`);
       });
       if (rows.length > shown.length) deferred.push({ title: teamRoster.title, body: rows.slice(shown.length).map((row) => row.filter(Boolean).join(' ')).join('\n') });

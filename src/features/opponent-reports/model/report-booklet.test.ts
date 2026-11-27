@@ -159,7 +159,7 @@ describe('booklet planning and printing',()=>{
     const {report,view}=fixture();
     const cell=(text:string)=>({text});
     view.team={
-      roster:{columns:['Jersey','Player','Role','Matches'],rows:[['7','Anna Rossi','Setter','3'],['12','Bea Neri','Libero','2']].map(row=>row.map(cell))},
+      roster:{columns:['#','Name','Role','Matches played'],rows:[['7','Anna Rossi','Setter','3'],['12','Bea Neri','Libero','2']].map(row=>row.map(cell))},
       starts:{columns:['Rotation','Starting on serve','Starting on reception'],rows:[1,2,3,4,5,6].map(r=>[cell(`P${r}`),cell(String(r===1?3:0)),cell(String(r===4?2:0))])},
       hasStarts:true,
       basis:t('teamStartsBasis',{n:5}),
@@ -168,10 +168,12 @@ describe('booklet planning and printing',()=>{
     for(const a4 of [false,true]){
       const pages=buildReportBooklet(report,view,t,'',{a4}).pages;
       const teamPage=pages[0];
-      expect(teamPage,`a4=${a4}`).toContain(`>${t('teamPageTitle')}<`);
+      expect(teamPage,`a4=${a4}`).toContain(`>${t('teamPageTitle',{team:'Rivals'})}<`);
       expect(teamPage).toContain('>Anna Rossi<');
       expect(teamPage).toContain('>Libero<');
-      expect(teamPage).toContain('text-anchor="end">Matches<');
+      expect(teamPage).toContain('>Team - Rivals<');
+      expect(teamPage).toContain('>Name<');
+      expect(teamPage).toContain('text-anchor="end">Matches played<');
       expect(teamPage).toContain('text-anchor="end">3<');
       expect(teamPage).toContain('>Starting on serve<');
       // Grey bars, the highest of each chart in the accent colour.
@@ -214,7 +216,7 @@ describe('booklet planning and printing',()=>{
     expect(single).toContain('>In the match against Gela on 01/11/2026.<');
     // Reports saved before the Team sheet keep their pages until the coach turns it on.
     report.booklet={...report.booklet!,includeTeam:undefined};
-    expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes(`>${t('teamPageTitle')}<`))).toBe(false);
+    expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes(`>${t('teamPageTitle',{team:'Rivals'})}<`))).toBe(false);
   });
   it('shares the component order between the navigator and every export layout',()=>{
     const {report,view}=fixture();
