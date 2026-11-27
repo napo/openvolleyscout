@@ -107,6 +107,8 @@ export function PlayerSituationMetricsWidget({ stats, filters, player }: PlayerS
   // classification, not the shared touch-level phase filter - so filters.rallyPhase
   // isn't applied here.
   // Rotation and score situation are read from the athlete's team point of view.
+  // Base, Combination and Set type are deliberately left out: Game situations
+  // count whole rallies by phase and outcome, not the attacks of one kind.
   const { rotation, scoreRange, server, receiver, attacker } = filters;
   const rallies = useMemo(
     () => filterRalliesForTeam(

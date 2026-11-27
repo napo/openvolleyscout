@@ -10,6 +10,9 @@
  * kept verbatim (`rawFields`) and written back unchanged on export.
  */
 
+// Value imports must be relative: node:test files reach this module through ts-node/esm.
+import { choiceList } from '../../lib/utils/choice-list';
+
 export interface AttackCombinationDefinition {
   /** Two-character code used in the attack code, e.g. "X5". */
   code: string;
@@ -44,6 +47,53 @@ function optional(value: string | undefined): string | undefined {
 /** Setter calls always start with "K"; attack combinations never do. */
 export function isSetterCallCode(code: string | undefined | null): boolean {
   return typeof code === 'string' && /^K[A-Z0-9]$/i.test(code.trim());
+}
+
+/** DataVolley attack ball types: high, medium, quick, tense, super, fast, other. */
+export const ATTACK_BALL_TYPES = ['H', 'M', 'Q', 'T', 'U', 'N', 'O'] as const;
+export type AttackBallType = (typeof ATTACK_BALL_TYPES)[number];
+
+/** Whether `code` is one of the seven attack ball type letters (exact, upper case). */
+export function isAttackBallType(code: string | null | undefined): code is AttackBallType {
+  return typeof code === 'string' && (ATTACK_BALL_TYPES as readonly string[]).includes(code);
+}
+
+/** A code as stored on a touch, trimmed and upper-cased; null when empty. */
+export function normalizeTouchCode(code: string | null | undefined): string | null {
+  if (typeof code !== 'string') return null;
+  const trimmed = code.trim().toUpperCase();
+  return trimmed ? trimmed : null;
+}
+
+/** The two code filters: the setter calls (Base, K codes) and the attack combinations. */
+export interface BaseCodeSelection {
+  setterCalls: string[];
+  combinationCodes: string[];
+}
+
+/**
+ * Splits a list saved by older versions, where setter calls and attack combinations shared one
+ * "Base / Combination" filter, into the two filters. The K codes go to `setterCalls`, the others
+ * to `combinationCodes`, merged with the lists already saved in `current` (a K code found among
+ * the current combinations is moved too, while the current setter calls stay setter calls). Codes are trimmed, upper-cased and kept once, in the
+ * order first seen. Idempotent, so it can run on every read.
+ */
+export function splitBaseCodeSelection(
+  mixed: unknown,
+  current?: { setterCalls?: unknown; combinationCodes?: unknown },
+): BaseCodeSelection {
+  const setterCalls: string[] = [];
+  const combinationCodes: string[] = [];
+  const add = (value: string, forceSetterCall = false) => {
+    const code = normalizeTouchCode(value);
+    if (!code) return;
+    const target = forceSetterCall || isSetterCallCode(code) ? setterCalls : combinationCodes;
+    if (!target.includes(code)) target.push(code);
+  };
+  choiceList(mixed).forEach((code) => add(code));
+  choiceList(current?.setterCalls).forEach((code) => add(code, true));
+  choiceList(current?.combinationCodes).forEach((code) => add(code));
+  return { setterCalls, combinationCodes };
 }
 
 export function parseAttackCombinationFields(fields: readonly string[]): AttackCombinationDefinition | null {

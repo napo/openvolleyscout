@@ -2,6 +2,7 @@ import type { PlayerRole, TeamSide, SkillEvaluation } from '@src/domain/common/e
 import type { TrackedSkill, RotationNumber } from '@src/features/scouting/model/match-stats';
 import type { TouchPhase } from '../../rally-phase/rally-phase-classifier';
 import { choiceList } from '../../../../lib/utils/choice-list';
+import { isAttackBallType, normalizeTouchCode, splitBaseCodeSelection, type AttackBallType } from '../../../../domain/match/code-tables';
 
 export type DashboardTeamFilter = 'all' | TeamSide;
 /**
@@ -24,8 +25,12 @@ export type DashboardScoreRangeFilter = ScoreSituation[];
 export type DashboardServerFilter = 'all' | string;  // playerId of server
 export type DashboardReceiverFilter = 'all' | string;  // playerId of receiver
 export type DashboardAttackerFilter = 'all' | string;  // playerId of attacker
-/** Base / combination codes (K1...Kn, X5...), several at once; empty = all. */
-export type DashboardBaseFilter = string[];
+/** Setter calls (Base: K1...Kn), several at once; empty = all. */
+export type DashboardSetterCallFilter = string[];
+/** Attack combinations (X5, V6, ...), several at once; empty = all. */
+export type DashboardCombinationFilter = string[];
+/** Set types (the attack's ball type letter: H M Q T U N O), several at once; empty = all. */
+export type DashboardAttackBallTypeFilter = AttackBallType[];
 
 export const ALL_EVALUATIONS: readonly SkillEvaluation[] = ['=', '/', '!', '-', '+', '#'];
 
@@ -46,8 +51,15 @@ export interface DashboardFilters {
   server: DashboardServerFilter;
   receiver: DashboardReceiverFilter;
   attacker: DashboardAttackerFilter;
-  /** Rallies in which the team played this base / combination (set or attack). */
-  base: DashboardBaseFilter;
+  /**
+   * Rallies in which the team set or attacked on this Base (setter call). With a combination or
+   * a set type also chosen, one attack of the team must match all of them.
+   */
+  setterCalls: DashboardSetterCallFilter;
+  /** Rallies in which the team played an attack with this combination. */
+  combinationCodes: DashboardCombinationFilter;
+  /** Rallies in which the team played an attack of this set type (H M Q T U N O). */
+  attackBallTypes: DashboardAttackBallTypeFilter;
 }
 
 export const PLAYER_ROLES: readonly PlayerRole[] = [
@@ -74,7 +86,9 @@ export function createDefaultFilters(): DashboardFilters {
     server: 'all',
     receiver: 'all',
     attacker: 'all',
-    base: [],
+    setterCalls: [],
+    combinationCodes: [],
+    attackBallTypes: [],
   };
 }
 
@@ -84,29 +98,47 @@ export function matchesAny<T>(selected: readonly T[] | undefined, value: T | nul
   return value !== null && value !== undefined && selected.includes(value);
 }
 
-/** The base codes chosen, also from the single value ('all' or one code) of older versions. */
-export const baseCodeList = choiceList;
-
 /** One value, 'all' or a list, as a list (what older shared links and saved filters hold). */
 function toList<T>(value: unknown, isValid: (item: unknown) => item is T): T[] {
   if (Array.isArray(value)) return value.filter(isValid);
   return isValid(value) ? [value] : [];
 }
 
+/** The set type letters chosen, trimmed, upper-cased and kept once; unknown letters are dropped. */
+function attackBallTypeList(value: unknown): AttackBallType[] {
+  const letters = choiceList(value).map(normalizeTouchCode).filter(isAttackBallType);
+  return [...new Set(letters)];
+}
+
 /**
  * Filters read from outside (a shared link, saved filters) as the app holds them today: the
- * single values of older versions become lists.
+ * single values of older versions become lists. Older links kept setter calls and attack
+ * combinations in one "Base / Combination" list (`base`): its K codes go to the Base filter
+ * (`setterCalls`), the other codes to the Combination filter (`combinationCodes`), and `base`
+ * is dropped. Running it again changes nothing.
  */
 export function normalizeDashboardFilters<T extends DashboardFilters>(filters: T): T {
   const raw = filters as unknown as Record<string, unknown>;
-  return {
+  const codes = splitBaseCodeSelection(raw.base, { setterCalls: raw.setterCalls, combinationCodes: raw.combinationCodes });
+  const next = {
     ...filters,
     set: toList(raw.set, (item): item is number => typeof item === 'number' && Number.isFinite(item)),
     rallyPhase: toList(raw.rallyPhase, (item): item is TouchPhase => typeof item === 'string' && item !== 'all'),
     rotation: toList(raw.rotation, (item): item is RotationNumber => typeof item === 'number' && item >= 1 && item <= 6),
-    base: baseCodeList(raw.base),
+    setterCalls: codes.setterCalls,
+    combinationCodes: codes.combinationCodes,
+    attackBallTypes: attackBallTypeList(raw.attackBallTypes),
     scoreRange: toList(raw.scoreRange, (item): item is ScoreSituation => item === 'tied' || item === 'leading' || item === 'trailing' || item === 'clutch'),
   };
+  delete (next as unknown as Record<string, unknown>).base;
+  return next;
+}
+
+/** Whether any of the Base, Combination and Set type filters is set. */
+export function hasAttackCodeFilters(filters: Partial<Pick<DashboardFilters, 'setterCalls' | 'combinationCodes' | 'attackBallTypes'>>): boolean {
+  return choiceList(filters.setterCalls).length > 0
+    || choiceList(filters.combinationCodes).length > 0
+    || choiceList(filters.attackBallTypes).length > 0;
 }
 
 export function isDefaultFilters(filters: DashboardFilters): boolean {
@@ -129,7 +161,7 @@ export function isDefaultFilters(filters: DashboardFilters): boolean {
     && filters.server === 'all'
     && filters.receiver === 'all'
     && filters.attacker === 'all'
-    && baseCodeList(filters.base).length === 0
+    && !hasAttackCodeFilters(filters)
   );
 }
 
@@ -197,7 +229,9 @@ export function getActiveFilterCount(filters: DashboardFilters): number {
     filters.server !== 'all',
     filters.receiver !== 'all',
     filters.attacker !== 'all',
-    baseCodeList(filters.base).length > 0,
+    choiceList(filters.setterCalls).length > 0,
+    choiceList(filters.combinationCodes).length > 0,
+    choiceList(filters.attackBallTypes).length > 0,
   ].filter(Boolean).length;
 }
 

@@ -70,7 +70,8 @@ import './video-analysis.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import {
   annotateVideoEntries,
-  availableBaseCodes,
+  availableCombinationCodes,
+  availableSetterCalls,
   applyVideoChainFilters,
   createDefaultVideoChainFilters,
   pruneVideoChainPlayers,
@@ -285,7 +286,8 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName, 
     [projectRecords],
   );
   const chainEntries = useMemo(() => annotateVideoEntries(allEntries), [allEntries]);
-  const baseCodes = useMemo(() => availableBaseCodes(chainEntries), [chainEntries]);
+  const setterCalls = useMemo(() => availableSetterCalls(chainEntries), [chainEntries]);
+  const combinationCodes = useMemo(() => availableCombinationCodes(chainEntries), [chainEntries]);
   // Rallies in which each athlete touched the ball, over the matches shown.
   const ralliesByPlayer = useMemo(() => {
     const byRally = new Map<string, Set<string>>();
@@ -890,7 +892,8 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName, 
         ]}
         playerOptions={multiPlayerOptions}
         setNumbers={filters.opponentProjectId !== 'all' ? availableSetNumbers : []}
-        baseCodes={baseCodes}
+        setterCalls={setterCalls}
+        combinationCodes={combinationCodes}
       />
       <label className="video-analysis__auto-advance">
         <input

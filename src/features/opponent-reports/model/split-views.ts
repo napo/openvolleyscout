@@ -6,8 +6,11 @@ import type {
   SetterDistributionViewConfig,
 } from '@src/domain/opponent-report/types';
 
-/** DataVolley attack ball types: high, medium, quick, tense, super, fast, other. */
-export const ATTACK_BALL_TYPES = ['H', 'M', 'Q', 'T', 'U', 'N', 'O'] as const;
+// Value import must be relative: node:test files may reach this module through ts-node/esm.
+import { ATTACK_BALL_TYPES } from '../../../domain/match/code-tables';
+
+/** DataVolley attack ball types (H M Q T U N O), the one shared list. */
+export { ATTACK_BALL_TYPES };
 
 /**
  * "Draw separately": a view split by one of its filters becomes one view per
@@ -15,7 +18,7 @@ export const ATTACK_BALL_TYPES = ['H', 'M', 'Q', 'T', 'U', 'N', 'O'] as const;
  * its own card. "Draw together" (no split) keeps one card for all values.
  */
 export type AttackerSplitField = 'attackZones' | 'rotations' | 'phases' | 'attackBallTypes';
-export type SetterSplitField = 'serveStartZones' | 'receptionZones' | 'serveTypes' | 'setterCalls';
+export type SetterSplitField = 'serveStartZones' | 'receptionZones' | 'serveTypes' | 'setterCalls' | 'attackBallTypes';
 
 export const ATTACKER_SPLIT_VALUES: { [K in AttackerSplitField]: ReadonlyArray<NonNullable<AttackerDirectionViewConfig[K]>[number]> } = {
   attackZones: ['4', '3', '2', '6', '1', '5'],
@@ -29,6 +32,7 @@ export const SETTER_SPLIT_VALUES: { [K in Exclude<SetterSplitField, 'setterCalls
   serveStartZones: ['1', '9', '6', '7', '5'],
   receptionZones: ['1', '6', '5', '9', '8', '7', '2', '3', '4'],
   serveTypes: ['jump_spin', 'jump_float', 'float', 'other'] as SetterDistributionServeType[],
+  attackBallTypes: ATTACK_BALL_TYPES,
 };
 
 type SplittableView = { id: string; label: string; splitBy?: string };

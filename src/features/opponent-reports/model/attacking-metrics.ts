@@ -2,12 +2,13 @@ import { getAttackSubtypeOrDefault, type AttackSubtype, type BallTouch } from '@
 import { createEmptySkillStats, updateSkillStats, type SkillStats } from '@src/features/scouting/model/match-stats';
 import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import type { TeamSide } from '@src/domain/common/enums';
-import type {
-  AttackerDirectionEvaluation,
-  AttackerDirectionViewConfig,
-  SetterDistributionReceptionEval,
-  SetterDistributionServeType,
-  SetterDistributionViewConfig,
+import {
+  normalizeAttackerDirectionView,
+  type AttackerDirectionEvaluation,
+  type AttackerDirectionViewConfig,
+  type SetterDistributionReceptionEval,
+  type SetterDistributionServeType,
+  type SetterDistributionViewConfig,
 } from '@src/domain/opponent-report/types';
 import { attackZoneNumber, extractSideOutSequences } from '@src/features/analytics/sideout/sideout-distribution';
 import { classifyAttackPrecedingContext } from '@src/features/analytics/rally-phase/rally-phase-classifier';
@@ -21,6 +22,13 @@ import {
   previousSet,
   scoreBeforeRallies,
 } from '@src/features/analytics/attack-context/attack-context';
+import {
+  collectAttackCodeOptions,
+  matchesAttackCodes,
+  resolveTouchAttackCodes,
+  sortAttackCodes,
+  type AttackCodeOptions,
+} from '@src/features/analytics/attack-context/attack-codes';
 import type { ReportMatchInput, ReportPlayer, Ratio } from './report-metrics';
 import { ratio, toReportPlayer } from './report-metrics';
 import { compareReportPlayers } from './report-keys';
@@ -735,7 +743,14 @@ export function collectSetterCallCodes(inputs: readonly ReportMatchInput[]): str
 }
 
 export function matchesSetterDistributionFilter(
-  sequence: { serve?: BallTouch; receive: BallTouch; receiverKey?: string; callCode?: string | null },
+  sequence: {
+    serve?: BallTouch;
+    receive: BallTouch;
+    receiverKey?: string;
+    callCode?: string | null;
+    /** Set type: the ball type letter of the attack that follows the set (null without an attack). */
+    attackBallType?: string | null;
+  },
   filter: SetterDistributionViewConfig,
 ): boolean {
   const evalCode = sequence.receive.evaluation ?? '';
@@ -774,6 +789,12 @@ export function matchesSetterDistributionFilter(
   if (filter.setterCalls && filter.setterCalls.length > 0) {
     const call = normalizeSetterCall(sequence.callCode);
     if (!call || !filter.setterCalls.some((code) => normalizeSetterCall(code) === call)) return false;
+  }
+
+  // Set type: the type of the attack that follows the set. A set without an attack has none.
+  if (filter.attackBallTypes && filter.attackBallTypes.length > 0) {
+    const type = normalizeSetterCall(sequence.attackBallType);
+    if (!type || !filter.attackBallTypes.some((code) => normalizeSetterCall(code) === type)) return false;
   }
 
   return true;
@@ -846,7 +867,13 @@ export function computeSetterDistributionViews(
       const won = wonByRally.get(rallyKey) === true;
       const receiverKey = sequence.receive.playerId ? playerById.get(sequence.receive.playerId)?.key : undefined;
       for (const view of views) {
-        if (!matchesSetterDistributionFilter({ serve, receive: sequence.receive, receiverKey, callCode: sequence.callCode }, view)) continue;
+        if (!matchesSetterDistributionFilter({
+          serve,
+          receive: sequence.receive,
+          receiverKey,
+          callCode: sequence.callCode,
+          attackBallType: sequence.attackBallType,
+        }, view)) continue;
         let rotMap = entry.views.get(view.id);
         if (!rotMap) {
           rotMap = new Map();
@@ -899,7 +926,11 @@ export interface AttackerDirectionSampleContext {
   attackZone: string | null;
   blockerCount?: number;
   attackSubtype?: AttackSubtype;
+  /** Base: the setter call of the set just before the attack. */
+  setterCall?: string;
+  /** The attack's own combination code (never a K code). */
   combinationCode?: string;
+  /** Set type: the attack's ball type letter. */
   attackBallType?: string;
 }
 
@@ -917,14 +948,6 @@ export interface AttackerCustomViewPlayerMetrics {
 export interface AttackerCustomViewMetrics {
   config: AttackerDirectionViewConfig;
   attackers: AttackerCustomViewPlayerMetrics[];
-}
-
-function resolveAttackCombinationCode(touch: BallTouch, set: BallTouch | null): string | undefined {
-  const raw = touch.combinationCode?.trim()
-    || set?.setterCallCode?.trim()
-    || touch.setterCallCode?.trim()
-    || undefined;
-  return raw ? raw.toUpperCase() : undefined;
 }
 
 export function matchesAttackerDirectionFilter(
@@ -968,41 +991,42 @@ export function matchesAttackerDirectionFilter(
     if (!sample.attackSubtype || !filter.attackSubtypes.includes(sample.attackSubtype)) return false;
   }
 
-  if (filter.combinationCodes && filter.combinationCodes.length > 0) {
-    if (!sample.combinationCode || !filter.combinationCodes.includes(sample.combinationCode)) return false;
-  }
-
-  if (filter.attackBallTypes && filter.attackBallTypes.length > 0) {
-    if (!sample.attackBallType || !filter.attackBallTypes.includes(sample.attackBallType)) return false;
-  }
-
-  return true;
+  // Base, combination and set type: each chosen list must hold (AND), compared ignoring case.
+  // The view is read through the converter, so K codes saved among the combinations count as Base.
+  const codes = normalizeAttackerDirectionView(filter);
+  return matchesAttackCodes(
+    {
+      setterCall: sample.setterCall ?? null,
+      combinationCode: sample.combinationCode ?? null,
+      ballType: sample.attackBallType ?? null,
+    },
+    { setterCalls: codes.setterCalls, combinationCodes: codes.combinationCodes, attackBallTypes: codes.attackBallTypes },
+  );
 }
 
-/** Collects all distinct attack combination / base codes recorded for the opponent across selected matches. */
-export function collectAttackCombinationCodes(inputs: readonly ReportMatchInput[]): string[] {
-  const codes = new Set<string>();
+/**
+ * The Base (setter call of the set before the attack) and Combination codes of the opponent's
+ * attacks across the selected matches, for the attacker view filters.
+ */
+export function collectAttackerViewCodeOptions(inputs: readonly ReportMatchInput[]): AttackCodeOptions {
+  const setterCalls = new Set<string>();
+  const combinationCodes = new Set<string>();
   for (const match of inputs) {
-    for (const rally of match.rallies) {
-      const sorted = [...rally.touches].sort((left, right) => left.sequenceNumber - right.sequenceNumber || left.createdAt - right.createdAt);
-      for (let index = 0; index < sorted.length; index += 1) {
-        const touch = sorted[index];
-        if (touch.teamSide !== match.side || touch.skill !== 'attack') continue;
-        const set = previousSet(sorted, index, match.side);
-        const code = resolveAttackCombinationCode(touch, set);
-        if (code) codes.add(code);
-      }
-    }
+    const options = collectAttackCodeOptions(match.rallies, (touch) => touch.teamSide === match.side && touch.skill === 'attack');
+    options.setterCalls.forEach((code) => setterCalls.add(code));
+    options.combinationCodes.forEach((code) => combinationCodes.add(code));
   }
-  return [...codes].sort((a, b) => a.localeCompare(b));
+  return { setterCalls: sortAttackCodes(setterCalls), combinationCodes: sortAttackCodes(combinationCodes) };
 }
 
 export function computeAttackerDirectionViews(
   inputs: readonly ReportMatchInput[],
-  views: readonly AttackerDirectionViewConfig[],
+  inputViews: readonly AttackerDirectionViewConfig[],
   baseAttackers: readonly AttackerReportMetrics[],
 ): AttackerCustomViewMetrics[] {
-  if (views.length === 0) return [];
+  if (inputViews.length === 0) return [];
+  // Older reports may hold K codes among the combinations: read them as Base.
+  const views = inputViews.map(normalizeAttackerDirectionView);
 
   interface MutableFilteredAttacker {
     directionsForDrawing: HeatmapEvent[];
@@ -1082,6 +1106,7 @@ export function computeAttackerDirectionViews(
           ? recordedRotation
           : (ctx?.rotation ?? null);
         const blockerCount = touch.numBlockers ?? blockersAfterAttack(sorted, index, match.side);
+        const codes = resolveTouchAttackCodes(sorted, index);
 
         const sample: AttackerDirectionSampleContext = {
           touch,
@@ -1093,8 +1118,9 @@ export function computeAttackerDirectionViews(
           attackZone: normalizedZone,
           blockerCount,
           attackSubtype: getAttackSubtypeOrDefault(touch),
-          combinationCode: resolveAttackCombinationCode(touch, set),
-          attackBallType: (touch.attackType ?? touch.skillTypeCode)?.trim().toUpperCase() || undefined,
+          setterCall: codes.setterCall ?? undefined,
+          combinationCode: codes.combinationCode ?? undefined,
+          attackBallType: codes.ballType ?? undefined,
         };
         const drawing = drawingByTouch.get(touch.id);
 

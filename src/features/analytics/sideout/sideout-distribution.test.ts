@@ -377,6 +377,14 @@ describe('extractSideOutSequences call code', () => {
     assert.equal(fromSetterCall.callCode, 'K2');
   });
 
+  it('reads a lower-case or padded setter call and attack letter', () => {
+    const [sequence] = extractSideOutSequences([
+      sideOutRally({ rallyNumber: 1, attackZone: '4', setterCallCode: ' k1', attackBallType: 'q ' }),
+    ]);
+    assert.equal(sequence.callCode, 'K1');
+    assert.equal(sequence.attackBallType, 'Q');
+  });
+
   it('is null when neither the set nor a legacy K-code carries a setter call', () => {
     const [sequence] = extractSideOutSequences([
       sideOutRally({ rallyNumber: 1, attackZone: '4' }),

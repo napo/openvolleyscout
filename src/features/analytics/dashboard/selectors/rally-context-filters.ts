@@ -2,9 +2,10 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
-import { baseCodeList, matchesAny, type DashboardFilters, type ScoreSituation } from '../filters/dashboard-filters';
+import { hasAttackCodeFilters, matchesAny, type DashboardFilters, type ScoreSituation } from '../filters/dashboard-filters';
 import { getScoreSituationSettings, isLateInSet } from '../../score-situation/score-situation-settings';
-import { rallyBaseCodes } from './base-code';
+import { rallyMatchesAttackCodes } from '../../attack-context/attack-codes';
+import { choiceList } from '../../../../lib/utils/choice-list';
 
 /**
  * The rally-context filters of the analysis dashboards: rotation, score
@@ -16,9 +17,15 @@ import { rallyBaseCodes } from './base-code';
  * is P1 of that team, "leading" means that team was ahead before the rally.
  * Server, receiver and attacker keep the rallies in which that player served,
  * received or attacked. Base keeps the rallies in which the team set or attacked
- * on that base / combination (setter call K1...Kn or attack code).
+ * on that setter call (K1...Kn). Combination and Set type keep the rallies in which
+ * the team played an attack with that combination or of that set type. When a
+ * combination or a set type is chosen, one attack of the team must match every
+ * chosen list (Base included): "X5 on K1" means the same attack.
  */
-export type RallyContextFilters = Pick<DashboardFilters, 'rotation' | 'scoreRange' | 'server' | 'receiver' | 'attacker' | 'base'>;
+export type RallyContextFilters = Pick<
+  DashboardFilters,
+  'rotation' | 'scoreRange' | 'server' | 'receiver' | 'attacker' | 'setterCalls' | 'combinationCodes' | 'attackBallTypes'
+>;
 
 export type { ScoreSituation } from '../filters/dashboard-filters';
 
@@ -46,7 +53,7 @@ export function hasRallyContextFilter(filters: Partial<RallyContextFilters>): bo
     || (filters.server ?? 'all') !== 'all'
     || (filters.receiver ?? 'all') !== 'all'
     || (filters.attacker ?? 'all') !== 'all'
-    || baseCodeList(filters.base).length > 0;
+    || hasAttackCodeFilters(filters);
 }
 
 function playerDid(rally: RallyStats, skill: BallTouch['skill'], playerId: string): boolean {
@@ -73,12 +80,12 @@ export function rallyMatchesContext(
   if ((filters.server ?? 'all') !== 'all' && !playerDid(rally, 'serve', filters.server!)) return false;
   if ((filters.receiver ?? 'all') !== 'all' && !playerDid(rally, 'receive', filters.receiver!)) return false;
   if ((filters.attacker ?? 'all') !== 'all' && !playerDid(rally, 'attack', filters.attacker!)) return false;
-  // Several bases: the rally passes when the team played any of them.
-  const bases = baseCodeList(filters.base);
-  if (bases.length > 0) {
-    const played = rallyBaseCodes(rally.touches, teamSide);
-    if (!bases.some((code) => played.has(code))) return false;
-  }
+  // Several codes in one list: any of them. Several lists: all of them (on the same attack).
+  if (hasAttackCodeFilters(filters) && !rallyMatchesAttackCodes(rally.touches, teamSide, {
+    setterCalls: choiceList(filters.setterCalls),
+    combinationCodes: choiceList(filters.combinationCodes),
+    attackBallTypes: choiceList(filters.attackBallTypes),
+  })) return false;
   return true;
 }
 
@@ -101,8 +108,14 @@ export function filterTouchesByRallyContext(
   if (!hasRallyContextFilter(filters)) return touches as BallTouch[];
   const rallyByTouch = new Map<BallTouch, RallyStats>();
   rallies.forEach((rally) => rally.touches.forEach((touch) => rallyByTouch.set(touch, rally)));
+  // One answer per rally and team: the code filters read the whole rally, so they are not run per touch.
+  const answers = new Map<RallyStats, Partial<Record<TeamSide, boolean>>>();
   return touches.filter((touch) => {
     const rally = rallyByTouch.get(touch);
-    return rally !== undefined && rallyMatchesContext(rally, filters, touch.teamSide);
+    if (rally === undefined) return false;
+    const byTeam = answers.get(rally) ?? {};
+    answers.set(rally, byTeam);
+    byTeam[touch.teamSide] ??= rallyMatchesContext(rally, filters, touch.teamSide);
+    return byTeam[touch.teamSide]!;
   });
 }

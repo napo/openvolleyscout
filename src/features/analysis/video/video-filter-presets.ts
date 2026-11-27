@@ -17,7 +17,11 @@ const VIEW_TEAMS: Record<VideoFilterPresetView, readonly VideoTeamScope[]> = {
 export interface VideoFilterPreset {
   id: string;
   name: string;
-  /** Chain filters; presets saved before them hold the old filters, converted when applied. */
+  /**
+   * Chain filters; presets saved before them hold the old filters, converted when applied. Presets
+   * saved with the one mixed "Base / Combination" list are split into Base and Combination when
+   * applied; the stored preset keeps its old form until it is saved again.
+   */
   filters: VideoChainFilters;
 }
 

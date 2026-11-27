@@ -9,7 +9,7 @@ import { LoadingProgressBanner, yieldToUi, type LoadProgressState } from '@src/c
 import { SelectableTable } from '@src/components/SelectableTable';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type { MatchProject } from '@src/domain/match/types';
-import type { OpponentReport, OpponentReportTeamRef } from '@src/domain/opponent-report/types';
+import { normalizeOpponentReportViews, type OpponentReport, type OpponentReportTeamRef } from '@src/domain/opponent-report/types';
 import { matchRepository, opponentReportRepository } from '@src/infrastructure/repositories';
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
@@ -21,7 +21,7 @@ import { buildReportSimilarities, listReportScopes, matchScopeKey, type MatchTea
 import { buildReportMatchInputs } from '../model/report-inputs';
 import { computeOpponentReportMetrics, toReportPlayer, type ReportPlayer } from '../model/report-metrics';
 import { expandAttackerViews, expandSetterViews } from '../model/split-views';
-import { collectAttackCombinationCodes, collectSetterCallCodes, computeAttackerDirectionViews, computeAttackingReportMetrics, computeSetterDistributionViews } from '../model/attacking-metrics';
+import { collectAttackerViewCodeOptions, collectSetterCallCodes, computeAttackerDirectionViews, computeAttackingReportMetrics, computeSetterDistributionViews } from '../model/attacking-metrics';
 import { computeServingReportMetrics } from '../model/serving-metrics';
 import { buildPlayerSkillVideoLinks, videoLinkWatchKey, setterBandFilter, type AttackerVideoLink } from '../model/attacker-video-links';
 import { buildKeySuggestions, compareReportPlayers } from '../model/report-keys';
@@ -113,6 +113,8 @@ export function OpponentReportEditorPage() {
             setPreparing(Boolean((location.state as {
                 preparing?: boolean;
             } | null)?.preparing) || loaded.draftStatus === 'preparing');
+            // Older reports kept setter calls among the combinations: read them as Base (saved at the next edit).
+            loaded = normalizeOpponentReportViews(loaded);
             latestRef.current = loaded;
             setReport(loaded);
             setProjects(all);
@@ -189,11 +191,11 @@ export function OpponentReportEditorPage() {
     const setterCallCodes = useMemo(() => collectSetterCallCodes(inputs), [inputs]);
     const setterCustomGroups = useMemo(
         () => report?.setterViews?.length
-            ? computeSetterDistributionViews(inputs, expandSetterViews(report.setterViews, (field, value) => field === 'serveTypes' ? t(SPLIT_SERVE_TYPE_KEYS[value as keyof typeof SPLIT_SERVE_TYPE_KEYS]) : field === 'setterCalls' ? String(value) : `${t('zone')} ${value}`, setterCallCodes), attacking.setters)
+            ? computeSetterDistributionViews(inputs, expandSetterViews(report.setterViews, (field, value) => field === 'serveTypes' ? t(SPLIT_SERVE_TYPE_KEYS[value as keyof typeof SPLIT_SERVE_TYPE_KEYS]) : field === 'setterCalls' || field === 'attackBallTypes' ? String(value) : `${t('zone')} ${value}`, setterCallCodes), attacking.setters)
             : [],
         [inputs, report?.setterViews, attacking.setters, setterCallCodes, t],
     );
-    const attackCombinationCodes = useMemo(() => collectAttackCombinationCodes(inputs), [inputs]);
+    const attackCodeOptions = useMemo(() => collectAttackerViewCodeOptions(inputs), [inputs]);
     const attackerCustomViews = useMemo(
         () => report?.attackerViews?.length
             ? computeAttackerDirectionViews(inputs, expandAttackerViews(report.attackerViews, (field, value) => field === 'attackZones' ? `Z${value}` : field === 'rotations' ? `P${value}` : field === 'attackBallTypes' ? String(value) : t(SPLIT_PHASE_KEYS[value as keyof typeof SPLIT_PHASE_KEYS])), attacking.attackers)
@@ -370,7 +372,7 @@ export function OpponentReportEditorPage() {
       {sample.actions < thresholds.minSample ? <p className="opponent-report__warning">{t('opponentReportLowSampleWarning', { n: thresholds.minSample })}</p> : null}
       {preview.length ? <details open><summary><ActionIcon name="preview" />{t('tacticalPreview')}</summary>{preview.map((svg, index) => <img className="tactical-preview" key={index} alt={`${opponentReportTitle(report)} · ${index + 1}`} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}/>)}</details> : null}
 
-      <TacticalBoardSheet report={report} plan={booklet!} staffNotes={fullPlan?.staffNotes ?? []} view={view} viewT={viewT} rosterPlayers={players} attackCombinationCodes={attackCombinationCodes} setterCallCodes={setterCallCodes} suggestions={suggestions} update={update}/>
+      <TacticalBoardSheet report={report} plan={booklet!} staffNotes={fullPlan?.staffNotes ?? []} view={view} viewT={viewT} rosterPlayers={players} attackCodeOptions={attackCodeOptions} setterCallCodes={setterCallCodes} suggestions={suggestions} update={update}/>
     </>}
   </AppPageLayout>;
 }

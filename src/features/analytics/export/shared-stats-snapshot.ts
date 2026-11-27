@@ -113,6 +113,7 @@ export function toWireSnapshot(snapshot: SharedStatsSnapshot): WireSnapshot {
 
 export function fromWireSnapshot(received: WireSnapshot): SharedStatsSnapshot {
   // A link made by an older version holds one set, phase, rotation or score situation: read as a list.
+  // Its combined "Base / Combination" list is split into the Base and Combination filters.
   const wire: WireSnapshot = { ...received, filters: normalizeDashboardFilters(received.filters) };
   if (!wire.stats) return { ...wire, stats: undefined };
   const bySet = new Map<number, RallyStats[]>();

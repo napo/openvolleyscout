@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useSyncExternalStore, type ReactNode, useMemo } from 'react';
 import type { SkillEvaluation } from '@src/domain/common/enums';
-import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
+import { AttackBallTypeChips, BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { SkillIcon } from '@src/components/skill-icons/SkillIcon';
-import { rallyBaseCodes, sortBaseCodes } from '../selectors/base-code';
+import { collectAttackCodeOptions, resolveAttackBallType, sortAttackCodes } from '../../attack-context/attack-codes';
+import { isAttackBallType } from '@src/domain/match/code-tables';
+import { choiceList } from '@src/lib/utils/choice-list';
 import { TRACKED_SKILLS, type MatchStats, type TrackedSkill } from '@src/features/scouting/model/match-stats';
 import { getScoreSituationSettings, subscribeScoreSituationSettings } from '../../score-situation/score-situation-settings';
 import { useFilterActions } from '../../stores/filter-selectors';
@@ -12,7 +14,6 @@ import { getAvailablePlayers, getAvailableSets, type PlayerOption } from '../sel
 import {
   ALL_EVALUATIONS,
   PLAYER_ROLES,
-  baseCodeList,
   TOUCH_PHASES,
   getActiveFilterCount,
   type DashboardFilters,
@@ -82,10 +83,31 @@ export function DashboardFilterPanel({
   const scoreRules = useSyncExternalStore(subscribeScoreSituationSettings, getScoreSituationSettings, getScoreSituationSettings);
   const sets = getAvailableSets(stats);
   const players = getAvailablePlayers(stats);
-  const baseCodes = useMemo(
-    () => sortBaseCodes(stats.rallyStats.flatMap((rally) => (['home', 'away'] as const).flatMap((side) => [...rallyBaseCodes(rally.touches, side)]))),
-    [stats.rallyStats],
-  );
+  // The Base and Combination codes (and whether any attack has a set type) of the team shown:
+  // only the locked team's when the page fixes it, both teams otherwise.
+  const codeOptions = useMemo(() => {
+    const inScope = (side: 'home' | 'away') => !lockedTeam || side === lockedTeam;
+    const options = collectAttackCodeOptions(stats.rallyStats, (touch) => inScope(touch.teamSide));
+    const hasBallTypes = stats.rallyStats.some((rally) => rally.touches.some((touch) => (
+      touch.skill === 'attack' && inScope(touch.teamSide) && isAttackBallType(resolveAttackBallType(touch))
+    )));
+    return { ...options, hasBallTypes };
+  }, [stats.rallyStats, lockedTeam]);
+  const selectedSetterCalls = choiceList(filters.setterCalls);
+  const selectedCombinations = choiceList(filters.combinationCodes);
+  const selectedBallTypes = choiceList(filters.attackBallTypes);
+  // A group is shown when the data has codes for it or something is chosen in it, so an active
+  // choice is never hidden (a chosen code missing from the data still gets its chip).
+  const setterCallCodes = sortAttackCodes([...codeOptions.setterCalls, ...selectedSetterCalls]);
+  const combinationCodes = sortAttackCodes([...codeOptions.combinationCodes, ...selectedCombinations]);
+  const showBallTypes = codeOptions.hasBallTypes || selectedBallTypes.length > 0;
+  // Two or more of Base, Combination and Set type: they must hold on the same attack. The hint
+  // goes under the last of them that is set.
+  const codeGroupsActive = [selectedSetterCalls, selectedCombinations, selectedBallTypes].filter((list) => list.length > 0).length;
+  const playHintAt = codeGroupsActive < 2 ? null
+    : selectedBallTypes.length > 0 ? 'ballTypes'
+      : 'combinations';
+  const playHint = <span className="perf-dashboard__filter-hint">{t('dashboardFilterPlayHint')}</span>;
   const activeCount = getActiveFilterCount(lockedTeam ? { ...filters, team: 'all' } : filters);
   const all = t('setterViewReceptionAll');
 
@@ -230,14 +252,37 @@ export function DashboardFilterPanel({
           ) : null}
         </FilterGroup>
 
-        {baseCodes.length > 0 ? (
-          <FilterGroup title={t('attackerViewBaseLabel')} active={baseCodeList(filters.base).length > 0}>
+        {setterCallCodes.length > 0 ? (
+          <FilterGroup title={t('baseFilterLabel')} active={selectedSetterCalls.length > 0}>
             <BaseCodeTable
               allLabel={all}
-              codes={baseCodes}
-              selected={baseCodeList(filters.base)}
-              onChange={(next) => updateFilter('base', next)}
+              codes={setterCallCodes}
+              selected={selectedSetterCalls}
+              onChange={(next) => updateFilter('setterCalls', next)}
             />
+          </FilterGroup>
+        ) : null}
+
+        {combinationCodes.length > 0 ? (
+          <FilterGroup title={t('combination')} active={selectedCombinations.length > 0}>
+            <BaseCodeTable
+              allLabel={all}
+              codes={combinationCodes}
+              selected={selectedCombinations}
+              onChange={(next) => updateFilter('combinationCodes', next)}
+            />
+            {playHintAt === 'combinations' ? playHint : null}
+          </FilterGroup>
+        ) : null}
+
+        {showBallTypes ? (
+          <FilterGroup title={t('attackerViewAttackBallTypeLabel')} active={selectedBallTypes.length > 0}>
+            <AttackBallTypeChips
+              allLabel={all}
+              selected={selectedBallTypes}
+              onChange={(next) => updateFilter('attackBallTypes', next.filter(isAttackBallType))}
+            />
+            {playHintAt === 'ballTypes' ? playHint : null}
           </FilterGroup>
         ) : null}
 

@@ -341,7 +341,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
             onChange={(next) => setFilters({ ...filters, attackEvaluations: fromChips(next, SIDEOUT_EVALUATIONS) })}
           />
         </FilterGroup>
-        <FilterGroup title={t('sideOutFilterAttackBallType')} active={chips(filters.attackBallTypes, SIDEOUT_ATTACK_BALL_TYPES).length > 0}>
+        <FilterGroup title={t('attackerViewAttackBallTypeLabel')} active={chips(filters.attackBallTypes, SIDEOUT_ATTACK_BALL_TYPES).length > 0}>
           <ChipSelect
             allLabel={all}
             options={SIDEOUT_ATTACK_BALL_TYPES.map((ballType) => ({ value: ballType, label: ballType, title: t(BALL_TYPE_LABEL_KEYS[ballType]) }))}

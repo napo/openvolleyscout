@@ -4,7 +4,9 @@ import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
 // Value imports must be relative (ts-node/esm cannot resolve @src/ at runtime)
 import { getZoneCode } from '../../scouting/model/datavolley-code';
-import { isSetterCallCode } from '../../../domain/match/code-tables';
+import { ATTACK_BALL_TYPES, isAttackBallType } from '../../../domain/match/code-tables';
+import type { AttackBallType } from '../../../domain/match/code-tables';
+import { resolveAttackBallType, setterCallOf } from '../attack-context/attack-codes';
 import type { SetterDistributionServeType } from '../../../domain/opponent-report/types';
 import {
   SERVE_START_ZONES,
@@ -20,8 +22,9 @@ export const SIDEOUT_EVALUATIONS: SkillEvaluation[] = ['#', '+', '!', '-', '/', 
 export const SIDEOUT_SERVE_BALL_TYPES = ['H', 'M', 'Q'] as const;
 export type SideOutServeBallType = (typeof SIDEOUT_SERVE_BALL_TYPES)[number];
 
-export const SIDEOUT_ATTACK_BALL_TYPES = ['H', 'M', 'Q', 'T', 'U', 'N', 'O'] as const;
-export type SideOutAttackBallType = (typeof SIDEOUT_ATTACK_BALL_TYPES)[number];
+/** The attack ball type letters, the same list as every other attack filter. */
+export const SIDEOUT_ATTACK_BALL_TYPES = ATTACK_BALL_TYPES;
+export type SideOutAttackBallType = AttackBallType;
 
 export const SIDEOUT_SETTER_POSITIONS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -165,10 +168,6 @@ function isSideOutServeBallType(code: string | undefined): code is SideOutServeB
   return code === 'H' || code === 'M' || code === 'Q';
 }
 
-function isSideOutAttackBallType(code: string | undefined): code is SideOutAttackBallType {
-  return !!code && (SIDEOUT_ATTACK_BALL_TYPES as readonly string[]).includes(code);
-}
-
 export function attackZoneNumber(attack: BallTouch): number | null {
   const code = attack.startZoneCode ?? getZoneCode(attack.originZone ?? attack.direction?.start);
   const zone = Number.parseInt(code.charAt(0), 10);
@@ -263,7 +262,7 @@ export function extractSideOutSequences(
       ? receive.homeSetterPosition
       : receive.awaySetterPosition) ?? null;
 
-    const attackBallTypeCode = attack?.attackType ?? attack?.skillTypeCode;
+    const attackBallTypeCode = attack ? resolveAttackBallType(attack) : null;
     const teamSetterIds = setterPlayerIds[receivingTeam];
     const attackerIsSetter = !set && !!attack?.playerId && teamSetterIds.has(attack.playerId);
     // No set touch and the attacker isn't a known setter: the set was never
@@ -273,11 +272,8 @@ export function extractSideOutSequences(
       ? [...teamSetterIds][0] ?? null
       : null;
 
-    const setterCallCode = set?.setterCallCode
-      ?? attack?.setterCallCode
-      ?? (isSetterCallCode(set?.combinationCode) ? set?.combinationCode : undefined)
-      ?? (isSetterCallCode(attack?.combinationCode) ? attack?.combinationCode : undefined)
-      ?? null;
+    // Base: the set's call first, then the attack's (K codes only, also from older data).
+    const setterCallCode = setterCallOf(set, attack);
 
     sequences.push({
       setNumber: rally.setNumber,
@@ -291,7 +287,7 @@ export function extractSideOutSequences(
       setterPosition,
       setterPlayerId: set?.playerId
         ?? (attackerIsSetter ? attack?.playerId ?? null : inferredSetterPlayerId),
-      attackBallType: isSideOutAttackBallType(attackBallTypeCode) ? attackBallTypeCode : null,
+      attackBallType: isAttackBallType(attackBallTypeCode) ? attackBallTypeCode : null,
       target: classifyTarget(set, attack, attackerIsSetter),
       callCode: setterCallCode,
       rallyWon: rally.pointWinner ? rally.pointWinner === receivingTeam : null,

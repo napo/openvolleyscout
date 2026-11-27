@@ -154,3 +154,43 @@ describe('shared links made before filters took several values', () => {
     expect(openedAll?.version === 3 && openedAll.snapshot.filters).toMatchObject({ set: [], rallyPhase: [], rotation: [], scoreRange: [] });
   });
 });
+
+describe('shared links made with the old Base / Combination filter', () => {
+  const open = (base: unknown) => {
+    const { setterCalls: _s, combinationCodes: _c, attackBallTypes: _a, ...rest } = createDefaultAdvancedFilters();
+    const filters = { ...rest, base } as unknown as ReturnType<typeof createDefaultAdvancedFilters>;
+    const opened = decodeSharedStats(encodeSharedStats({
+      version: 3,
+      tabId: 'report',
+      title: 'Report',
+      matchLabel: 'A - B',
+      expiresAt: Date.UTC(2099, 0, 1),
+      snapshot: { report: { homeTabellino: {}, awayTabellino: {}, setSummaries: [], bottomSummaryBlocks: [] } as never, filters, selectedPlayerIds: [] },
+    }));
+    return opened?.version === 3 ? opened.snapshot.filters : null;
+  };
+
+  it('open with the setter calls in Base and the other codes in Combination', () => {
+    const filters = open(['K1', 'X5']);
+    expect(filters).toMatchObject({ setterCalls: ['K1'], combinationCodes: ['X5'], attackBallTypes: [] });
+    expect(filters && 'base' in filters).toBe(false);
+  });
+
+  it('read "all" and a single code as before', () => {
+    expect(open('all')).toMatchObject({ setterCalls: [], combinationCodes: [], attackBallTypes: [] });
+    expect(open('K2')).toMatchObject({ setterCalls: ['K2'], combinationCodes: [] });
+  });
+
+  it('carry the new filters of a link made today unchanged', () => {
+    const filters = { ...createDefaultAdvancedFilters(), setterCalls: ['K1'], combinationCodes: ['X5'], attackBallTypes: ['Q' as const] };
+    const opened = decodeSharedStats(encodeSharedStats({
+      version: 3,
+      tabId: 'report',
+      title: 'Report',
+      matchLabel: 'A - B',
+      expiresAt: Date.UTC(2099, 0, 1),
+      snapshot: { report: { homeTabellino: {}, awayTabellino: {}, setSummaries: [], bottomSummaryBlocks: [] } as never, filters, selectedPlayerIds: [] },
+    }));
+    expect(opened?.version === 3 && opened.snapshot.filters).toMatchObject({ setterCalls: ['K1'], combinationCodes: ['X5'], attackBallTypes: ['Q'] });
+  });
+});

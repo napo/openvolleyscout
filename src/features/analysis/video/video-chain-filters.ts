@@ -19,7 +19,12 @@ import {
 } from '../../analytics/rally-phase/rally-phase-classifier';
 import { attackZoneNumber } from '../../analytics/sideout/sideout-distribution';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
-import { resolveBaseCode, sortBaseCodes } from '../../analytics/dashboard/selectors/base-code';
+import {
+  matchesAttackCodes,
+  resolveTouchAttackCodes,
+  sortAttackCodes,
+} from '../../analytics/attack-context/attack-codes';
+import { splitBaseCodeSelection } from '../../../domain/match/code-tables';
 import type { VideoEventEntry } from './video-event-index';
 import { isLateInSet } from '../../analytics/score-situation/score-situation-settings';
 
@@ -60,9 +65,16 @@ export interface VideoSkillAttributes {
   attackZones?: string[];
   /** Attack: number of blockers faced (0-3). */
   blockers?: number[];
-  /** Set and attack: base / combination (setter call K1...Kn or attack combination such as X5). */
-  baseCodes?: string[];
+  /** Attack: set type, the attack's ball type letter (H, M, Q, T, U, N, O). */
+  attackBallTypes?: string[];
+  /** Set and attack: Base, the setter call (K1...Kn); an attack takes the call of the set before it. */
+  setterCalls?: string[];
+  /** Attack: the attack's own combination code (X5, V6, ...). */
+  combinationCodes?: string[];
 }
+
+/** Attributes as saved before Base and Combination were two filters: one mixed list. */
+type LegacyVideoSkillAttributes = VideoSkillAttributes & { baseCodes?: unknown };
 
 export interface VideoChainFilters {
   team: VideoTeamScope;
@@ -112,9 +124,13 @@ export interface VideoChainEntry<E extends VideoEventEntry = VideoEventEntry> {
     situations: AttackerDirectionPhase[];
     zone: string | null;
     blockers: number | null;
+    /** Set type: the attack's ball type letter (upper case), null when the scout wrote none. */
+    ballType: string | null;
   };
-  /** Set and attack: base / combination code (upper case), null when the scout wrote none. */
-  baseCode?: string | null;
+  /** Set and attack: the Base (setter call, upper case), null when the scout wrote none. */
+  setterCall?: string | null;
+  /** Attack: its own combination code (upper case, never a K code), null when it has none. */
+  combinationCode?: string | null;
 }
 
 type Annotatable = VideoEventEntry & { matchKey?: string; focusSide?: TeamSide };
@@ -166,6 +182,8 @@ export function annotateVideoEntries<E extends Annotatable>(entries: readonly E[
     for (const entry of rallyEntries) {
       const index = orderOf.get(entry.touch.id) ?? 0;
       let attack: VideoChainEntry['attack'];
+      // Same reading as the tactical report, heatmap and Analysis panel (shared resolver).
+      const codes = resolveTouchAttackCodes(touches, index);
       if (entry.skill === 'attack') {
         const context = preceding.get(entry.touch.id);
         const situations: AttackerDirectionPhase[] = [];
@@ -179,13 +197,14 @@ export function annotateVideoEntries<E extends Annotatable>(entries: readonly E[
           situations,
           zone: rawZone === null ? null : String(BACK_ROW_ZONE_MAP[rawZone] ?? rawZone),
           blockers: blockers ?? null,
+          ballType: codes.ballType,
         };
       }
-      const baseCode = entry.skill === 'set' || entry.skill === 'attack' ? resolveBaseCode(touches, index, entry.teamSide) : undefined;
       result.set(entry, {
         entry,
         rallyKey,
-        baseCode,
+        setterCall: entry.skill === 'set' || entry.skill === 'attack' ? codes.setterCall : undefined,
+        combinationCode: entry.skill === 'attack' ? codes.combinationCode : undefined,
         order: index,
         phase: phases.get(entry.touch.id) ?? null,
         setTargetPoints: target,
@@ -197,9 +216,14 @@ export function annotateVideoEntries<E extends Annotatable>(entries: readonly E[
   return entries.map((entry) => result.get(entry)!);
 }
 
-/** Base / combination codes present in the entries, sorted (K1, K2 ... then the others). */
-export function availableBaseCodes(entries: readonly VideoChainEntry[]): string[] {
-  return sortBaseCodes(entries.flatMap((item) => (item.baseCode ? [item.baseCode] : [])));
+/** Base codes (setter calls) present in the sets and attacks of the entries, sorted (K2 before K10). */
+export function availableSetterCalls(entries: readonly VideoChainEntry[]): string[] {
+  return sortAttackCodes(entries.flatMap((item) => (item.setterCall ? [item.setterCall] : [])));
+}
+
+/** Combination codes present in the attacks of the entries, sorted (X5 before X9). */
+export function availableCombinationCodes(entries: readonly VideoChainEntry[]): string[] {
+  return sortAttackCodes(entries.flatMap((item) => (item.entry.skill === 'attack' && item.combinationCode ? [item.combinationCode] : [])));
 }
 
 function includesOrEmpty<T>(selected: readonly T[] | undefined, value: T | null | undefined): boolean {
@@ -221,7 +245,13 @@ export function matchesSkillAttributes(item: VideoChainEntry, attributes: VideoS
   }
   if (!includesOrEmpty(attributes.attackZones, item.attack?.zone)) return false;
   if (!includesOrEmpty(attributes.blockers, item.attack?.blockers)) return false;
-  if (!includesOrEmpty(attributes.baseCodes, item.baseCode)) return false;
+  // Base, Combination and Set type, crossed with AND; the chosen codes are compared ignoring case.
+  const codes = {
+    setterCall: item.setterCall ?? null,
+    combinationCode: item.combinationCode ?? null,
+    ballType: item.attack?.ballType ?? null,
+  };
+  if (!matchesAttackCodes(codes, attributes)) return false;
   return true;
 }
 
@@ -377,17 +407,48 @@ type LegacyVideoFilters = {
 const LEGACY_EVALUATION_COUNT = 6;
 
 /**
+ * Splits the mixed "Base / Combination" list of saved filters into the two filters. Set and
+ * attack cards get the K codes as Base; only the attack card has a Combination filter, so other
+ * codes go there on the attack card and are dropped elsewhere (a hidden filter would still
+ * filter). Cards without the old list are returned as they are, so this is idempotent.
+ */
+function migrateVideoAttributes(attributes: VideoChainFilters['attributes'] | undefined): VideoChainFilters['attributes'] {
+  const result: VideoChainFilters['attributes'] = {};
+  for (const [key, value] of Object.entries(attributes ?? {}) as Array<[SkillType | 'any', LegacyVideoSkillAttributes | undefined]>) {
+    if (!value || typeof value !== 'object' || !('baseCodes' in value)) {
+      result[key] = value;
+      continue;
+    }
+    const { baseCodes, ...rest } = value;
+    const next: VideoSkillAttributes = rest;
+    if (key === 'set' || key === 'attack') {
+      const split = splitBaseCodeSelection(baseCodes, {
+        setterCalls: rest.setterCalls,
+        combinationCodes: key === 'attack' ? rest.combinationCodes : undefined,
+      });
+      if (split.setterCalls.length > 0) next.setterCalls = split.setterCalls;
+      if (key === 'attack' && split.combinationCodes.length > 0) next.combinationCodes = split.combinationCodes;
+    }
+    result[key] = next;
+  }
+  return result;
+}
+
+/**
  * Filters saved before the chain filters (video filter presets): converted so
  * nothing saved is lost. The old phase covered transitions too, the setter
  * position is the rotation, and the serve/receiver filters become the serve and
  * reception links of the chain. Several old skills meant "any of them", which a
  * chain cannot say: then the skill choice is dropped and the rest kept.
+ *
+ * Chain filters saved with the one mixed "Base / Combination" list are split into the Base
+ * (setter calls) and Combination filters, read the same way every time (nothing rewritten).
  */
 export function toVideoChainFilters(raw: unknown): VideoChainFilters {
   const defaults = createDefaultVideoChainFilters();
   if (typeof raw !== 'object' || raw === null) return defaults;
   if (Array.isArray((raw as Partial<VideoChainFilters>).chain)) {
-    return { ...defaults, ...(raw as Partial<VideoChainFilters>), attributes: { ...(raw as VideoChainFilters).attributes } };
+    return { ...defaults, ...(raw as Partial<VideoChainFilters>), attributes: migrateVideoAttributes((raw as VideoChainFilters).attributes) };
   }
   const legacy = raw as LegacyVideoFilters;
   const filters: VideoChainFilters = {

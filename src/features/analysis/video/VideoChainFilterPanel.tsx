@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { AttackerDirectionPhase, SetterDistributionServeType } from '@src/domain/opponent-report/types';
-import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
+import { AttackBallTypeChips, BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups, ResetFiltersButton } from '@src/components/filter-chips/FilterChips';
 import { countChangedFilters } from '@src/lib/utils/stats-scope';
 import { TOUCH_PHASES, type TouchPhase } from '@src/features/analytics/rally-phase/rally-phase-classifier';
 import type { ScoreSituation } from '@src/features/analytics/dashboard/selectors/rally-context-filters';
@@ -75,15 +75,17 @@ export interface VideoChainFilterPanelProps {
   /** Players to offer, for the actions shown (team scope) or for a previous link of the chain. */
   playerOptions: (scope: VideoTeamScope) => VideoPlayerPickOption[];
   setNumbers: readonly number[];
-  /** Base / combination codes found in the matches (setter calls K1...Kn, attack combinations). */
-  baseCodes?: readonly string[];
+  /** Base codes found in the matches: setter calls K1...Kn of the sets and attacks. */
+  setterCalls?: readonly string[];
+  /** Combination codes found in the attacks of the matches (X5, V6, ...). */
+  combinationCodes?: readonly string[];
 }
 
 /**
  * The contextual video filters: team, phase, a chain of skills with each skill's
  * attributes, then the rally context. Built from the shared filter chips.
  */
-export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOptions, setNumbers, baseCodes = [] }: VideoChainFilterPanelProps) {
+export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOptions, setNumbers, setterCalls = [], combinationCodes = [] }: VideoChainFilterPanelProps) {
   const { t } = useTranslation();
   const all = t('setterViewReceptionAll');
   // A team or chain change can hide chosen players: drop them so nothing hidden keeps filtering.
@@ -169,13 +171,31 @@ export function VideoChainFilterPanel({ filters, onChange, teamOptions, playerOp
             />
           </>
         ) : null}
-        {(key === 'set' || key === 'attack') && baseCodes.length > 0 ? (
-          <BaseCodeTable
-            label={t('attackerViewBaseLabel')}
+        {key === 'attack' ? (
+          <AttackBallTypeChips
+            label={t('attackerViewAttackBallTypeLabel')}
             allLabel={all}
-            codes={baseCodes}
-            selected={attributes.baseCodes ?? []}
-            onChange={(next) => patchAttributes(key, { baseCodes: next })}
+            selected={attributes.attackBallTypes ?? []}
+            onChange={(attackBallTypes) => patchAttributes(key, { attackBallTypes })}
+          />
+        ) : null}
+        {/* Shown while there are codes to offer or a choice is still active, so nothing hidden keeps filtering. */}
+        {(key === 'set' || key === 'attack') && (setterCalls.length > 0 || (attributes.setterCalls?.length ?? 0) > 0) ? (
+          <BaseCodeTable
+            label={t('baseFilterLabel')}
+            allLabel={all}
+            codes={setterCalls}
+            selected={attributes.setterCalls ?? []}
+            onChange={(next) => patchAttributes(key, { setterCalls: next })}
+          />
+        ) : null}
+        {key === 'attack' && (combinationCodes.length > 0 || (attributes.combinationCodes?.length ?? 0) > 0) ? (
+          <BaseCodeTable
+            label={t('combination')}
+            allLabel={all}
+            codes={combinationCodes}
+            selected={attributes.combinationCodes ?? []}
+            onChange={(next) => patchAttributes(key, { combinationCodes: next })}
           />
         ) : null}
         {players.length > 0 ? (

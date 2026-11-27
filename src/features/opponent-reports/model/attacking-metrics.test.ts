@@ -10,7 +10,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchRosterPlayer } from '@src/domain/match/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import {
-  collectAttackCombinationCodes,
+  collectAttackerViewCodeOptions,
   collectSetterCallCodes,
   computeAttackerDirectionViews,
   computeSetterRepeats,
@@ -651,6 +651,104 @@ describe('opponent attacking metrics', () => {
     expect(attempts({ id: 'both', label: 'K1 + KC', receptionBand: 'all', setterCalls: ['K1', 'KC'] })).toBe(3);
   });
 
+  it('filters custom setter distribution views by the set type (the type of the attack after the set)', () => {
+    const sideOut = (rally: number, order: number, type: string | null): RallyStats => ({
+      setNumber: 1,
+      rallyNumber: rally,
+      touches: [
+        touch(`s${rally}`, order, 'h1', 'serve', '+', { teamSide: 'home', rallyNumber: rally }),
+        touch(`r${rally}`, order + 1, 'a4', 'receive', '+', { awaySetterPosition: 1, rallyNumber: rally }),
+        touch(`set${rally}`, order + 2, 'a1', 'set', '#', { rallyNumber: rally }),
+        ...(type === null ? [] : [touch(`atk${rally}`, order + 3, 'a4', 'attack', '#', { startZoneCode: '4', attackType: type, rallyNumber: rally })]),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    });
+    const fixture = match([sideOut(1, 1, 'Q'), sideOut(2, 10, 'q'), sideOut(3, 20, 'H'), sideOut(4, 30, null)], 'm1', 'a1');
+    const metrics = computeAttackingReportMetrics([fixture]);
+    const band = (view: Parameters<typeof computeSetterDistributionViews>[1][number]) => (
+      computeSetterDistributionViews([fixture], [view], metrics.setters)[0].views[0].rotations[0].band
+    );
+    const all = band({ id: 'all', label: 'All', receptionBand: 'all' });
+    expect(all.attempts).toBe(3);
+    expect(all.sideOut?.total).toBe(4);
+    const quick = band({ id: 'q', label: 'Q', receptionBand: 'all', attackBallTypes: ['Q'] });
+    expect(quick.attempts).toBe(2);
+    // A reception without an attack has no set type: it leaves the side-out count of a filtered view.
+    expect(quick.sideOut?.total).toBe(2);
+    expect(band({ id: 'h', label: 'H', receptionBand: 'all', attackBallTypes: ['h'] }).attempts).toBe(1);
+    expect(band({ id: 'u', label: 'U', receptionBand: 'all', attackBallTypes: ['U'] }).attempts).toBe(0);
+    expect(band({ id: 'qh', label: 'Q H', receptionBand: 'all', attackBallTypes: ['Q', 'H'] }).attempts).toBe(3);
+  });
+
+  it('filters custom attacker direction views by base and combination crossed with AND', () => {
+    const rally = (number: number, order: number, call: string | undefined, combination: string | undefined, withSet = true): RallyStats => ({
+      setNumber: 1,
+      rallyNumber: number,
+      touches: [
+        touch(`d${number}`, order, 'a4', 'dig', '+', { rallyNumber: number }),
+        ...(withSet ? [touch(`set${number}`, order + 1, 'a1', 'set', '#', { rallyNumber: number, ...(call ? { setterCallCode: call } : {}) })] : []),
+        touch(`atk${number}`, order + 2, 'a4', 'attack', '#', {
+          startZoneCode: '4',
+          rallyNumber: number,
+          ...(combination ? { combinationCode: combination } : {}),
+          ...(!withSet && call ? { setterCallCode: call } : {}),
+        }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'away',
+      pointWinner: 'away',
+      terminalReason: null,
+    });
+    const fixture = match([
+      rally(1, 1, 'K1', 'X5'),
+      rally(2, 10, 'K1', undefined),
+      rally(3, 20, 'K7', 'X5'),
+      // Older data: the setter call saved as the attack's combination, no set scouted.
+      rally(4, 30, undefined, 'K2', false),
+    ], 'm1', 'a1');
+    const metrics = computeAttackingReportMetrics([fixture]);
+    expect(collectAttackerViewCodeOptions([fixture])).toEqual({ setterCalls: ['K1', 'K2', 'K7'], combinationCodes: ['X5'] });
+    const count = (filter: { setterCalls?: string[]; combinationCodes?: string[] }) => (
+      computeAttackerDirectionViews([fixture], [{ id: 'v', label: 'V', ...filter }], metrics.attackers)[0]
+        .attackers.find((entry) => entry.player.jersey === '4')?.attacks ?? 0
+    );
+    expect(count({})).toBe(4);
+    // Base counts every attack whose set had that call, also when the attack has a combination.
+    expect(count({ setterCalls: ['K1'] })).toBe(2);
+    expect(count({ setterCalls: ['k1'] })).toBe(2);
+    expect(count({ combinationCodes: ['X5'] })).toBe(2);
+    expect(count({ setterCalls: ['K1'], combinationCodes: ['X5'] })).toBe(1);
+    expect(count({ setterCalls: ['K7'], combinationCodes: ['X5'] })).toBe(1);
+    expect(count({ setterCalls: ['K2'] })).toBe(1);
+    // A K code saved among the combinations (reports of older versions) is read as Base.
+    expect(count({ combinationCodes: ['K2'] })).toBe(1);
+    expect(count({ combinationCodes: ['K1', 'X5'] })).toBe(1);
+  });
+
+  it('converts K codes saved among the combinations of an attacker view into Base', () => {
+    const rally = (number: number, order: number, call: string, combination: string): RallyStats => ({
+      setNumber: 1,
+      rallyNumber: number,
+      touches: [
+        touch(`d${number}`, order, 'a4', 'dig', '+', { rallyNumber: number }),
+        touch(`set${number}`, order + 1, 'a1', 'set', '#', { rallyNumber: number, setterCallCode: call }),
+        touch(`atk${number}`, order + 2, 'a4', 'attack', '#', { startZoneCode: '4', rallyNumber: number, combinationCode: combination }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'away',
+      pointWinner: 'away',
+      terminalReason: null,
+    });
+    const fixture = match([rally(1, 1, 'K1', 'X5'), rally(2, 10, 'K1', 'V5'), rally(3, 20, 'K7', 'X5')], 'm1', 'a1');
+    const metrics = computeAttackingReportMetrics([fixture]);
+    const [legacy] = computeAttackerDirectionViews([fixture], [{ id: 'old', label: 'Old', combinationCodes: ['K1', 'X5'] }], metrics.attackers);
+    expect(legacy.config).toMatchObject({ id: 'old', setterCalls: ['K1'], combinationCodes: ['X5'] });
+    expect(legacy.attackers.find((entry) => entry.player.jersey === '4')?.attacks).toBe(1);
+  });
+
   it('filters custom attacker direction views by attack type (H M Q T U N O)', () => {
     const attack = (id: string, order: number, type: string, rally: number): RallyStats => ({
       setNumber: 1,
@@ -742,7 +840,7 @@ describe('opponent attacking metrics', () => {
     expect(player.directionsForDrawing.map((direction) => direction.touchId)).toEqual(['open']);
   });
 
-  it('filters custom attacker direction views by phase, reception, rotation, zone, subtype, base/combination, blockers, and evaluation', () => {
+  it('filters custom attacker direction views by phase, reception, rotation, zone, subtype, base, combination, blockers, and evaluation', () => {
     const rallies: RallyStats[] = [
       {
         setNumber: 1,
@@ -790,7 +888,7 @@ describe('opponent attacking metrics', () => {
     ];
     const fixture = match(rallies, 'm1', 'a1');
     const metrics = computeAttackingReportMetrics([fixture]);
-    expect(collectAttackCombinationCodes([fixture])).toEqual(['V5', 'X5']);
+    expect(collectAttackerViewCodeOptions([fixture])).toEqual({ setterCalls: ['K1'], combinationCodes: ['V5', 'X5'] });
 
     const views = computeAttackerDirectionViews(
       [fixture],

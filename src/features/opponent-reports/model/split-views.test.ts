@@ -43,6 +43,16 @@ describe('draw separately', () => {
     expect(chosen.map((view) => view.id)).toEqual(['s~K7', 's~K1']);
   });
 
+  it('splits setter views by set type, one card per letter, or by the chosen letters', () => {
+    const base = { id: 's', label: 'S', receptionBand: 'all' as const, splitBy: 'attackBallTypes' as const };
+    const all = expandSetterViews([base], (_, value) => String(value));
+    expect(all.map((view) => view.id)).toEqual(['s~H', 's~M', 's~Q', 's~T', 's~U', 's~N', 's~O']);
+    expect(all.every((view) => view.splitBy === undefined)).toBe(true);
+    expect(all[2]).toMatchObject({ attackBallTypes: ['Q'], label: 'S · Q' });
+    const chosen = expandSetterViews([{ ...base, attackBallTypes: ['Q', 'H'] }], (_, value) => String(value));
+    expect(chosen.map((view) => [view.id, view.attackBallTypes])).toEqual([['s~Q', ['Q']], ['s~H', ['H']]]);
+  });
+
   it('keeps one card when the matches hold no setter call to split by', () => {
     const views = expandSetterViews([{ id: 's', label: 'S', receptionBand: 'all', splitBy: 'setterCalls' }], (_, value) => String(value));
     expect(views.map((view) => view.id)).toEqual(['s']);

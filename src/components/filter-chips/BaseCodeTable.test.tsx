@@ -26,3 +26,14 @@ describe('base code table', () => {
     expect(screen.queryByText('Combinations')).toBeNull();
   });
 });
+
+describe('base code table with a choice missing from the codes', () => {
+  it('still shows a chip for the chosen code, marked as chosen', () => {
+    render(
+      <I18nProvider><BaseCodeTable allLabel="All" codes={['K1']} selected={['K9']} onChange={() => undefined} /></I18nProvider>,
+    );
+    const chip = screen.getByRole('button', { name: 'K9' });
+    expect(chip.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'K1' }).getAttribute('aria-pressed')).toBe('false');
+  });
+});

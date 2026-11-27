@@ -3,6 +3,8 @@
  * to prepare the match against it, printed as a multi-sheet PDF.
  */
 import type { AttackSubtype } from '../touch/types';
+// Value import must be relative: modules reached by node:test files (ts-node/esm) import these types.
+import { isSetterCallCode, splitBaseCodeSelection } from '../match/code-tables';
 
 /** A team referenced by the report: the archived team when linked, else its name. */
 export interface OpponentReportTeamRef {
@@ -208,7 +210,7 @@ export interface OpponentReportBooklet {
 
 export type OpponentReportComponentId = OpponentReportSheetId | 'notes';
 
-/** Custom setter distribution view filter (serve type, serve start zone, reception band). */
+/** Custom setter distribution view filter (serve type, serve start zone, reception band, base, set type). */
 export type SetterDistributionServeType = 'jump_spin' | 'jump_float' | 'float' | 'other';
 export type SetterDistributionReceptionBand = 'all' | 'positive' | 'negative';
 export type SetterDistributionReceptionEval = '#' | '+' | '!' | '-';
@@ -227,13 +229,18 @@ export interface SetterDistributionViewConfig {
   receptionZones?: string[];
   /** Empty or omitted = all receivers (ReportPlayer.key). */
   receiverKeys?: string[];
-  /** Setter calls ('K1', 'KC', ...) the set was called with. Empty or omitted = every set, called or not. */
+  /** Setter calls ('K1', 'KC', ...) the set was called with (the "Base"). Empty or omitted = every set, called or not. */
   setterCalls?: string[];
+  /**
+   * Set type: the ball type letter (H, M, Q, T, U, N, O) of the attack that follows the set.
+   * Empty or omitted = every set, with or without an attack.
+   */
+  attackBallTypes?: string[];
   /** Draw one card per value of this filter ("draw separately"); omitted = one card ("draw together"). */
-  splitBy?: 'serveStartZones' | 'receptionZones' | 'serveTypes' | 'setterCalls';
+  splitBy?: 'serveStartZones' | 'receptionZones' | 'serveTypes' | 'setterCalls' | 'attackBallTypes';
 }
 
-/** Custom attacker direction view filter (phase, reception, rotation, zone, subtype, base/combination, blockers, evaluation). */
+/** Custom attacker direction view filter (phase, reception, rotation, zone, subtype, set type, base, combination, blockers, evaluation). */
 export type AttackerDirectionPhase = 'after_receive' | 'after_dig' | 'high_ball' | 'late_set';
 export type AttackerDirectionEvaluation = '#' | '+' | '!' | '-' | '/' | '=';
 
@@ -254,12 +261,34 @@ export interface AttackerDirectionViewConfig {
   blockers?: number[];
   /** Empty or omitted = all attack subtypes ('H' hard, 'P' placed, 'T' tip). */
   attackSubtypes?: AttackSubtype[];
-  /** Empty or omitted = all attack combination / base codes (e.g. 'X5', 'V5', 'XP', 'K1'). */
+  /** Setter calls (K1, KC, ...) of the set just before the attack (the "Base"). Empty or omitted = all. */
+  setterCalls?: string[];
+  /**
+   * The attack's own combination codes (e.g. 'X5', 'V5', 'XP'). Empty or omitted = all. Reports
+   * saved before the Base had its own filter may hold K codes here: read views through
+   * `normalizeAttackerDirectionView`, which moves them to `setterCalls`.
+   */
   combinationCodes?: string[];
-  /** Empty or omitted = all attack types (DataVolley ball type letter: H, M, Q, T, U, N, O). */
+  /** Empty or omitted = all set types (DataVolley ball type letter of the attack: H, M, Q, T, U, N, O). */
   attackBallTypes?: string[];
   /** Draw one card per value of this filter ("draw separately"); omitted = one card ("draw together"). */
   splitBy?: 'attackZones' | 'rotations' | 'phases' | 'attackBallTypes';
+}
+
+/**
+ * Reads an attacker view saved by older versions, where setter calls (K1, KC, ...) and attack
+ * combinations shared `combinationCodes`: the K codes move to `setterCalls` (merged with the ones
+ * already there), the other codes stay. Returns the same object when there is nothing to move, so
+ * it is idempotent and can run on every read.
+ */
+export function normalizeAttackerDirectionView(view: AttackerDirectionViewConfig): AttackerDirectionViewConfig {
+  if (!view.combinationCodes?.some((code) => isSetterCallCode(code))) return view;
+  const split = splitBaseCodeSelection(undefined, { setterCalls: view.setterCalls, combinationCodes: view.combinationCodes });
+  return {
+    ...view,
+    setterCalls: split.setterCalls.length > 0 ? split.setterCalls : undefined,
+    combinationCodes: split.combinationCodes.length > 0 ? split.combinationCodes : undefined,
+  };
 }
 
 export interface OpponentReport {
@@ -309,6 +338,13 @@ export interface OpponentReport {
   sheets: OpponentReportSheetState[];
   createdAt: number;
   updatedAt: number;
+}
+
+/** A report whose attacker views are read through `normalizeAttackerDirectionView`; the same object when nothing changes. */
+export function normalizeOpponentReportViews(report: OpponentReport): OpponentReport {
+  if (!report.attackerViews?.length) return report;
+  const attackerViews = report.attackerViews.map(normalizeAttackerDirectionView);
+  return attackerViews.every((view, index) => view === report.attackerViews![index]) ? report : { ...report, attackerViews };
 }
 
 /** The default ("quick") report includes Keys, Overview, Reception, Serve Targets, and Board. */

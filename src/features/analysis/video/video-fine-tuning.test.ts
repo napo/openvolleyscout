@@ -48,6 +48,15 @@ describe('saved filters', () => {
     expect(applied).toMatchObject({ chain: ['attack'], phases: ['break_point', 'transition_break_point'], attributes: { attack: { playerIds: ['p4'], evaluations: ['#'] } } });
   });
 
+  it('splits the old mixed "Base / Combination" list of a saved preset when applied', () => {
+    const defaults = createDefaultVideoChainFilters();
+    const saved = { id: 'base', name: 'Base', filters: { ...defaults, chain: ['attack'], attributes: { attack: { baseCodes: ['K1', 'X5'] } } } };
+    const applied = applyVideoFilterPreset(saved as never, new Set());
+    expect(applied.attributes.attack).toEqual({ setterCalls: ['K1'], combinationCodes: ['X5'], playerIds: [] });
+    // The stored preset is left as it was until it is saved again.
+    expect(saved.filters.attributes.attack.baseCodes).toEqual(['K1', 'X5']);
+  });
+
   it('brings back only the team choices the view can show', () => {
     const defaults = createDefaultVideoChainFilters();
     const studied = upsertVideoFilterPreset([], 'Studied', { ...defaults, team: 'focus' }, 1)[0]!;

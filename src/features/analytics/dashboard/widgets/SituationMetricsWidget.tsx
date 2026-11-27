@@ -161,6 +161,8 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
 
   // Rotation and score situation are read from each team's point of view, so
   // each team's numbers come from its own filtered rallies.
+  // Base, Combination and Set type are deliberately left out: Game situations
+  // count whole rallies by phase and outcome, not the attacks of one kind.
   const { rotation, scoreRange, server, receiver, attacker } = filters;
   const homeRallies = useMemo(
     () => filterRalliesForTeam(rallies, { rotation, scoreRange, server, receiver, attacker }, 'home'),

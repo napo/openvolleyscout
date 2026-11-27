@@ -14,6 +14,7 @@ import type { KeySuggestion } from '../model/report-keys';
 import { useMemo, useRef, useState } from 'react';
 import { ActionIcon } from '@src/components/ActionIcon';
 import { useTranslation } from '@src/i18n';
+import type { AttackCodeOptions } from '@src/features/analytics/attack-context/attack-codes';
 import type {
   OpponentReport,
   OpponentReportComponentId,
@@ -196,6 +197,8 @@ function EditableStringList({
   );
 }
 
+const NO_ATTACK_CODE_OPTIONS: AttackCodeOptions = { setterCalls: [], combinationCodes: [] };
+
 export function TacticalBoardSheet({
   report,
   plan,
@@ -203,7 +206,7 @@ export function TacticalBoardSheet({
   view,
   viewT,
   rosterPlayers,
-  attackCombinationCodes = [],
+  attackCodeOptions = NO_ATTACK_CODE_OPTIONS,
   setterCallCodes = [],
   suggestions,
   update,
@@ -214,7 +217,8 @@ export function TacticalBoardSheet({
   view: ReportView;
   viewT: ViewT;
   rosterPlayers: readonly ReportPlayer[];
-  attackCombinationCodes?: readonly string[];
+  /** Base and Combination codes of the opponent's attacks, for the attacker view filters. */
+  attackCodeOptions?: AttackCodeOptions;
   setterCallCodes?: readonly string[];
   suggestions: readonly KeySuggestion[];
   update: Update;
@@ -544,7 +548,8 @@ export function TacticalBoardSheet({
           {selected === 'attackers' ? (
             <AttackerViewsEditor
               views={report.attackerViews}
-              combinationCodes={attackCombinationCodes}
+              setterCallCodes={attackCodeOptions.setterCalls}
+              combinationCodes={attackCodeOptions.combinationCodes}
               onChange={(nextViews) => update((current) => {
                 const attackerPlayerKeys = view.attackers.map((a) => a.player.key);
                 const nextAttackerPieceIds = nextViews && nextViews.length > 0

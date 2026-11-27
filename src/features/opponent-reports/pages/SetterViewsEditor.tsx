@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { SplitToggle } from './SplitToggle';
-import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
+import { AttackBallTypeChips, BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type {
   SetterDistributionReceptionEval,
   SetterDistributionServeType,
@@ -90,6 +90,7 @@ export function SetterViewsEditor({ views, receivers = [], setterCallCodes = [],
           receptionZones: base.receptionZones ? [...base.receptionZones] : undefined,
           receiverKeys: base.receiverKeys ? [...base.receiverKeys] : undefined,
           setterCalls: base.setterCalls ? [...base.setterCalls] : undefined,
+          attackBallTypes: base.attackBallTypes ? [...base.attackBallTypes] : undefined,
         }
       : {
           id,
@@ -234,8 +235,19 @@ export function SetterViewsEditor({ views, receivers = [], setterCallCodes = [],
                     />
                   </FilterGroup>
 
-                  {setterCallCodes.length > 0 ? (
-                    <FilterGroup title={t('setterCall')} active={Boolean(view.setterCalls?.length)} wide>
+                  {/* Set type: the type of the attack that follows the set. */}
+                  <FilterGroup title={t('attackerViewAttackBallTypeLabel')} active={Boolean(view.attackBallTypes?.length)}>
+                    <SplitToggle separate={view.splitBy === 'attackBallTypes'} onChange={(separate) => patchView(index, { splitBy: separate ? 'attackBallTypes' : undefined })} />
+                    <AttackBallTypeChips
+                      allLabel={all}
+                      selected={view.attackBallTypes ?? []}
+                      onChange={(next) => patchView(index, { attackBallTypes: next.length > 0 ? next : undefined })}
+                    />
+                  </FilterGroup>
+
+                  {/* Base: the setter call of the set. Visible while it has a choice, even with no codes in the matches. */}
+                  {setterCallCodes.length > 0 || view.setterCalls?.length ? (
+                    <FilterGroup title={t('baseFilterLabel')} active={Boolean(view.setterCalls?.length)} wide>
                       <SplitToggle separate={view.splitBy === 'setterCalls'} onChange={(separate) => patchView(index, { splitBy: separate ? 'setterCalls' : undefined })} />
                       <BaseCodeTable
                         allLabel={all}

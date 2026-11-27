@@ -8,8 +8,10 @@ import { buildVideoEventIndex } from './video-event-index';
 import {
   annotateVideoEntries,
   applyVideoChainFilters,
-  availableBaseCodes,
+  availableCombinationCodes,
+  availableSetterCalls,
   createDefaultVideoChainFilters,
+  toVideoChainFilters,
   type VideoChainFilters,
 } from './video-chain-filters';
 
@@ -104,6 +106,47 @@ describe('filters saved before the chain filters', () => {
     expect(toVideoChainFilters({ skills: ['serve', 'attack'], evaluations: ['#', '+', '!', '-', '/', '='] }).chain).toEqual([]);
     expect(toVideoChainFilters(converted)).toEqual(converted);
   });
+
+  it('splits the old mixed "Base / Combination" list into Base and Combination', () => {
+    const saved = {
+      ...createDefaultVideoChainFilters(),
+      chain: ['set', 'attack'],
+      attributes: {
+        set: { baseCodes: ['K1', 'X5'] },
+        attack: { baseCodes: ['k1', 'KC', 'X5'], evaluations: ['#'] },
+        any: { baseCodes: ['K2'], playerIds: ['p1'] },
+        serve: { serveTypes: ['float'] },
+      },
+    };
+    const converted = toVideoChainFilters(saved);
+    expect(converted.attributes).toEqual({
+      // The set card has no Combination filter: other codes would filter unseen, so they go.
+      set: { setterCalls: ['K1'] },
+      attack: { setterCalls: ['K1', 'KC'], combinationCodes: ['X5'], evaluations: ['#'] },
+      any: { playerIds: ['p1'] },
+      serve: { serveTypes: ['float'] },
+    });
+    expect(JSON.stringify(converted)).not.toContain('baseCodes');
+    // Read again, nothing changes; the input is left as it was.
+    expect(toVideoChainFilters(converted)).toEqual(converted);
+    expect(saved.attributes.set.baseCodes).toEqual(['K1', 'X5']);
+  });
+
+  it('merges the old list with Base and Combination already saved, each code once', () => {
+    const converted = toVideoChainFilters({
+      ...createDefaultVideoChainFilters(),
+      chain: ['attack'],
+      attributes: { attack: { setterCalls: ['K2'], combinationCodes: ['X6'], baseCodes: ['K2', 'k1', 'x6', 'X5', ''] } },
+    });
+    expect(converted.attributes.attack).toEqual({ setterCalls: ['K2', 'K1'], combinationCodes: ['X6', 'X5'] });
+  });
+
+  it('leaves cards without the old list as they are, and drops an empty old list', () => {
+    const current = { ...createDefaultVideoChainFilters(), chain: ['attack' as const], attributes: { attack: { attackBallTypes: ['Q'], setterCalls: ['K1'] } } };
+    expect(toVideoChainFilters(current)).toEqual(current);
+    const empty = toVideoChainFilters({ ...current, attributes: { attack: { baseCodes: [], evaluations: ['#'] } } });
+    expect(empty.attributes).toEqual({ attack: { evaluations: ['#'] } });
+  });
 });
 
 describe('chosen players and the visible cards', () => {
@@ -156,17 +199,65 @@ describe('choosing the skill shown in the chain', () => {
     expect(sets.length).toBeLessThan(filter({ chain: ['receive', 'set'] }).length);
   });
 
-  it('filters sets and attacks by base / combination (setter calls K1...Kn, attack codes)', () => {
-    const codes = availableBaseCodes(items);
-    expect(codes.length).toBeGreaterThan(0);
-    // The bases (K..) come first in the list; an attack carries its own combination code.
-    const code = items.find((item) => item.entry.skill === 'attack' && item.baseCode)?.baseCode!;
-    expect(codes).toContain(code);
-    const attacks = filter({ chain: ['attack'] });
-    const withCode = filter({ chain: ['attack'], attributes: { attack: { baseCodes: [code] } } });
-    expect(withCode.length).toBeGreaterThan(0);
-    expect(withCode.length).toBeLessThanOrEqual(attacks.length);
-    const kept = new Set(withCode);
-    expect(items.filter((item) => kept.has(item.entry)).every((item) => item.baseCode === code)).toBe(true);
+  it('filters sets and attacks by Base (setter call): an attack takes the call of its set', () => {
+    const calls = availableSetterCalls(items);
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every((code) => /^K[A-Z0-9]$/.test(code))).toBe(true);
+    const call = items.find((item) => item.entry.skill === 'attack' && item.setterCall)?.setterCall!;
+    expect(calls).toContain(call);
+
+    const sets = filter({ chain: ['set'] });
+    const setsOnCall = filter({ chain: ['set'], attributes: { set: { setterCalls: [call] } } });
+    expect(setsOnCall.length).toBeGreaterThan(0);
+    expect(setsOnCall.length).toBeLessThanOrEqual(sets.length);
+    const keptSets = new Set(setsOnCall);
+    expect(items.filter((item) => keptSets.has(item.entry)).every((item) => item.setterCall === call)).toBe(true);
+
+    const attacksOnCall = filter({ chain: ['attack'], attributes: { attack: { setterCalls: [call.toLowerCase()] } } });
+    expect(attacksOnCall.length).toBeGreaterThan(0);
+    const keptAttacks = new Set(attacksOnCall);
+    const keptItems = items.filter((item) => keptAttacks.has(item.entry));
+    expect(keptItems.every((item) => item.entry.skill === 'attack' && item.setterCall === call)).toBe(true);
+    expect(keptItems).toHaveLength(items.filter((item) => item.entry.skill === 'attack' && item.setterCall === call).length);
   });
+
+  it('filters attacks by their own Combination, never a K code', () => {
+    const combinations = availableCombinationCodes(items);
+    expect(combinations.length).toBeGreaterThan(0);
+    expect(combinations.some((code) => /^K[A-Z0-9]$/.test(code))).toBe(false);
+    const code = combinations[0]!;
+    const attacks = filter({ chain: ['attack'], attributes: { attack: { combinationCodes: [code] } } });
+    expect(attacks.length).toBeGreaterThan(0);
+    const kept = new Set(attacks);
+    expect(items.filter((item) => kept.has(item.entry)).every((item) => item.combinationCode === code)).toBe(true);
+    expect(attacks).toHaveLength(items.filter((item) => item.entry.skill === 'attack' && item.combinationCode === code).length);
+  });
+
+  it('crosses Base and Combination with AND', () => {
+    const pair = items.find((item) => item.entry.skill === 'attack' && item.setterCall && item.combinationCode)!;
+    expect(pair).toBeDefined();
+    const base = filter({ chain: ['attack'], attributes: { attack: { setterCalls: [pair.setterCall!] } } });
+    const combination = filter({ chain: ['attack'], attributes: { attack: { combinationCodes: [pair.combinationCode!] } } });
+    const both = filter({ chain: ['attack'], attributes: { attack: { setterCalls: [pair.setterCall!], combinationCodes: [pair.combinationCode!] } } });
+    expect(both.length).toBeGreaterThan(0);
+    expect(both.length).toBeLessThanOrEqual(Math.min(base.length, combination.length));
+    const kept = new Set(both);
+    expect(items.filter((item) => kept.has(item.entry))
+      .every((item) => item.setterCall === pair.setterCall && item.combinationCode === pair.combinationCode)).toBe(true);
+  });
+
+  it('filters attacks by set type (ball type letter), as the tactical report reads it', () => {
+    const attackItems = items.filter((item) => item.entry.skill === 'attack');
+    const letters = attackItems.map((item) => item.attack?.ballType).filter((type): type is string => Boolean(type));
+    expect(letters.length).toBeGreaterThan(0);
+    expect(letters.every((type) => /^[HMQTUNO]$/.test(type))).toBe(true);
+    const letter = letters[0]!;
+    const expected = attackItems.filter((item) => (item.entry.touch.attackType ?? item.entry.touch.skillTypeCode)?.trim().toUpperCase() === letter);
+    const kept = filter({ chain: ['attack'], attributes: { attack: { attackBallTypes: [letter] } } });
+    expect(kept.length).toBeGreaterThan(0);
+    expect(kept).toHaveLength(expected.length);
+    // Sets carry no set type, so the filter on the set card would keep none.
+    expect(items.filter((item) => item.entry.skill === 'set').every((item) => item.attack === undefined)).toBe(true);
+  });
+
 });

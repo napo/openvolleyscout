@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { AttackerDirectionViewConfig } from '@src/domain/opponent-report/types';
+import { normalizeAttackerDirectionView, type AttackerDirectionViewConfig } from '@src/domain/opponent-report/types';
 import type { TranslationKey } from '@src/i18n';
 
 /** Describes the actual sample independently of the coach's editable view title. */
-export function attackerViewFilterLabel(view: AttackerDirectionViewConfig, t: (key: TranslationKey) => string): string {
+export function attackerViewFilterLabel(savedView: AttackerDirectionViewConfig, t: (key: TranslationKey) => string): string {
+  // Older reports may hold K codes among the combinations: they are the Base.
+  const view = normalizeAttackerDirectionView(savedView);
   const parts: string[] = [];
   const phaseKeys = {
     after_receive: 'opponentReportAttackAfterReceive',
@@ -22,6 +24,7 @@ export function attackerViewFilterLabel(view: AttackerDirectionViewConfig, t: (k
   if (view.blockers?.length) parts.push(`${t('opponentReportAttackBlockers')}: ${view.blockers.join('/')}`);
   if (view.evaluations?.length) parts.push(`${t('attackerViewEvaluationLabel')}: ${view.evaluations.join('/')}`);
   if (view.attackBallTypes?.length) parts.push(`${t('attackerViewAttackBallTypeLabel')}: ${view.attackBallTypes.join('/')}`);
-  if (view.combinationCodes?.length) parts.push(`${t('attackerViewBaseLabel')}: ${view.combinationCodes.join('/')}`);
+  if (view.setterCalls?.length) parts.push(`${t('baseFilterLabel')}: ${view.setterCalls.join('/')}`);
+  if (view.combinationCodes?.length) parts.push(`${t('combination')}: ${view.combinationCodes.join('/')}`);
   return parts.join(' · ');
 }

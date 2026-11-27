@@ -3,15 +3,20 @@ import { nextChartRotation, rotateCanvasDrawing, type ChartRotation } from '@src
 import SimpleHeat from 'simpleheat';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
-import { getAttackSubtypeOrDefault, type AttackSubtype, type BallTouch } from '@src/domain/touch/types';
+import type { AttackSubtype, BallTouch } from '@src/domain/touch/types';
 import type {
   AttackerDirectionPhase,
   SetterDistributionReceptionEval,
 } from '@src/domain/opponent-report/types';
-import { attackZoneNumber } from '../../sideout/sideout-distribution';
-import { BACK_ROW_ZONE_MAP, isHighBall, scoreBeforeRallies } from '../../attack-context/attack-context';
-import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
+import { AttackBallTypeChips, BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
+import {
+  collectHeatmapAttackCodes,
+  countActiveAttackFilters,
+  EMPTY_HEATMAP_ATTACK_FILTERS,
+  filterRalliesByAttackFilters,
+  type HeatmapAttackFilters,
+} from '../filters/heatmap-attack-filters';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
 import { ALL_EVALUATIONS, matchesAny } from '../../dashboard/filters/dashboard-filters';
 import { getTeamsToShow } from '../../dashboard/selectors/dashboard-selectors';
@@ -1234,26 +1239,6 @@ export interface ZoneDensityModeProps {
   filters?: DashboardFilters;
 }
 
-interface HeatmapAttackFilters {
-  phases: AttackerDirectionPhase[];
-  receptionEvaluations: SetterDistributionReceptionEval[];
-  rotations: number[];
-  attackZones: string[];
-  attackSubtypes: AttackSubtype[];
-  blockers: number[];
-  combinationCodes: string[];
-}
-
-const EMPTY_HEATMAP_ATTACK_FILTERS: HeatmapAttackFilters = {
-  phases: [],
-  receptionEvaluations: [],
-  rotations: [],
-  attackZones: [],
-  attackSubtypes: [],
-  blockers: [],
-  combinationCodes: [],
-};
-
 const HEATMAP_ATTACK_PHASES: ReadonlyArray<{
   value: AttackerDirectionPhase;
   labelKey: 'opponentReportAttackAfterReceive' | 'opponentReportAttackAfterDig' | 'opponentReportAttackHighBall' | 'opponentReportAttackLateSet';
@@ -1275,130 +1260,6 @@ const HEATMAP_ATTACK_SUBTYPES: ReadonlyArray<{
   { value: 'T', labelKey: 'attackSubtypeTip' },
 ];
 const HEATMAP_BLOCKERS = [0, 1, 2, 3, 4] as const; // 4 = open block (DataVolley players-at-net value)
-
-function hasAnyAttackFilter(f: HeatmapAttackFilters): boolean {
-  return (
-    f.phases.length > 0
-    || f.receptionEvaluations.length > 0
-    || f.rotations.length > 0
-    || f.attackZones.length > 0
-    || f.attackSubtypes.length > 0
-    || f.blockers.length > 0
-    || f.combinationCodes.length > 0
-  );
-}
-
-function resolveTouchCombinationCode(sorted: readonly BallTouch[], index: number, teamSide: 'home' | 'away'): string | undefined {
-  const touch = sorted[index];
-  if (touch.combinationCode?.trim()) return touch.combinationCode.trim().toUpperCase();
-  for (let i = index - 1; i >= 0; i -= 1) {
-    const prev = sorted[i];
-    if (prev.teamSide !== teamSide) break;
-    if (prev.skill === 'set') {
-      const code = prev.setterCallCode?.trim() || prev.combinationCode?.trim();
-      if (code) return code.toUpperCase();
-      break;
-    }
-    if (prev.skill !== 'cover') break;
-  }
-  return touch.setterCallCode?.trim() ? touch.setterCallCode.trim().toUpperCase() : undefined;
-}
-
-function filterRalliesByAttackFilters(
-  rallies: readonly RallyStats[],
-  teamSide: 'home' | 'away',
-  attackFilters: HeatmapAttackFilters,
-): RallyStats[] {
-  if (!hasAnyAttackFilter(attackFilters)) return [...rallies];
-
-  // "Late set" follows the final-phase score of Settings > Analysis, like the tactical report and Video analysis.
-  const lateRallies = scoreBeforeRallies(rallies);
-
-  return rallies.map((rally) => {
-    const sorted = [...rally.touches].sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
-    const contexts = classifyAttackPrecedingContext(rally);
-    const isLate = Boolean(lateRallies.get(`${rally.setNumber}:${rally.rallyNumber}`));
-    const keepIds = new Set<string>();
-
-    for (let i = 0; i < sorted.length; i += 1) {
-      const touch = sorted[i];
-      if (touch.teamSide !== teamSide || touch.skill !== 'attack') {
-        keepIds.add(touch.id);
-        continue;
-      }
-
-      const preceding = contexts.get(touch.id);
-      let prevReceive: BallTouch | undefined;
-      let prevSet: BallTouch | undefined;
-      for (let j = i - 1; j >= 0; j -= 1) {
-        const prev = sorted[j];
-        if (prev.teamSide !== teamSide) break;
-        if (prev.skill === 'set' && !prevSet) prevSet = prev;
-        if (prev.skill === 'receive') {
-          prevReceive = prev;
-          break;
-        }
-        if (prev.skill !== 'set' && prev.skill !== 'cover') break;
-      }
-
-      const isHigh = isHighBall(prevSet ?? null, touch);
-
-      if (attackFilters.phases.length > 0) {
-        const phaseOk = attackFilters.phases.some((phase) => {
-          if (phase === 'after_receive') return preceding === 'receive';
-          if (phase === 'after_dig') return preceding === 'dig';
-          if (phase === 'high_ball') return isHigh;
-          if (phase === 'late_set') return isLate;
-          return false;
-        });
-        if (!phaseOk) continue;
-      }
-
-      if (attackFilters.receptionEvaluations.length > 0) {
-        const recEval = preceding === 'receive' ? prevReceive?.evaluation : undefined;
-        if (!recEval || !attackFilters.receptionEvaluations.includes(recEval as SetterDistributionReceptionEval)) continue;
-      }
-
-      if (attackFilters.rotations.length > 0) {
-        const rot = teamSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition;
-        if (!rot || !attackFilters.rotations.includes(rot)) continue;
-      }
-
-      if (attackFilters.attackZones.length > 0) {
-        const rawZone = attackZoneNumber(touch);
-        const normZone = rawZone === null ? null : String(BACK_ROW_ZONE_MAP[rawZone] ?? rawZone);
-        if (!normZone || !attackFilters.attackZones.includes(normZone)) continue;
-      }
-
-      if (attackFilters.attackSubtypes.length > 0) {
-        const subtype = getAttackSubtypeOrDefault(touch);
-        if (!subtype || !attackFilters.attackSubtypes.includes(subtype)) continue;
-      }
-
-      if (attackFilters.blockers.length > 0) {
-        let blockerCount = touch.numBlockers;
-        if (blockerCount === undefined) {
-          for (let j = i + 1; j < sorted.length; j += 1) {
-            if (sorted[j].teamSide === teamSide) continue;
-            if (sorted[j].skill === 'block') blockerCount = sorted[j].numBlockers;
-            break;
-          }
-        }
-        if (blockerCount === undefined || !attackFilters.blockers.includes(blockerCount)) continue;
-      }
-
-      if (attackFilters.combinationCodes.length > 0) {
-        const combo = resolveTouchCombinationCode(sorted, i, teamSide);
-        if (!combo || !attackFilters.combinationCodes.includes(combo)) continue;
-      }
-
-      keepIds.add(touch.id);
-    }
-
-    if (keepIds.size === rally.touches.length) return rally;
-    return { ...rally, touches: rally.touches.filter((touch) => keepIds.has(touch.id)) };
-  });
-}
 
 export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: ZoneDensityModeProps) {
   const { t } = useTranslation();
@@ -1429,20 +1290,11 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
     return rallies;
   }, [stats.rallyStats, filters?.set]);
 
-  const availableCombinationCodes = useMemo(() => {
-    const codes = new Set<string>();
-    for (const rally of filteredRallies) {
-      const sorted = [...rally.touches].sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
-      for (let i = 0; i < sorted.length; i += 1) {
-        const touch = sorted[i];
-        if (touch.teamSide !== teamSide || touch.skill !== 'attack') continue;
-        if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
-        const code = resolveTouchCombinationCode(sorted, i, teamSide);
-        if (code) codes.add(code);
-      }
-    }
-    return [...codes].sort((a, b) => a.localeCompare(b));
-  }, [filteredRallies, teamSide, filters?.player]);
+  // The Base and Combination chips list the codes of this team's attacks (of the chosen player, if any).
+  const availableAttackCodes = useMemo(
+    () => collectHeatmapAttackCodes(filteredRallies, teamSide, filters?.player),
+    [filteredRallies, teamSide, filters?.player],
+  );
 
   const effectiveRallies = useMemo(
     () => (skill === 'attack' || skill === 'all'
@@ -1451,15 +1303,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
     [filteredRallies, skill, teamSide, attackFilters],
   );
 
-  const activeAttackFilterCount = useMemo(() => (
-    (attackFilters.phases.length > 0 ? 1 : 0)
-    + (attackFilters.receptionEvaluations.length > 0 ? 1 : 0)
-    + (attackFilters.rotations.length > 0 ? 1 : 0)
-    + (attackFilters.attackZones.length > 0 ? 1 : 0)
-    + (attackFilters.attackSubtypes.length > 0 ? 1 : 0)
-    + (attackFilters.blockers.length > 0 ? 1 : 0)
-    + (attackFilters.combinationCodes.length > 0 ? 1 : 0)
-  ), [attackFilters]);
+  const activeAttackFilterCount = useMemo(() => countActiveAttackFilters(attackFilters), [attackFilters]);
 
   const allLabel = t('setterViewReceptionAll');
   const setAttackFilter = <K extends keyof HeatmapAttackFilters>(field: K, next: HeatmapAttackFilters[K]) => {
@@ -1727,9 +1571,16 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
               <ChipSelect
                 allLabel={allLabel}
                 layout="court"
-            options={HEATMAP_ATTACK_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
+                options={HEATMAP_ATTACK_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
                 selected={attackFilters.attackZones}
                 onChange={(next) => setAttackFilter('attackZones', next)}
+              />
+            </FilterGroup>
+            <FilterGroup title={t('attackerViewAttackBallTypeLabel')} active={attackFilters.attackBallTypes.length > 0}>
+              <AttackBallTypeChips
+                allLabel={allLabel}
+                selected={attackFilters.attackBallTypes}
+                onChange={(next) => setAttackFilter('attackBallTypes', next)}
               />
             </FilterGroup>
             <FilterGroup title={t('opponentReportAttackType')} active={attackFilters.attackSubtypes.length > 0}>
@@ -1748,11 +1599,22 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
                 onChange={(next) => setAttackFilter('blockers', next)}
               />
             </FilterGroup>
-            {availableCombinationCodes.length > 0 ? (
-              <FilterGroup title={t('attackerViewBaseLabel')} active={attackFilters.combinationCodes.length > 0} wide>
+            {/* Base and Combination are two groups crossed with AND; a group stays visible while it holds a choice. */}
+            {availableAttackCodes.setterCalls.length > 0 || attackFilters.setterCalls.length > 0 ? (
+              <FilterGroup title={t('baseFilterLabel')} active={attackFilters.setterCalls.length > 0} wide>
                 <BaseCodeTable
                   allLabel={allLabel}
-                  codes={availableCombinationCodes}
+                  codes={availableAttackCodes.setterCalls}
+                  selected={attackFilters.setterCalls}
+                  onChange={(next) => setAttackFilter('setterCalls', next)}
+                />
+              </FilterGroup>
+            ) : null}
+            {availableAttackCodes.combinationCodes.length > 0 || attackFilters.combinationCodes.length > 0 ? (
+              <FilterGroup title={t('combination')} active={attackFilters.combinationCodes.length > 0} wide>
+                <BaseCodeTable
+                  allLabel={allLabel}
+                  codes={availableAttackCodes.combinationCodes}
                   selected={attackFilters.combinationCodes}
                   onChange={(next) => setAttackFilter('combinationCodes', next)}
                 />

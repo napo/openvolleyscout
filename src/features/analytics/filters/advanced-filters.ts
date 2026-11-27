@@ -82,7 +82,9 @@ export function createDefaultAdvancedFilters(): AdvancedFilters {
     server: 'all',
     receiver: 'all',
     attacker: 'all',
-    base: [],
+    setterCalls: [],
+    combinationCodes: [],
+    attackBallTypes: [],
   };
 }
 

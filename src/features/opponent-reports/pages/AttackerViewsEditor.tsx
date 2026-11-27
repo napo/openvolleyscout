@@ -3,14 +3,14 @@ import { useState } from 'react';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { SplitToggle } from './SplitToggle';
 import { attackerViewFilterLabel } from '../model/attacker-view-label';
-import { ATTACK_BALL_TYPES } from '../model/split-views';
-import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
+import { AttackBallTypeChips, BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type { AttackSubtype } from '@src/domain/touch/types';
-import type {
-  AttackerDirectionEvaluation,
-  AttackerDirectionPhase,
-  AttackerDirectionViewConfig,
-  SetterDistributionReceptionEval,
+import {
+  normalizeAttackerDirectionView,
+  type AttackerDirectionEvaluation,
+  type AttackerDirectionPhase,
+  type AttackerDirectionViewConfig,
+  type SetterDistributionReceptionEval,
 } from '@src/domain/opponent-report/types';
 
 const PHASES: ReadonlyArray<{
@@ -38,11 +38,14 @@ const BLOCKER_COUNTS = [0, 1, 2, 3, 4] as const; // 4 = open block (DataVolley p
 
 interface AttackerViewsEditorProps {
   views: readonly AttackerDirectionViewConfig[] | undefined;
+  /** Base: the setter calls (K1, KC, ...) of the sets before the attacks found in the matches. */
+  setterCallCodes?: readonly string[];
+  /** The attacks' own combination codes (X5, V5, ...) found in the matches. */
   combinationCodes?: readonly string[];
   onChange: (nextViews: AttackerDirectionViewConfig[] | undefined) => void;
 }
 
-export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: AttackerViewsEditorProps) {
+export function AttackerViewsEditor({ views, setterCallCodes = [], combinationCodes = [], onChange }: AttackerViewsEditorProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const all = t('setterViewReceptionAll');
@@ -51,7 +54,8 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
     { id: 'all', label: t('opponentReportAttackAll') },
   ];
 
-  const activeViews: AttackerDirectionViewConfig[] = views && views.length > 0 ? [...views] : defaultViews();
+  // Older views keep K codes among the combinations: show them under Base, saved split at the next edit.
+  const activeViews: AttackerDirectionViewConfig[] = views && views.length > 0 ? views.map(normalizeAttackerDirectionView) : defaultViews();
 
   const patchView = (index: number, patch: Partial<AttackerDirectionViewConfig>) => {
     const next = activeViews.map((view, i) => {
@@ -85,6 +89,7 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
           evaluations: base.evaluations ? [...base.evaluations] : undefined,
           blockers: base.blockers ? [...base.blockers] : undefined,
           attackSubtypes: base.attackSubtypes ? [...base.attackSubtypes] : undefined,
+          setterCalls: base.setterCalls ? [...base.setterCalls] : undefined,
           combinationCodes: base.combinationCodes ? [...base.combinationCodes] : undefined,
           attackBallTypes: base.attackBallTypes ? [...base.attackBallTypes] : undefined,
         }
@@ -233,9 +238,8 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
 
                     <FilterGroup title={t('attackerViewAttackBallTypeLabel')} active={Boolean(view.attackBallTypes?.length)}>
                       <SplitToggle separate={view.splitBy === 'attackBallTypes'} onChange={(separate) => patchView(index, { splitBy: separate ? 'attackBallTypes' : undefined })} />
-                      <ChipSelect
+                      <AttackBallTypeChips
                         allLabel={all}
-                        options={ATTACK_BALL_TYPES.map((type) => ({ value: type, label: type, title: t(`ballType${type}` as TranslationKey).split(' / ')[0] }))}
                         selected={view.attackBallTypes ?? []}
                         onChange={(next) => setField(index, 'attackBallTypes', next)}
                       />
@@ -268,8 +272,20 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
                       />
                     </FilterGroup>
 
-                    {combinationCodes.length > 0 ? (
-                      <FilterGroup title={t('attackerViewBaseLabel')} active={Boolean(view.combinationCodes?.length)} wide>
+                    {/* Base and Combination are two filters crossed with AND. A group stays visible while it has a choice. */}
+                    {setterCallCodes.length > 0 || view.setterCalls?.length ? (
+                      <FilterGroup title={t('baseFilterLabel')} active={Boolean(view.setterCalls?.length)} wide>
+                        <BaseCodeTable
+                          allLabel={all}
+                          codes={setterCallCodes}
+                          selected={view.setterCalls ?? []}
+                          onChange={(next) => setField(index, 'setterCalls', next)}
+                        />
+                      </FilterGroup>
+                    ) : null}
+
+                    {combinationCodes.length > 0 || view.combinationCodes?.length ? (
+                      <FilterGroup title={t('combination')} active={Boolean(view.combinationCodes?.length)} wide>
                         <BaseCodeTable
                           allLabel={all}
                           codes={combinationCodes}

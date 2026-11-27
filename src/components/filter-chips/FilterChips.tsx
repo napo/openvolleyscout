@@ -7,8 +7,9 @@ import {
   getEvaluationScale,
   getEvaluationTint,
 } from '@src/domain/touch/evaluation-scale';
-import { isSetterCallCode } from '@src/domain/match/code-tables';
+import { ATTACK_BALL_TYPES, isSetterCallCode } from '@src/domain/match/code-tables';
 import { useTranslation } from '@src/i18n';
+import type { TranslationKey } from '@src/i18n';
 import './filter-chips.css';
 
 /**
@@ -149,12 +150,14 @@ export function ChipSelect<T extends string | number>({ options, selected, onCha
 }
 
 /**
- * Base / combination codes as a table: the letter in the first cell of a row and the codes that
- * start with it in the cells after it (C: 5 6 D F; K: 1 2 C E). The bases (the setter calls, K..)
- * come first under their own heading, then the combinations. Several codes can be chosen, and a
- * click on the letter takes or leaves the whole row. None chosen means all.
+ * Base or combination codes as a table: the letter in the first cell of a row and the codes that
+ * start with it in the cells after it (C: 5 6 D F; K: 1 2 C E). Each filter gives it one kind of
+ * code: the Base filter the setter calls (K..), the Combination filter the attack combinations,
+ * so no heading is drawn. Only a mixed list shows the bases first under their own heading, then
+ * the combinations. Several codes can be chosen, and a click on the letter takes or leaves the
+ * whole row. None chosen means all.
  */
-export function BaseCodeTable({ codes, selected, onChange, allLabel, label }: {
+export function BaseCodeTable({ codes: offered, selected, onChange, allLabel, label }: {
   codes: readonly string[];
   selected: readonly string[];
   onChange: (next: string[]) => void;
@@ -163,6 +166,11 @@ export function BaseCodeTable({ codes, selected, onChange, allLabel, label }: {
   label?: string;
 }) {
   const { t } = useTranslation();
+  // A chosen code missing from the offered ones (an old saved choice, or data that changed) still
+  // gets its chip, so a choice that keeps filtering is never hidden and can be taken off.
+  const missing = selected.filter((code) => !offered.includes(code));
+  const codes = missing.length === 0 ? offered
+    : [...new Set([...offered, ...missing])].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
   const rows = new Map<string, string[]>();
   codes.forEach((code) => {
     const letter = code.charAt(0);
@@ -173,7 +181,10 @@ export function BaseCodeTable({ codes, selected, onChange, allLabel, label }: {
     { key: 'combinations', title: t('baseCodesCombinations'), rows: [...rows.entries()].filter(([, rowCodes]) => !isSetterCallCode(rowCodes[0])) },
   ].filter((group) => group.rows.length > 0);
   const columns = Math.max(1, ...[...rows.values()].map((rowCodes) => rowCodes.length)) + 1;
-  const emit = (next: string[]) => onChange(next.length === codes.length ? [] : next);
+  // Every code of the table chosen (and nothing else) is the same as none: back to "All".
+  const emit = (next: string[]) => onChange(
+    codes.length > 0 && codes.every((code) => next.includes(code)) && next.every((code) => codes.includes(code)) ? [] : next,
+  );
   const toggle = (code: string) => emit(selected.includes(code) ? selected.filter((item) => item !== code) : [...selected, code]);
   const toggleRow = (rowCodes: readonly string[]) => {
     const whole = rowCodes.every((code) => selected.includes(code));
@@ -232,6 +243,26 @@ export function BaseCodeTable({ codes, selected, onChange, allLabel, label }: {
       </table>
     </div>
   );
+}
+
+/**
+ * The seven attack ball type letters (Set type filter: H M Q T U N O), always all shown, with the
+ * letter's name on hover. None chosen means all.
+ */
+export function AttackBallTypeChips({ selected, onChange, allLabel, label }: {
+  selected: readonly string[];
+  onChange: (next: string[]) => void;
+  allLabel: string;
+  /** A small label before "All", when the chips are not in a group of their own. */
+  label?: string;
+}) {
+  const { t } = useTranslation();
+  const options = ATTACK_BALL_TYPES.map((type) => ({
+    value: type as string,
+    label: type,
+    title: t(`ballType${type}` as TranslationKey).split(' / ')[0],
+  }));
+  return <ChipSelect allLabel={allLabel} label={label} options={options} selected={selected} onChange={onChange} />;
 }
 
 /** Style of an evaluation chip: the skill's colour, full when chosen, tinted otherwise. */

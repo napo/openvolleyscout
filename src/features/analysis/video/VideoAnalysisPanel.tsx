@@ -71,7 +71,8 @@ import { VideoPlayerView, togglePlayerPlayback, type VideoPlayerHandle } from '.
 import './video-analysis.css';
 import {
   annotateVideoEntries,
-  availableBaseCodes,
+  availableCombinationCodes,
+  availableSetterCalls,
   applyVideoChainFilters,
   createDefaultVideoChainFilters,
   isDefaultVideoChainFilters,
@@ -229,7 +230,8 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const rallyTimingMode = eventIndex.rallyTimingMode;
   // Phase, attack description and set target, derived once per index for the chain filters.
   const chainEntries = useMemo(() => annotateVideoEntries(eventIndex.entries), [eventIndex.entries]);
-  const baseCodes = useMemo(() => availableBaseCodes(chainEntries), [chainEntries]);
+  const setterCalls = useMemo(() => availableSetterCalls(chainEntries), [chainEntries]);
+  const combinationCodes = useMemo(() => availableCombinationCodes(chainEntries), [chainEntries]);
   // Rallies in which each athlete touched the ball, for the athlete list.
   const ralliesByPlayer = useMemo(() => {
     const byRally = new Map<string, Set<string>>();
@@ -972,7 +974,8 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
         ]}
         playerOptions={playerChipOptions}
         setNumbers={eventIndex.setNumbers}
-        baseCodes={baseCodes}
+        setterCalls={setterCalls}
+        combinationCodes={combinationCodes}
       />
       <label className="video-analysis__auto-advance">
         <input
