@@ -19,6 +19,7 @@ describe('print themes', () => {
       expect(contrastRatio(theme.primary, theme.onPrimary), `${id} band`).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio('#ffffff', theme.accent), `${id} accent`).toBeGreaterThanOrEqual(3);
       expect(contrastRatio('#ffffff', theme.text), `${id} text`).toBeGreaterThanOrEqual(7);
+      expect(contrastRatio('#ffffff', theme.ink), `${id} ink`).toBeGreaterThanOrEqual(7);
     }
   });
 

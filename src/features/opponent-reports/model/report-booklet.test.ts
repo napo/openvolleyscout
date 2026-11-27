@@ -12,6 +12,7 @@ import { bookletImposition, buildReportBooklet, fitBookletCourt, imposeBooklet, 
 import { buildReceptionFormationSvg } from './reception-formation';
 import { buildSetterRotationCourtSvg } from './report-view';
 import { moveReportComponent, reportComponentOrder } from './report-components';
+import { resolvePrintTheme } from '@src/lib/theme/print-theme';
 import { assignLineupCell, attackerBoardViews, resolveLineupCells, selectedAttackers, setSelectedAttackers } from './board-pieces';
 import { recoverArchivedSetterSheets } from './report-draft';
 import type { KeySuggestion } from './report-keys';
@@ -272,6 +273,21 @@ describe('booklet planning and printing',()=>{
     const a4=buildReportBooklet(report,view,t,'',{a4:true}).pages.join('');
     expect(a4).toContain(`>${t('setterRepeatTitle')} · #2 Player 2<`);
     expect(a4).toContain('>40% (2/5)<');
+  });
+  it('prints with the theme of the report: black and white leaves no OVS colour, club colours fill the band',()=>{
+    const {report,view}=fixture();
+    const ovs=buildReportBooklet(report,view,t).pages.join('');
+    expect(ovs).toContain('height="65" fill="#142e42"');
+    report.booklet={...report.booklet!,printTheme:{id:'black-white'}};
+    const bw=buildReportBooklet(report,view,t).pages.join('');
+    expect(bw).toContain('height="65" fill="#e5e7eb"');
+    expect(bw).not.toContain('#142e42');
+    expect(bw).not.toContain('#007e80');
+    report.booklet={...report.booklet!,printTheme:{id:'club',club:{primary:'#003366',accent:'#d4af37'}}};
+    const club=buildReportBooklet(report,view,t).pages[0];
+    expect(club).toContain('height="65" fill="#003366"');
+    // A theme passed by the caller wins (the preview of a choice not saved yet).
+    expect(buildReportBooklet(report,view,t,'',{theme:resolvePrintTheme('high-contrast')}).pages[0]).toContain('height="65" fill="#000000"');
   });
   it('shares the component order between the navigator and every export layout',()=>{
     const {report,view}=fixture();

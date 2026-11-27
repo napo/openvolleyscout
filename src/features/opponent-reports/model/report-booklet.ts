@@ -9,6 +9,7 @@ import { buildQrSvg } from './qr-svg';
 import { buildAttackDefenseLegendSvg, buildCustomLegendSvg, buildServeHowLegendSvg, buildServeTargetsLegendSvg } from './reception-formation';
 import { collectCustomLegendEntries, drawingHasMoveArrows, findMoveArrowColor } from './tactical-board';
 import { videoLinkWatchKey } from './attacker-video-links';
+import { activePrintTheme, PRINT_THEMES, type PrintTheme } from '@src/lib/theme/print-theme';
 
 export const BOOKLET_WIDTH = 419.528;
 export const BOOKLET_HEIGHT = 595.276;
@@ -36,11 +37,8 @@ export function wrapBookletText(text: string, width: number, size: number): stri
   }
   return result;
 }
-function text(x: number, y: number, value: string, size = 8, bold = false, fill = color): string {
+function svgText(x: number, y: number, value: string, size = 8, bold = false, fill = color): string {
   return `<text x="${x}" y="${y}" font-size="${size}"${bold ? ' font-weight="bold"' : ''} fill="${fill}" xml:space="preserve">${xml(value)}</text>`;
-}
-function lines(x: number, y: number, value: string, width: number, size = 8): string[] {
-  return wrapBookletText(value, width, size).map((line, i) => text(x, y + i * size * 1.4, line, size));
 }
 /** Reuse the entire SVG and apply ONE scale to both axes, including edited drawings. */
 export function fitBookletCourt(svg: string, x: number, y: number, width: number, height: number, namespace: string): string {
@@ -69,8 +67,8 @@ function highestBars(values: readonly number[], recent: readonly number[] | unde
 }
 
 /** A small horizontal bar chart: one row per label, the count at the end of its bar; grey bars, the chosen ones in the report's accent, an optional note below. */
-function bookletBarChart(x: number, y: number, width: number, height: number, title: string, labels: readonly string[], values: readonly number[], max: number, highlighted: ReadonlySet<number>, note: string, colors: { bar: string; highlight: string }): string {
-  const parts = [text(x, y + 8, title, 8, true)];
+function bookletBarChart(x: number, y: number, width: number, height: number, title: string, labels: readonly string[], values: readonly number[], max: number, highlighted: ReadonlySet<number>, note: string, colors: { bar: string; highlight: string; ink: string }): string {
+  const parts = [svgText(x, y + 8, title, 8, true, colors.ink)];
   const top = y + 16, labelWidth = 22, valueWidth = 16;
   const row = (height - 16) / Math.max(1, values.length), barHeight = Math.min(16, row * 0.62);
   const barSpace = width - labelWidth - valueWidth;
@@ -78,11 +76,11 @@ function bookletBarChart(x: number, y: number, width: number, height: number, ti
   values.forEach((value, i) => {
     const middle = top + row * i + row / 2;
     const barWidth = max > 0 ? barSpace * value / max : 0;
-    parts.push(`<text x="${x}" y="${middle + 2.5}" font-size="7" fill="${color}">${xml(labels[i] ?? '')}</text>`);
+    parts.push(`<text x="${x}" y="${middle + 2.5}" font-size="7" fill="${colors.ink}">${xml(labels[i] ?? '')}</text>`);
     if (barWidth > 0) parts.push(`<rect x="${x + labelWidth}" y="${middle - barHeight / 2}" width="${barWidth}" height="${barHeight}" fill="${highlighted.has(i) ? colors.highlight : colors.bar}" rx="1.5"/>`);
-    parts.push(`<text x="${x + labelWidth + barWidth + 3}" y="${middle + 2.5}" font-size="7" font-weight="bold" fill="${color}">${value}</text>`);
+    parts.push(`<text x="${x + labelWidth + barWidth + 3}" y="${middle + 2.5}" font-size="7" font-weight="bold" fill="${colors.ink}">${value}</text>`);
   });
-  if (note) parts.push(text(x, y + height + 8, note, 6.5, true, colors.highlight));
+  if (note) parts.push(svgText(x, y + height + 8, note, 6.5, true, colors.highlight));
   return parts.join('');
 }
 
@@ -95,10 +93,10 @@ export const TEAM_CHART_HIGHLIGHT = '#007e80';
  * (on serve, on reception), or with one match only the rotations written out. Below, what they are counted on
  * and the coach's note.
  */
-export function teamStartsElements(x: number, y: number, width: number, height: number, piece: Pick<ResolvedBoardPiece, 'table' | 'subtitle'>, team: ReportView['team'], colors: { bar?: string; highlight?: string } | undefined, t: ViewT): string {
+export function teamStartsElements(x: number, y: number, width: number, height: number, piece: Pick<ResolvedBoardPiece, 'table' | 'subtitle'>, team: ReportView['team'], colors: { bar?: string; highlight?: string } | undefined, t: ViewT, theme: PrintTheme = PRINT_THEMES.ovs): string {
   const table = piece.table;
   if (!table) return '';
-  const bar = colors?.bar || TEAM_CHART_BAR, highlight = colors?.highlight || TEAM_CHART_HIGHLIGHT;
+  const bar = colors?.bar || theme.neutral, highlight = colors?.highlight || theme.accent;
   const labels = table.rows.map((row) => formatViewCell(row[0]));
   const counts = (column: number) => table.rows.map((row) => Math.max(0, Number.parseInt(formatViewCell(row[column]), 10) || 0));
   const serve = counts(1), receive = counts(2), max = Math.max(1, ...serve, ...receive);
@@ -111,18 +109,18 @@ export function teamStartsElements(x: number, y: number, width: number, height: 
     if (team?.singleMatch) {
       // One match: no chart, the rotation(s) it started in.
       const used = values.flatMap((value, i) => (value > 0 ? [{ label: labels[i], value }] : [])).sort((a, b) => b.value - a.value);
-      parts.push(text(left, y + 8, table.columns[column] ?? '', 8, true));
+      parts.push(svgText(left, y + 8, table.columns[column] ?? '', 8, true, theme.ink));
       const written = used.length === 1 ? used[0].label : used.map((entry) => `${entry.label} (${entry.value})`).join(' · ');
-      parts.push(text(left, y + 34, written || '-', used.length === 1 ? 24 : 13, true, highlight));
+      parts.push(svgText(left, y + 34, written || '-', used.length === 1 ? 24 : 13, true, highlight));
       return;
     }
     const { bars, tieBrokenBy } = highestBars(values, column === 1 ? recent?.serve : recent?.receive);
     const note = tieBrokenBy !== undefined && recent
       ? t(recent.matches === 1 ? 'teamStartsTieNoteOne' : 'teamStartsTieNote', { rotation: labels[tieBrokenBy], n: recent.matches })
       : '';
-    parts.push(bookletBarChart(left, y, chartWidth, chartHeight - 10, table.columns[column] ?? '', labels, values, max, bars, note, { bar, highlight }));
+    parts.push(bookletBarChart(left, y, chartWidth, chartHeight - 10, table.columns[column] ?? '', labels, values, max, bars, note, { bar, highlight, ink: theme.ink }));
   });
-  noteLines.forEach((line, i) => parts.push(text(x, y + height - noteLines.length * 8 + 6 + i * 8, line, 6, false, '#475569')));
+  noteLines.forEach((line, i) => parts.push(svgText(x, y + height - noteLines.length * 8 + 6 + i * 8, line, 6, false, theme.muted)));
   return parts.join('');
 }
 /** Servers printed with their serve chart: the coach's choice, else the six main ones (or all, old switch). */
@@ -159,7 +157,15 @@ export interface ReportBookletPlan {
 }
 
 /** Same plan drives the source-selection count, preview, A5 PDF and A4 imposition. */
-export function buildReportBooklet(report: OpponentReport, view: ReportView, t: ViewT, sampleLine = '', options: { a4?: boolean; matchLines?: string[] } = {}): ReportBookletPlan {
+export function buildReportBooklet(report: OpponentReport, view: ReportView, t: ViewT, sampleLine = '', options: { a4?: boolean; matchLines?: string[]; theme?: PrintTheme } = {}): ReportBookletPlan {
+  const theme = options.theme ?? activePrintTheme(report.booklet?.printTheme);
+  const text = (x: number, y: number, value: string, size = 8, bold = false, fill = theme.ink) => svgText(x, y, value, size, bold, fill);
+  // Legends: the frame and its words follow the theme; the coloured symbols keep their meaning.
+  const legend = (svg: string) => theme.id === 'ovs' ? svg : svg
+    .replaceAll('fill="#f8fafc" stroke="#cbd5e1"', `fill="${theme.soft}" stroke="${theme.border}"`)
+    .replaceAll('fill="#1e293b"', `fill="${theme.ink}"`)
+    .replaceAll('fill="#475569"', `fill="${theme.muted}"`);
+  const lines = (x: number, y: number, value: string, width: number, size = 8): string[] => wrapBookletText(value, width, size).map((line, i) => text(x, y + i * size * 1.4, line, size));
   const a4 = options.a4 === true;
   const pageWidth = a4 ? 595.276 : BOOKLET_WIDTH;
   const pageHeight = a4 ? 841.89 : BOOKLET_HEIGHT;
@@ -183,8 +189,8 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
         const section = content.slice(offset, offset + capacity);
         const height = Math.max(34, section.length * 12 + (paragraph.label ? 25 : 16));
         if (y + height > BOTTOM) { page = add(title); y = TOP; }
-        if (paragraph.primary) page.elements.push(`<rect x="${M}" y="${y}" width="${WIDTH}" height="${height}" rx="5" fill="#eaf3f3"/>`);
-        if (paragraph.label) page.elements.push(text(M + 8, y + 13, paragraph.label, 8, true, '#007e80'));
+        if (paragraph.primary) page.elements.push(`<rect x="${M}" y="${y}" width="${WIDTH}" height="${height}" rx="5" fill="${theme.accentSoft}"/>`);
+        if (paragraph.label) page.elements.push(text(M + 8, y + 13, paragraph.label, 8, true, theme.accent));
         const baseline = y + (paragraph.label ? 27 : 15);
         page.elements.push(...section.map((line, index) => text(M + 8, baseline + index * 12, line, 8.5)));
         y += height + 8;
@@ -204,7 +210,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
         const x = M + (i % columns) * (cw + 10), y = top + Math.floor(i / columns) * (ch + 10) + (bandHeadings ? (Math.floor(i / (columns * 2)) + 1) * 16 : 0);
         if (bandHeadings && card.bandKey && i % (columns * 2) === 0) {
           const heading = bandHeadings[card.bandKey];
-          if (heading) page.elements.push(text(M, y - 4, heading, 8, true, '#007e80'));
+          if (heading) page.elements.push(text(M, y - 4, heading, 8, true, theme.accent));
         }
         const qrSize = card.qrSvg ? (a4 ? 26 : 22) : 0;
         const fullLabel = wrapBookletText(card.title, cw - 10 - (qrSize ? qrSize + 4 : 0), 7.2);
@@ -243,7 +249,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
             // A longer note shows its start and continues, whole, in the staff notes.
             const shown = fits ? noteLines : [...noteLines.slice(0, capacity - 1), '…'];
             if (fits) notesInBox.add(card.note.id);
-            page.elements.push(`<rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="3" fill="#f8fafc" stroke="#cbd5e1" stroke-width=".6" data-court-note="${xml(card.note.id)}"/>`);
+            page.elements.push(`<rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="3" fill="${theme.soft}" stroke="${theme.border}" stroke-width=".6" data-court-note="${xml(card.note.id)}"/>`);
             page.elements.push(...shown.map((line, j) => text(boxX + 4, boxY + 4 + size + j * step, line, size)));
           }
           const sampleY = card.descriptionBelow ? y + headingHeight + Math.max(drawingHeight, rowHeight) + 12 : y + ch - visibleSample.length * 8;
@@ -312,15 +318,15 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
         const nameX = x + size * 2.6, nameWidth = Math.min(columnWidth * 0.5, size * 20) - size * 2.6;
         const roleX = nameX + nameWidth + 6, roleWidth = Math.min(size * 11, columnWidth - (roleX - x) - size * 3);
         page.elements.push(text(nameX, rowY, wrapBookletText(row[1] ?? '', nameWidth, size)[0] ?? '', size));
-        page.elements.push(text(roleX, rowY, wrapBookletText(row[2] ?? '', roleWidth, size)[0] ?? '', size, false, '#475569'));
+        page.elements.push(text(roleX, rowY, wrapBookletText(row[2] ?? '', roleWidth, size)[0] ?? '', size, false, theme.muted));
         const matchesX = roleX + roleWidth + size * 4;
         if (i % perColumn === 0) {
           // Column headings above each column of athletes.
           const headingY = y - 3;
-          [[x, headers[0]], [nameX, headers[1]], [roleX, headers[2]]].forEach(([left, label]) => { if (label) page.elements.push(text(left as number, headingY, label as string, 6.5, true, '#475569')); });
-          if (headers[3]) page.elements.push(`<text x="${matchesX}" y="${headingY}" font-size="6.5" font-weight="bold" fill="#475569" text-anchor="end">${xml(headers[3])}</text>`);
+          [[x, headers[0]], [nameX, headers[1]], [roleX, headers[2]]].forEach(([left, label]) => { if (label) page.elements.push(text(left as number, headingY, label as string, 6.5, true, theme.muted)); });
+          if (headers[3]) page.elements.push(`<text x="${matchesX}" y="${headingY}" font-size="6.5" font-weight="bold" fill="${theme.muted}" text-anchor="end">${xml(headers[3])}</text>`);
         }
-        if (row[3]) page.elements.push(`<text x="${matchesX}" y="${rowY}" font-size="${size}" fill="${color}" text-anchor="end">${xml(row[3])}</text>`);
+        if (row[3]) page.elements.push(`<text x="${matchesX}" y="${rowY}" font-size="${size}" fill="${theme.ink}" text-anchor="end">${xml(row[3])}</text>`);
       });
       if (rows.length > shown.length) deferred.push({ title: teamRoster.title, body: rows.slice(shown.length).map((row) => row.filter(Boolean).join(' ')).join('\n') });
       rememberNotes(teamRoster);
@@ -328,7 +334,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     if (teamStarts?.table) {
       const top = BOTTOM - chartBlock + 8;
       page.elements.push(text(M, top, teamStarts.title, 10, true));
-      page.elements.push(teamStartsElements(M, top + 8, WIDTH, BOTTOM - top - 8, teamStarts, view.team, report.pieceEdits?.[PIECE_TEAM_STARTS]?.chartColors, t));
+      page.elements.push(teamStartsElements(M, top + 8, WIDTH, BOTTOM - top - 8, teamStarts, view.team, report.pieceEdits?.[PIECE_TEAM_STARTS]?.chartColors, t, theme));
       rememberNotes(teamStarts);
     }
     }
@@ -342,24 +348,24 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
         const cells = teamLineup.lineupCells, labels = teamLineup.lineupLabels ?? [];
         const cellWidth = (WIDTH - 12) / 3, cellHeight = a4 ? 74 : 62, gap = 6;
         // The net above the front row: zones 4, 3, 2 in front, 5, 6, 1 behind; the liberos below.
-        second.elements.push(`<line x1="${M}" y1="${top}" x2="${M + WIDTH}" y2="${top}" stroke="${color}" stroke-width="2"/>`);
+        second.elements.push(`<line x1="${M}" y1="${top}" x2="${M + WIDTH}" y2="${top}" stroke="${theme.ink}" stroke-width="2"/>`);
         const drawCell = (index: number, x: number, y: number) => {
           const athletes = cells[index] ?? [];
-          second.elements.push(`<rect x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width=".8"/>`);
+          second.elements.push(`<rect x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}" rx="4" fill="${theme.soft}" stroke="${theme.border}" stroke-width=".8"/>`);
           const label = index < 6 ? `${t('teamColZone')} ${labels[index] ?? index + 1}` : labels[index] ?? 'L';
-          second.elements.push(`<text x="${x + cellWidth - 4}" y="${y + 9}" font-size="6" fill="#475569" text-anchor="end">${xml(label)}</text>`);
+          second.elements.push(`<text x="${x + cellWidth - 4}" y="${y + 9}" font-size="6" fill="${theme.muted}" text-anchor="end">${xml(label)}</text>`);
           // Two athletes share the cell side by side, in the order the coach chose.
           const part = cellWidth / Math.max(1, athletes.length);
           athletes.forEach((athlete, n) => {
             const left = x + n * part;
-            if (n > 0) second.elements.push(`<line x1="${left}" y1="${y + 4}" x2="${left}" y2="${y + cellHeight - 4}" stroke="#cbd5e1" stroke-width=".6"/>`);
+            if (n > 0) second.elements.push(`<line x1="${left}" y1="${y + 4}" x2="${left}" y2="${y + cellHeight - 4}" stroke="${theme.border}" stroke-width=".6"/>`);
             const nameSize = athletes.length > 1 ? (a4 ? 8 : 7) : (a4 ? 9 : 8);
             let lineY = y + 11;
-            second.elements.push(text(left + 4, lineY, athlete.role, 8, true, '#007e80'));
+            second.elements.push(text(left + 4, lineY, athlete.role, 8, true, theme.accent));
             lineY += nameSize + 3;
             wrapBookletText(`#${athlete.jersey} ${athlete.name}`, part - 8, nameSize).slice(0, 2).forEach((line) => { second.elements.push(text(left + 4, lineY, line, nameSize, true)); lineY += nameSize + 1.5; });
-            wrapBookletText(athlete.figures, part - 8, 6).slice(0, 2).forEach((line) => { second.elements.push(text(left + 4, lineY + 1, line, 6, false, '#475569')); lineY += 7.5; });
-            second.elements.push(text(left + 4, y + cellHeight - 5, t('teamCellMatches', { n: athlete.matches }), 6, false, '#475569'));
+            wrapBookletText(athlete.figures, part - 8, 6).slice(0, 2).forEach((line) => { second.elements.push(text(left + 4, lineY + 1, line, 6, false, theme.muted)); lineY += 7.5; });
+            second.elements.push(text(left + 4, y + cellHeight - 5, t('teamCellMatches', { n: athlete.matches }), 6, false, theme.muted));
           });
         };
         [[3, 2, 1], [4, 5, 0]].forEach((indexes, line) => indexes.forEach((index, column) => drawCell(index, M + column * (cellWidth + gap), top + 6 + line * (cellHeight + gap))));
@@ -368,7 +374,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
         liberoCells.forEach((index, n) => drawCell(index, M + n * (cellWidth + gap), y));
         if (liberoCells.length) y += cellHeight + gap;
         const caption = wrapBookletText(teamLineup.subtitle ?? '', WIDTH, 6);
-        caption.forEach((line, n) => second.elements.push(text(M, y + 6 + n * 8, line, 6, false, '#475569')));
+        caption.forEach((line, n) => second.elements.push(text(M, y + 6 + n * 8, line, 6, false, theme.muted)));
         top = y + 10 + caption.length * 8;
         rememberNotes(teamLineup);
       }
@@ -381,13 +387,13 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
         const valueWidth = (WIDTH - numberWidth - nameWidth) / Math.max(1, table.columns.length - 2);
         const columnRight = (index: number) => M + numberWidth + nameWidth + valueWidth * (index - 1);
         const drawRow = (cells: string[], y: number, header: boolean) => {
-          const fill = header ? '#475569' : color;
+          const fill = header ? theme.muted : color;
           second.elements.push(text(M, y, cells[0] ?? '', size, true, fill));
           second.elements.push(text(M + numberWidth, y, wrapBookletText(cells[1] ?? '', nameWidth - 4, size)[0] ?? '', size, header, fill));
           cells.slice(2).forEach((value, i) => second.elements.push(`<text x="${columnRight(i + 2)}" y="${y}" font-size="${size}"${header ? ' font-weight="bold"' : ''} fill="${fill}" text-anchor="end">${xml(value)}</text>`));
         };
         drawRow(table.columns, top, true);
-        second.elements.push(`<line x1="${M}" y1="${top + 3}" x2="${M + WIDTH}" y2="${top + 3}" stroke="#cbd5e1" stroke-width=".6"/>`);
+        second.elements.push(`<line x1="${M}" y1="${top + 3}" x2="${M + WIDTH}" y2="${top + 3}" stroke="${theme.border}" stroke-width=".6"/>`);
         table.rows.map((row) => row.map(formatViewCell)).forEach((row, i) => {
           if (top + (i + 1) * step < BOTTOM) drawRow(row, top + (i + 1) * step, false);
         });
@@ -431,7 +437,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     const serveTargetPageStart = pages.length;
     grids(reception?.title ?? t('opponentReportFormations'), (reception?.courts ?? []).map((court) => ({ title: court.label, court, body: court.sample, descriptionBelow: true })), 3, 2, BOTTOM - 52, '');
     if (pages.length > serveTargetPageStart) {
-      pages[pages.length - 1].elements.push(fitBookletCourt(serveTargetsLegendSvg, M, BOTTOM - 46, WIDTH, 46, 'serve-legend'));
+      pages[pages.length - 1].elements.push(fitBookletCourt(legend(serveTargetsLegendSvg), M, BOTTOM - 46, WIDTH, 46, 'serve-legend'));
     }
     rememberNotes(reception);
   }
@@ -519,7 +525,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       grids(t('opponentReportSheet_attackers'), drawnAttackers.map(toGridCard), 2, 3, BOTTOM - 46);
     }
     if (pages.length > attackPageStart) {
-      pages[pages.length - 1].elements.push(fitBookletCourt(attackLegendSvg, M, BOTTOM - 40, WIDTH, 40, 'attack-legend'));
+      pages[pages.length - 1].elements.push(fitBookletCourt(legend(attackLegendSvg), M, BOTTOM - 40, WIDTH, 40, 'attack-legend'));
     }
   }
   // One block per attacker: name as heading, then "situation: value" lines,
@@ -596,7 +602,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     );
     if (customLegend.length && pages.length > pageStart) {
       pages[pages.length - 1].elements.push(
-        fitBookletCourt(buildCustomLegendSvg(customLegend), M, bottom - 28, WIDTH, 28, 'setter-legend'),
+        fitBookletCourt(legend(buildCustomLegendSvg(customLegend)), M, bottom - 28, WIDTH, 28, 'setter-legend'),
       );
     }
   };
@@ -677,7 +683,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     // Six servers per page: the chosen ones (the six main ones unless the coach picked others).
     if (starters.length) grids(t('opponentReportSheet_serve'), starters.map(serveCard), 2, 3, BOTTOM - 38);
     if (pages.length > servePageStart) {
-      pages[pages.length - 1].elements.push(fitBookletCourt(serveHowLegendSvg, M, BOTTOM - 32, WIDTH, 32, 'serve-how-legend'));
+      pages[pages.length - 1].elements.push(fitBookletCourt(legend(serveHowLegendSvg), M, BOTTOM - 32, WIDTH, 32, 'serve-how-legend'));
     }
     const listed = [...reserves, ...textOnly];
     if (listed.length) deferred.push({ id: 'serve-reserves', title: t('serveHowReserves'), body: listed.map((p) => serveText.get(p.id) ?? p.title).join('\n') });
@@ -723,7 +729,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       );
       if (extraCustomLegend.length) {
         pages[pages.length - 1].elements.push(
-          fitBookletCourt(buildCustomLegendSvg(extraCustomLegend), M, BOTTOM - 28, WIDTH, 28, 'extra-legend'),
+          fitBookletCourt(legend(buildCustomLegendSvg(extraCustomLegend)), M, BOTTOM - 28, WIDTH, 28, 'extra-legend'),
         );
       }
     }
@@ -772,7 +778,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
           const chunk = wrapped.map(value => value.slice(offset, offset + chunkLines));
           const height = Math.max(26, Math.max(...chunk.map(value => value.length)) * 12 + 12);
           if (y + height > BOTTOM) { page = add(t(`opponentReportSheet_${piece.sheetId}`)); y = TOP; if (!header) drawRow(table.columns, true); }
-          page.elements.push(`<rect x="${M}" y="${y}" width="${WIDTH}" height="${height}" fill="${header ? '#eaf3f3' : '#f8fafc'}"/>`);
+          page.elements.push(`<rect x="${M}" y="${y}" width="${WIDTH}" height="${height}" fill="${header ? theme.accentSoft : theme.soft}"/>`);
           chunk.forEach((value, col) => value.forEach((line, row) => page.elements.push(text(M + col * cellWidth + 6, y + 16 + row * 12, line, 8, header))));
           y += height + 2;
           }
@@ -836,7 +842,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const target = a4 ? contentPages : Math.ceil(Math.max(minimum, contentPages) / 4) * 4;
   while (pages.length < target) {
     const page = add(t('bookletNotes'));
-    for (let y = TOP + 20; y < BOTTOM; y += 26) page.elements.push(`<line x1="${M}" y1="${y}" x2="${pageWidth - M}" y2="${y}" stroke="#cbd5e1" stroke-width="0.5"/>`);
+    for (let y = TOP + 20; y < BOTTOM; y += 26) page.elements.push(`<line x1="${M}" y1="${y}" x2="${pageWidth - M}" y2="${y}" stroke="${theme.border}" stroke-width="0.5"/>`);
   }
   const footer = `${APP_METADATA.name} · ${APP_METADATA.author.displayName} · ${APP_METADATA.urls.webApp} · ${t('bookletFreeSoftware')} · GNU AGPL v3 or later (${APP_METADATA.license})`;
   const footerSize = Math.min(4.5, WIDTH / Math.max(1, [...footer].length * .64));
@@ -845,7 +851,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const attributionSize = 3.8;
   const attributionLines = wrapBookletText(attribution, WIDTH, attributionSize).slice(0, 2);
   return {
-    pages: pages.map((page, i) => `<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}" height="${pageHeight}" viewBox="0 0 ${pageWidth} ${pageHeight}"><rect width="100%" height="100%" fill="#fff"/><rect width="100%" height="65" fill="${color}"/>${text(M, 18, report.opponent.name, 8, true, '#fff')}${wrapBookletText(page.title, WIDTH, 13).slice(0, 2).map((line, j) => text(M, 36 + j * 15, line, 13, true, '#fff')).join('')}${text(M, 77, wrapBookletText(context, WIDTH, 6)[0] ?? '', 6)}${page.elements.join('')}<line x1="${M}" y1="${pageHeight - 30}" x2="${pageWidth - M}" y2="${pageHeight - 30}" stroke="#cbd5e1"/>${text(M, pageHeight - 24, footer, footerSize)}${attributionLines.map((line, j) => text(M, pageHeight - 18 + j * 4.6, line, attributionSize)).join('')}${text(M, pageHeight - 4, `${i + 1} / ${pages.length}`, 5)}</svg>`),
+    pages: pages.map((page, i) => `<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}" height="${pageHeight}" viewBox="0 0 ${pageWidth} ${pageHeight}"><rect width="100%" height="100%" fill="#fff"/><rect width="100%" height="65" fill="${theme.primary}"/>${text(M, 18, report.opponent.name, 8, true, theme.onPrimary)}${wrapBookletText(page.title, WIDTH, 13).slice(0, 2).map((line, j) => text(M, 36 + j * 15, line, 13, true, theme.onPrimary)).join('')}${text(M, 77, wrapBookletText(context, WIDTH, 6)[0] ?? '', 6)}${page.elements.join('')}<line x1="${M}" y1="${pageHeight - 30}" x2="${pageWidth - M}" y2="${pageHeight - 30}" stroke="${theme.border}"/>${text(M, pageHeight - 24, footer, footerSize)}${attributionLines.map((line, j) => text(M, pageHeight - 18 + j * 4.6, line, attributionSize)).join('')}${text(M, pageHeight - 4, `${i + 1} / ${pages.length}`, 5)}</svg>`),
     staffNotes,
     width: pageWidth, height: pageHeight,
     contentPages, paddingPages: pages.length - contentPages, sheets: pages.length / 4, format: settings,

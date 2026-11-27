@@ -187,6 +187,8 @@ export interface OpponentReportBooklet {
   includeServeReserves?: boolean;
   /** Servers (ReportPlayer.key) printed with their serve chart; the others as text. Absent = the six main ones. */
   serveChartKeys?: string[];
+  /** This report's print theme; absent = the default chosen in Settings. */
+  printTheme?: { id: 'ovs' | 'ovs-blue' | 'club' | 'black-white' | 'high-contrast'; club?: { primary: string; accent: string } };
   /** "Block and defence" attack-direction sheet; included unless false. */
   includeAttackers?: boolean;
   /** Legacy switch: charts for every setter. Read only while setterChartKeys is absent. */

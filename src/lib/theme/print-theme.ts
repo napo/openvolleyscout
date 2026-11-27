@@ -17,6 +17,10 @@ export interface PrintTheme {
   onPrimary: string;
   /** Accent: highlighted values, small headings, the highest bar of a chart. */
   accent: string;
+  /** Pale background of highlighted boxes (the main priorities). */
+  accentSoft: string;
+  /** Text of the frame (titles, values) on white. */
+  ink: string;
   /** Pale background of boxes and cells. */
   soft: string;
   /** Lines and borders. */
@@ -83,16 +87,16 @@ const BASE = { text: '#111827', muted: '#475569' } as const;
 
 export const PRINT_THEMES: Record<Exclude<PrintThemeId, 'club'>, PrintTheme> = {
   ovs: {
-    id: 'ovs', primary: '#142e42', onPrimary: '#ffffff', accent: '#007e80', soft: '#f8fafc', border: '#cbd5e1', neutral: '#cbd5e1', ...BASE, flat: false,
+    id: 'ovs', primary: '#142e42', onPrimary: '#ffffff', accent: '#007e80', accentSoft: '#eaf3f3', ink: '#142e42', soft: '#f8fafc', border: '#cbd5e1', neutral: '#cbd5e1', ...BASE, flat: false,
   },
   'ovs-blue': {
-    id: 'ovs-blue', primary: '#002554', onPrimary: '#ffffff', accent: '#0169D8', soft: '#eef5ff', border: '#7f93b4', neutral: '#c9d6ea', text: '#111827', muted: '#6b7280', flat: false,
+    id: 'ovs-blue', primary: '#002554', onPrimary: '#ffffff', accent: '#0169d8', accentSoft: '#e6f0fb', ink: '#002554', soft: '#eef5ff', border: '#7f93b4', neutral: '#c9d6ea', text: '#111827', muted: '#6b7280', flat: false,
   },
   'black-white': {
-    id: 'black-white', primary: '#e5e7eb', onPrimary: '#111827', accent: '#111827', soft: '#ffffff', border: '#6b7280', neutral: '#d1d5db', text: '#000000', muted: '#374151', flat: true,
+    id: 'black-white', primary: '#e5e7eb', onPrimary: '#111827', accent: '#111827', accentSoft: '#f3f4f6', ink: '#000000', soft: '#ffffff', border: '#6b7280', neutral: '#d1d5db', text: '#000000', muted: '#374151', flat: true,
   },
   'high-contrast': {
-    id: 'high-contrast', primary: '#000000', onPrimary: '#ffffff', accent: '#0047b3', soft: '#ffffff', border: '#000000', neutral: '#9ca3af', text: '#000000', muted: '#1f2937', flat: false,
+    id: 'high-contrast', primary: '#000000', onPrimary: '#ffffff', accent: '#0047b3', accentSoft: '#e6edf7', ink: '#000000', soft: '#ffffff', border: '#000000', neutral: '#9ca3af', text: '#000000', muted: '#1f2937', flat: false,
   },
 };
 
@@ -106,6 +110,9 @@ export function clubPrintTheme(colors: Partial<ClubColors> = {}): PrintTheme {
     onPrimary: readableInk(primary),
     // The accent colours text and thin lines on white: keep it readable there.
     accent: legibleOnWhite(accent, 3),
+    accentSoft: mixColors(legibleOnWhite(accent, 3), '#ffffff', 0.9),
+    // A dark club colour also writes the titles; a light one leaves them near-black.
+    ink: contrastRatio(primary, '#ffffff') >= 7 ? primary : '#111827',
     soft: mixColors(primary, '#ffffff', 0.94),
     border: mixColors(primary, '#ffffff', 0.7),
     neutral: mixColors(primary, '#ffffff', 0.78),
