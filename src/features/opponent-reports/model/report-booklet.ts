@@ -57,21 +57,74 @@ export function fitBookletCourt(svg: string, x: number, y: number, width: number
 }
 interface Page { title: string; elements: string[]; component: OpponentReportComponentId }
 
-/** A small column chart: one bar per label, the count above it, the label below. */
-function bookletBarChart(x: number, y: number, width: number, height: number, title: string, labels: readonly string[], values: readonly number[], max: number, fill: string): string {
+/** The highest bars; on a tie, the one used most in the latest matches, if that settles it. */
+function highestBars(values: readonly number[], recent: readonly number[] | undefined): { bars: Set<number>; tieBrokenBy?: number } {
+  const highest = Math.max(0, ...values);
+  if (highest === 0) return { bars: new Set() };
+  const tied = values.flatMap((value, i) => (value === highest ? [i] : []));
+  if (tied.length === 1 || !recent) return { bars: new Set(tied) };
+  const best = Math.max(...tied.map((i) => recent[i] ?? 0));
+  const winners = tied.filter((i) => (recent[i] ?? 0) === best);
+  return best > 0 && winners.length === 1 ? { bars: new Set(winners), tieBrokenBy: winners[0] } : { bars: new Set(tied) };
+}
+
+/** A small horizontal bar chart: one row per label, the count at the end of its bar; grey bars, the chosen ones in the report's accent, an optional note below. */
+function bookletBarChart(x: number, y: number, width: number, height: number, title: string, labels: readonly string[], values: readonly number[], max: number, highlighted: ReadonlySet<number>, note: string, colors: { bar: string; highlight: string }): string {
   const parts = [text(x, y + 8, title, 8, true)];
-  const top = y + 22, base = y + height - 12, slot = width / Math.max(1, values.length), barWidth = Math.min(28, slot * 0.6);
-  parts.push(`<line x1="${x}" y1="${base}" x2="${x + width}" y2="${base}" stroke="#94a3b8" stroke-width=".6"/>`);
+  const top = y + 16, labelWidth = 22, valueWidth = 16;
+  const row = (height - 16) / Math.max(1, values.length), barHeight = Math.min(16, row * 0.62);
+  const barSpace = width - labelWidth - valueWidth;
+  parts.push(`<line x1="${x + labelWidth}" y1="${top}" x2="${x + labelWidth}" y2="${top + row * values.length}" stroke="#94a3b8" stroke-width=".6"/>`);
   values.forEach((value, i) => {
-    const barHeight = max > 0 ? (base - top) * value / max : 0;
-    const center = x + slot * i + slot / 2;
-    if (barHeight > 0) parts.push(`<rect x="${center - barWidth / 2}" y="${base - barHeight}" width="${barWidth}" height="${barHeight}" fill="${fill}" rx="1.5"/>`);
-    parts.push(`<text x="${center}" y="${base - barHeight - 3}" font-size="7" font-weight="bold" fill="${color}" text-anchor="middle">${value}</text>`);
-    parts.push(`<text x="${center}" y="${base + 9}" font-size="7" fill="${color}" text-anchor="middle">${xml(labels[i] ?? '')}</text>`);
+    const middle = top + row * i + row / 2;
+    const barWidth = max > 0 ? barSpace * value / max : 0;
+    parts.push(`<text x="${x}" y="${middle + 2.5}" font-size="7" fill="${color}">${xml(labels[i] ?? '')}</text>`);
+    if (barWidth > 0) parts.push(`<rect x="${x + labelWidth}" y="${middle - barHeight / 2}" width="${barWidth}" height="${barHeight}" fill="${highlighted.has(i) ? colors.highlight : colors.bar}" rx="1.5"/>`);
+    parts.push(`<text x="${x + labelWidth + barWidth + 3}" y="${middle + 2.5}" font-size="7" font-weight="bold" fill="${color}">${value}</text>`);
   });
+  if (note) parts.push(text(x, y + height + 8, note, 6.5, true, colors.highlight));
   return parts.join('');
 }
 
+
+export const TEAM_CHART_BAR = '#cbd5e1';
+export const TEAM_CHART_HIGHLIGHT = '#007e80';
+
+/**
+ * The starting rotations of the Team page, drawn the same in the booklet and in the editor: two bar charts
+ * (on serve, on reception), or with one match only the rotations written out. Below, what they are counted on
+ * and the coach's note.
+ */
+export function teamStartsElements(x: number, y: number, width: number, height: number, piece: Pick<ResolvedBoardPiece, 'table' | 'subtitle'>, team: ReportView['team'], colors: { bar?: string; highlight?: string } | undefined, t: ViewT): string {
+  const table = piece.table;
+  if (!table) return '';
+  const bar = colors?.bar || TEAM_CHART_BAR, highlight = colors?.highlight || TEAM_CHART_HIGHLIGHT;
+  const labels = table.rows.map((row) => formatViewCell(row[0]));
+  const counts = (column: number) => table.rows.map((row) => Math.max(0, Number.parseInt(formatViewCell(row[column]), 10) || 0));
+  const serve = counts(1), receive = counts(2), max = Math.max(1, ...serve, ...receive);
+  const noteLines = [team?.basis ?? '', piece.subtitle ?? ''].filter(Boolean).flatMap((line) => wrapBookletText(line, width, 6));
+  const chartHeight = height - noteLines.length * 8 - 6, chartWidth = (width - 14) / 2;
+  const parts: string[] = [];
+  const recent = team?.recent;
+  ([[1, serve], [2, receive]] as const).forEach(([column, values], index) => {
+    const left = x + index * (chartWidth + 14);
+    if (team?.singleMatch) {
+      // One match: no chart, the rotation(s) it started in.
+      const used = values.flatMap((value, i) => (value > 0 ? [{ label: labels[i], value }] : [])).sort((a, b) => b.value - a.value);
+      parts.push(text(left, y + 8, table.columns[column] ?? '', 8, true));
+      const written = used.length === 1 ? used[0].label : used.map((entry) => `${entry.label} (${entry.value})`).join(' · ');
+      parts.push(text(left, y + 34, written || '-', used.length === 1 ? 24 : 13, true, highlight));
+      return;
+    }
+    const { bars, tieBrokenBy } = highestBars(values, column === 1 ? recent?.serve : recent?.receive);
+    const note = tieBrokenBy !== undefined && recent
+      ? t(recent.matches === 1 ? 'teamStartsTieNoteOne' : 'teamStartsTieNote', { rotation: labels[tieBrokenBy], n: recent.matches })
+      : '';
+    parts.push(bookletBarChart(left, y, chartWidth, chartHeight - 10, table.columns[column] ?? '', labels, values, max, bars, note, { bar, highlight }));
+  });
+  noteLines.forEach((line, i) => parts.push(text(x, y + height - noteLines.length * 8 + 6 + i * 8, line, 6, false, '#475569')));
+  return parts.join('');
+}
 type SetterGroup = ReportView['setter']['groups'][number];
 /** Setters in print order: most touches of every skill first, then most sets. */
 export function rankSetterGroups<G extends Pick<SetterGroup, 'player' | 'attempts' | 'touches'>>(groups: readonly G[]): G[] {
@@ -229,7 +282,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   if (teamRoster?.table || teamStarts?.table) {
     component = 'team';
     const page = add(t('opponentReportSheet_team'));
-    const chartBlock = teamStarts?.table ? (a4 ? 260 : 190) : 0;
+    const chartBlock = teamStarts?.table ? (a4 ? 190 : 150) : 0;
     let y = TOP;
     if (teamRoster?.table) {
       page.elements.push(text(M, y + 10, teamRoster.title, 10, true));
@@ -251,17 +304,9 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       rememberNotes(teamRoster);
     }
     if (teamStarts?.table) {
-      const table = teamStarts.table;
       const top = BOTTOM - chartBlock + 8;
       page.elements.push(text(M, top, teamStarts.title, 10, true));
-      const labels = table.rows.map((row) => formatViewCell(row[0]));
-      const counts = (column: number) => table.rows.map((row) => Math.max(0, Number.parseInt(formatViewCell(row[column]), 10) || 0));
-      const serve = counts(1), receive = counts(2), max = Math.max(1, ...serve, ...receive);
-      const captionLines = wrapBookletText(teamStarts.subtitle ?? '', WIDTH, 6);
-      const chartTop = top + 8, chartWidth = (WIDTH - 14) / 2, chartHeight = BOTTOM - chartTop - captionLines.length * 8 - 4;
-      page.elements.push(bookletBarChart(M, chartTop, chartWidth, chartHeight, table.columns[1] ?? '', labels, serve, max, '#0f766e'));
-      page.elements.push(bookletBarChart(M + chartWidth + 14, chartTop, chartWidth, chartHeight, table.columns[2] ?? '', labels, receive, max, '#1d4ed8'));
-      page.elements.push(...captionLines.map((line, i) => text(M, BOTTOM - captionLines.length * 8 + 6 + i * 8, line, 6, false, '#475569')));
+      page.elements.push(teamStartsElements(M, top + 8, WIDTH, BOTTOM - top - 8, teamStarts, view.team, report.pieceEdits?.[PIECE_TEAM_STARTS]?.chartColors, t));
       rememberNotes(teamStarts);
     }
     component = 'keys';

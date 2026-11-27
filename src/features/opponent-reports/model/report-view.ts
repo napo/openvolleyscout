@@ -2,6 +2,7 @@
  * What the report sheets show, already worded and coloured, shared by the
  * screen and the PDF so both say exactly the same thing. Pure given `t`.
  */
+import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { placeSvgLabels } from '@src/lib/utils/svg-label-placement';
 import { attackerViewFilterLabel } from './attacker-view-label';
 import { reportPriorities, priorityText } from './report-priorities';
@@ -147,7 +148,17 @@ export interface ReportView {
   /** Zone analysis per rotation, after reception and in transition. */
   zones?: ReportZoneView;
   /** "Team" sheet: athletes who played and the sets started in each rotation. */
-  team?: { roster: ViewTable; starts: ViewTable; hasStarts: boolean };
+  team?: {
+    roster: ViewTable;
+    starts: ViewTable;
+    hasStarts: boolean;
+    /** The same starts in the latest matches, in the rows' order: breaks a tie between the highest bars. */
+    recent?: { matches: number; serve: number[]; receive: number[] };
+    /** What the starts are counted on: "on N matches", or the only match with its opponent and date. */
+    basis: string;
+    /** One match only: its rotations are written, not drawn. */
+    singleMatch: boolean;
+  };
   minSample: number;
 }
 
@@ -189,7 +200,9 @@ function teamView(metrics: OpponentReportMetrics, t: ViewT): NonNullable<ReportV
     const key = libero ? 'roleNameLibero' : ROLE_NAME_KEYS[role as keyof typeof ROLE_NAME_KEYS];
     return key ? t(key) : '';
   };
-  const rotations = [1, 2, 3, 4, 5, 6] as const;
+  // Game order of the setter: P1, then P6, P5 ... P2.
+  const rotations = [1, 6, 5, 4, 3, 2] as const;
+  const only = metrics.sample.matches === 1 ? metrics.matchList?.[0] : undefined;
   return {
     roster: {
       columns: [t('jerseyNumber'), t('opponentReportColPlayer'), t('teamColRole')],
@@ -199,10 +212,19 @@ function teamView(metrics: OpponentReportMetrics, t: ViewT): NonNullable<ReportV
       columns: [t('opponentReportColRotation'), t('teamStartsServe'), t('teamStartsReceive')],
       rows: rotations.map((rotation) => {
         const starts = metrics.startingRotationCounts[rotation];
-        return [plain(`P${rotation}`), plain(starts.serve), plain(starts.receive)];
+        return [plain(t('teamRotationLabel', { n: rotation })), plain(starts.serve), plain(starts.receive)];
       }),
     },
     hasStarts: rotations.some((rotation) => metrics.startingRotationCounts[rotation].serve + metrics.startingRotationCounts[rotation].receive > 0),
+    basis: only
+      ? t('teamStartsSingleMatch', { team: only.facedName ?? '?', date: formatDisplayDate(only.playedAt) || '?' })
+      : t('teamStartsBasis', { n: metrics.sample.matches }),
+    singleMatch: Boolean(only),
+    ...(metrics.recentStartingRotationCounts ? { recent: {
+      matches: metrics.recentStartingRotationCounts.matches,
+      serve: rotations.map((rotation) => metrics.recentStartingRotationCounts!.counts[rotation].serve),
+      receive: rotations.map((rotation) => metrics.recentStartingRotationCounts!.counts[rotation].receive),
+    } } : {}),
   };
 }
 

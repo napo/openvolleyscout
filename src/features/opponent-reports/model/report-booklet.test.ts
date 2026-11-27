@@ -162,6 +162,8 @@ describe('booklet planning and printing',()=>{
       roster:{columns:['Jersey','Player','Role'],rows:[['7','Anna Rossi','Setter'],['12','Bea Neri','Libero']].map(row=>row.map(cell))},
       starts:{columns:['Rotation','Starting on serve','Starting on reception'],rows:[1,2,3,4,5,6].map(r=>[cell(`P${r}`),cell(String(r===1?3:0)),cell(String(r===4?2:0))])},
       hasStarts:true,
+      basis:t('teamStartsBasis',{n:5}),
+      singleMatch:false,
     };
     for(const a4 of [false,true]){
       const pages=buildReportBooklet(report,view,t,'',{a4}).pages;
@@ -170,9 +172,44 @@ describe('booklet planning and printing',()=>{
       expect(teamPage).toContain('>Anna Rossi<');
       expect(teamPage).toContain('>Libero<');
       expect(teamPage).toContain('>Starting on serve<');
-      expect(teamPage.match(/<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="[\d.]+" fill="#(0f766e|1d4ed8)"/g)).toHaveLength(2);
+      // Grey bars, the highest of each chart in the accent colour.
+      expect(teamPage.match(/<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="[\d.]+" fill="#007e80"/g)).toHaveLength(2);
+      expect(teamPage.indexOf('>P1<')).toBeLessThan(teamPage.indexOf('>P6<'));
       expect(pages.filter(page=>page.includes('>Anna Rossi<')),`a4=${a4} roster printed once`).toHaveLength(1);
     }
+    // The rotations follow the setter's game order, with the letter of each language.
+    const metrics=computeOpponentReportMetrics([]);
+    metrics.startingRotationCounts[4]={serve:1,receive:0};
+    const order=(translate:ViewT)=>buildReportView(report,metrics,[],DEFAULT_THRESHOLDS,translate,DEFAULT_RECEPTION_SYSTEM_BLOCK,computeAttackingReportMetrics([])).team!.starts.rows.map(row=>row[0].text);
+    expect(order(t)).toEqual(['Z1','Z6','Z5','Z4','Z3','Z2']);
+    expect(order(translator(italian))).toEqual(['P1','P6','P5','P4','P3','P2']);
+    // A tie between the highest bars: the rotation used most in the latest matches is the coloured one, with a note.
+    view.team={...view.team!,
+      starts:{...view.team!.starts,rows:['P1','P6','P5','P4','P3','P2'].map((label,i)=>[cell(label),cell(String(i===0||i===3?4:1)),cell('0')])},
+      recent:{matches:3,serve:[1,0,0,2,0,0],receive:[0,0,0,0,0,0]}};
+    const tiePage=buildReportBooklet(report,view,t).pages[0];
+    expect(tiePage).toContain(`>${t('teamStartsTieNote',{rotation:'P4',n:3})}<`);
+    expect(tiePage.match(/fill="#007e80" rx="1.5"/g)).toHaveLength(1);
+    // Still level in the latest matches: both stay coloured and no note is written.
+    view.team={...view.team!,recent:{matches:3,serve:[1,0,0,1,0,0],receive:[0,0,0,0,0,0]}};
+    const levelPage=buildReportBooklet(report,view,t).pages[0];
+    expect(levelPage.match(/fill="#007e80" rx="1.5"/g)).toHaveLength(2);
+    expect(levelPage).not.toContain('used most');
+    // What the chart is counted on is always written under it; the coach's colours replace the default ones.
+    expect(levelPage).toContain(`>${t('teamStartsBasis',{n:5})}<`);
+    report.pieceEdits={'team:starts':{chartColors:{bar:'#aaaaaa',highlight:'#ff0000'}}};
+    const coloured=buildReportBooklet(report,view,t).pages[0];
+    expect(coloured).toContain('fill="#ff0000" rx="1.5"');
+    expect(coloured).toContain('fill="#aaaaaa" rx="1.5"');
+    report.pieceEdits={};
+    // One match only: the rotation is written instead of the chart, with the match it comes from.
+    view.team={...view.team!,singleMatch:true,basis:t('teamStartsSingleMatch',{team:'Gela',date:'01/11/2026'}),
+      starts:{...view.team!.starts,rows:['P1','P6','P5','P4','P3','P2'].map((label,i)=>[cell(label),cell(i===0?'3':'0'),cell(i===3?'2':i===5?'1':'0')])}};
+    const single=buildReportBooklet(report,view,t).pages[0];
+    expect(single).not.toContain('rx="1.5"');
+    expect(single).toContain('>P1<');
+    expect(single).toContain('>P4 (2) · P2 (1)<');
+    expect(single).toContain('>In the match against Gela on 01/11/2026.<');
     // Reports saved before the Team sheet keep their pages until the coach turns it on.
     report.booklet={...report.booklet!,includeTeam:undefined};
     expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes(`>${t('opponentReportSheet_team')}<`))).toBe(false);

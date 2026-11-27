@@ -888,6 +888,10 @@
 .opponent-report__video-link small { display: block; }
 .opponent-report__board-piece { min-width: 0; }
 .opponent-report__board-piece-title { min-width: 0; }
+.opponent-report__team-chart-editor { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-start; margin-bottom: 0.5rem; }
+.opponent-report__team-chart-editor svg { width: min(100%, 38rem); height: auto; background: #fff; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 6px; }
+.opponent-report__team-chart-colors { display: flex; flex-direction: column; gap: 0.4rem; }
+.opponent-report__team-chart-colors label { display: flex; align-items: center; gap: 0.5rem; }
 .opponent-report__setter-charts { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; align-items: center; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 6px; padding: 0.5rem 0.75rem; margin: 0 0 0.75rem; }
 .opponent-report__setter-charts legend { font-weight: 600; padding: 0 0.25rem; }
 .opponent-report__setter-charts .opponent-report__hint { flex-basis: 100%; margin: 0; }

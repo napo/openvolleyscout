@@ -6,7 +6,7 @@ import type { ReportMatchInput } from './report-metrics';
 
 /** The selected matches, reduced to what the report metrics read. */
 export function buildReportMatchInputs(matches: readonly TeamMatch[]): ReportMatchInput[] {
-  return matches.map(({ project, side }) => {
+  return matches.map(({ project, side, faced }) => {
     const stats = buildProjectMatchStats(project);
     return {
       matchId: project.metadata.id,
@@ -17,6 +17,8 @@ export function buildReportMatchInputs(matches: readonly TeamMatch[]): ReportMat
       roster: getMatchRoster(project, side),
       videoAnalysis: project.videoAnalysis,
       codeTables: getMatchCodeTables(project),
+      playedAt: project.metadata.playedAt,
+      facedName: faced?.name,
     };
   });
 }

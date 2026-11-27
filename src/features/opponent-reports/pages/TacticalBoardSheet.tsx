@@ -2,7 +2,8 @@ import { Modal } from '@src/components/Modal';
 import { nextChartRotation } from '@src/lib/utils/chart-rotation';
 import { expandAttackerViews, expandSetterViews } from '../model/split-views';
 import { BookletSettings } from './BookletSettings';
-import { chartedSetterKeys, DEFAULT_BOOKLET, rankSetterGroups, type ReportBookletPlan, type ReportStaffNote } from '../model/report-booklet';
+import { chartedSetterKeys, DEFAULT_BOOKLET, rankSetterGroups, TEAM_CHART_BAR, TEAM_CHART_HIGHLIGHT, teamStartsElements, type ReportBookletPlan, type ReportStaffNote } from '../model/report-booklet';
+import { PIECE_TEAM_STARTS } from '../model/board-pieces';
 import { playerLabel } from '../model/report-keys';
 import { moveReportComponent, reportComponentOrder } from '../model/report-components';
 import { ReportPriorities } from './ReportPriorities';
@@ -657,7 +658,53 @@ export function TacticalBoardSheet({
                   </details>
                 </header>
 
-                {piece.subtitle !== undefined ? (
+                {piece.id === PIECE_TEAM_STARTS ? (
+                  <div className="opponent-report__team-chart-editor">
+                    <svg
+                      viewBox="0 0 380 180"
+                      role="img"
+                      aria-label={piece.title}
+                      // Built from escaped text only, the same drawing as the printed page.
+                      dangerouslySetInnerHTML={{ __html: teamStartsElements(0, 0, 380, 180, piece, view.team, edit?.chartColors, viewT) }}
+                    />
+                    <div className="opponent-report__team-chart-colors">
+                      {(['bar', 'highlight'] as const).map((key) => (
+                        <label key={key}>
+                          <span>{t(key === 'bar' ? 'teamChartColorBar' : 'teamChartColorHighlight')}</span>
+                          <input
+                            type="color"
+                            value={edit?.chartColors?.[key] ?? (key === 'bar' ? TEAM_CHART_BAR : TEAM_CHART_HIGHLIGHT)}
+                            onChange={(event) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                              ...prev,
+                              chartColors: { ...prev.chartColors, [key]: event.target.value },
+                            })))}
+                          />
+                        </label>
+                      ))}
+                      {edit?.chartColors ? (
+                        <button type="button" className="btn-secondary btn-small" onClick={() => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
+                          const next = { ...prev };
+                          delete next.chartColors;
+                          return next;
+                        }))}>
+                          <ActionIcon name="undo" />{t('opponentReportBoardResetPiece')}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
+                {piece.subtitle !== undefined && piece.id === PIECE_TEAM_STARTS ? (
+                  <textarea
+                    className="opponent-report__board-piece-subtitle"
+                    rows={2}
+                    value={piece.subtitle}
+                    onChange={(event) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                      ...prev,
+                      subtitle: event.target.value,
+                    })))}
+                  />
+                ) : piece.subtitle !== undefined ? (
                   <input
                     type="text"
                     className="opponent-report__board-piece-subtitle"

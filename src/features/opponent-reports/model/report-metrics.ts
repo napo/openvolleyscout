@@ -35,6 +35,10 @@ export interface ReportMatchInput {
   videoAnalysis?: MatchVideoAnalysis;
   /** The match's DataVolley combination table (for the served attacker of the zone analysis). */
   codeTables?: DataVolleyCodeTables;
+  /** When the match was played: orders the matches for "the latest matches". */
+  playedAt?: string;
+  /** The team faced in that match. */
+  facedName?: string;
 }
 
 export interface Ratio {
@@ -186,6 +190,10 @@ export interface OpponentReportMetrics {
   touchesByPlayer?: Record<string, number>;
   /** Athletes who played (a touch, or in a starting line-up), by jersey, with the role of the roster. */
   teamPlayers?: Array<{ player: ReportPlayer; role?: string; libero: boolean }>;
+  /** Starting rotations in the latest matches only (up to four, by date): breaks ties on the Team page. */
+  recentStartingRotationCounts?: { matches: number; counts: Record<CourtPosition, { serve: number; receive: number }> };
+  /** The analysed matches, oldest first: who was faced and when. */
+  matchList?: Array<{ matchId: string; facedName?: string; playedAt?: string }>;
   /** Optional so older fixtures and stored metrics stay valid. */
   teamIndicators?: TeamIndicators;
   startingRotations: StartingRotationRow[];
@@ -626,6 +634,22 @@ export function computeOpponentReportMetrics(
   return {
     sample: { matches: matches.length, sets, rallies },
     touchesByPlayer: Object.fromEntries(touchCounts),
+    matchList: matches
+      .map((match, index) => ({ match, index }))
+      .sort((a, b) => (a.match.playedAt ?? '').localeCompare(b.match.playedAt ?? '') || a.index - b.index)
+      .map(({ match }) => ({ matchId: match.matchId, facedName: match.facedName, playedAt: match.playedAt })),
+    recentStartingRotationCounts: (() => {
+      const latest = matches
+        .map((match, index) => ({ id: match.matchId, playedAt: match.playedAt ?? '', index }))
+        .sort((a, b) => a.playedAt.localeCompare(b.playedAt) || a.index - b.index)
+        .slice(-4)
+        .map((match) => match.id);
+      const counts = EMPTY_COUNTS();
+      for (const row of startingRotations) {
+        if (row.rotation && latest.includes(row.matchId)) counts[row.rotation][row.serving ? 'serve' : 'receive'] += 1;
+      }
+      return { matches: latest.length, counts };
+    })(),
     teamPlayers: [...players.values()]
       .filter((player) => playedKeys.has(player.key))
       .sort((a, b) => (Number(a.jersey) || 999) - (Number(b.jersey) || 999) || a.name.localeCompare(b.name))

@@ -114,6 +114,16 @@ describe('opponent report metrics', () => {
     expect(metrics.teamPlayers?.map((entry) => entry.player.jersey)).toEqual(['1', '2', '3', '4', '5', '6']);
   });
 
+  it('counts the starting rotations of the latest matches, ordered by date', () => {
+    const base = { side: 'away' as const, events, rallies: rallyStats, roster, rotationStats: [] };
+    const latest = computeOpponentReportMetrics([
+      { ...base, matchId: 'old', playedAt: '2026-01-01', events: [] },
+      ...['b', 'c', 'd', 'e'].map((id, i) => ({ ...base, matchId: id, playedAt: `2026-0${i + 2}-01` })),
+    ]).recentStartingRotationCounts!;
+    expect(latest.matches).toBe(4);
+    expect(latest.counts[1]).toEqual({ serve: 0, receive: 4 });
+  });
+
   it('measures reception per receiver and per rotation', () => {
     const byName = Object.fromEntries(metrics.receivers.map((row) => [row.player.name, row.positive]));
     expect(byName.Player2).toEqual({ count: 1, total: 1, rate: 1 });

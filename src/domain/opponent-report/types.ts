@@ -161,6 +161,8 @@ export interface OpponentReportPieceEdit {
   /** Quarter turns of a court diagram, labels kept upright. */
   courtRotations?: Record<string, 90 | 180 | 270>;
   serveHeatmapEdits?: Record<string, ServeHeatmapCellEdit>;
+  /** Colours of a bar chart (the Team page): every bar, and the highest one. */
+  chartColors?: { bar?: string; highlight?: string };
   note?: string;
 }
 
