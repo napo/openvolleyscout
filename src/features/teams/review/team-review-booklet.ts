@@ -7,6 +7,7 @@
 import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import type { SkillStats } from '@src/features/scouting/model/match-stats';
 import { APP_METADATA } from '@src/lib/constants/app';
+import { activePrintTheme } from '@src/lib/theme/print-theme';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { RADAR_AXES, DEFAULT_RADAR_AXIS_IDS } from '@src/features/analytics/radar/model/radar-metrics';
 import { BOOKLET_HEIGHT, BOOKLET_WIDTH, DEFAULT_BOOKLET, wrapBookletText, type ReportBookletPlan } from '@src/features/opponent-reports/model/report-booklet';
@@ -30,8 +31,13 @@ export type ReviewT = (key: string, params?: Record<string, string | number>) =>
 
 const M = 20;
 const TOP = 87;
-const INK = '#142e42';
-const ACCENT = '#007e80';
+// The frame follows the print theme (OVS by default); the colours of the data keep their meaning.
+let INK = '#142e42';
+let BAND = '#142e42';
+let ON_BAND = '#ffffff';
+let ACCENT = '#007e80';
+let SOFT = '#f8fafc';
+let BORDER = '#cbd5e1';
 const MUTED = '#64748b';
 const GOOD = '#16a34a';
 const WEAK = '#dc2626';
@@ -95,7 +101,7 @@ function trendChart(data: TeamReviewData, axisId: string, x: number, y: number, 
 
 function kpiBox(x: number, y: number, w: number, h: number, label: string, value: string, sub = '', tone = INK): string[] {
   return [
-    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="0.6"/>`,
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${SOFT}" stroke="${BORDER}" stroke-width="0.6"/>`,
     text(x + 7, y + 11, label, 6.2, false, MUTED),
     text(x + 7, y + 24, value, 10.5, true, tone),
     ...(sub ? [text(x + 7, y + 34, sub, 5.6, false, MUTED)] : []),
@@ -119,7 +125,7 @@ function drawPlayerPages(
   // Header + optional QR
   const qr = player.videoUrl ? buildQrSvg(player.videoUrl) : null;
   const headerH = qr ? 60 : 38;
-  page.elements.push(`<rect x="${M}" y="${y}" width="${WIDTH}" height="${headerH}" rx="5" fill="#f8fafc" stroke="#cbd5e1" stroke-width="0.7"/>`);
+  page.elements.push(`<rect x="${M}" y="${y}" width="${WIDTH}" height="${headerH}" rx="5" fill="${SOFT}" stroke="${BORDER}" stroke-width="0.7"/>`);
   const roleLabel = player.role ? ` · ${t(player.role)}` : '';
   page.elements.push(text(M + 8, y + 14, `#${player.jersey} ${player.name}${roleLabel}`, 9.5, true));
   page.elements.push(text(M + 8, y + 25, `${t('teamReviewPlayerMatches', { count: player.matches })} · ${t('teamReviewPointsLabel')}: ${player.points} · ${t('teamReviewErrorsLabel')}: ${player.errors}`, 6.5, false, MUTED));
@@ -281,11 +287,22 @@ function drawPlayerPages(
   }
 }
 
+function applyReviewTheme(): void {
+  const theme = activePrintTheme();
+  INK = theme.ink;
+  BAND = theme.primary;
+  ON_BAND = theme.onPrimary;
+  ACCENT = theme.accent;
+  SOFT = theme.soft;
+  BORDER = theme.border;
+}
+
 export function buildTeamReviewBooklet(
   data: TeamReviewData,
   t: ReviewT,
   options: { notes?: string; title?: string; config?: Partial<TeamReviewConfig> } = {},
 ): ReportBookletPlan {
+  applyReviewTheme();
   const config: TeamReviewConfig = { ...DEFAULT_TEAM_REVIEW_CONFIG, ...(options.config ?? {}) };
   const extended = config.detailLevel === 'extended';
   const axisLabels = buildAxisLabels(t);
@@ -538,7 +555,7 @@ export function buildTeamReviewBooklet(
   const attributionLines = wrapBookletText(t('tacticalAttributionFooter'), WIDTH, 3.8).slice(0, 2);
   const context = `${title} · ${t('teamReviewRecord', { won: data.wins, lost: data.losses, total: data.matches.length })}`;
   return {
-    pages: pages.map((item, index) => `<svg xmlns="http://www.w3.org/2000/svg" width="${BOOKLET_WIDTH}" height="${BOOKLET_HEIGHT}" viewBox="0 0 ${BOOKLET_WIDTH} ${BOOKLET_HEIGHT}"><rect width="100%" height="100%" fill="#fff"/><rect width="100%" height="65" fill="${INK}"/>${text(M, 18, data.teamName, 8, true, '#fff')}${wrapBookletText(item.title, WIDTH, 13).slice(0, 2).map((line, row) => text(M, 36 + row * 15, line, 13, true, '#fff')).join('')}${text(M, 77, wrapBookletText(context, WIDTH, 6)[0] ?? '', 6)}${item.elements.join('')}<line x1="${M}" y1="${BOOKLET_HEIGHT - 30}" x2="${BOOKLET_WIDTH - M}" y2="${BOOKLET_HEIGHT - 30}" stroke="#cbd5e1"/>${text(M, BOOKLET_HEIGHT - 24, footer, footerSize)}${attributionLines.map((line, row) => text(M, BOOKLET_HEIGHT - 18 + row * 4.6, line, 3.8)).join('')}${text(M, BOOKLET_HEIGHT - 4, `${index + 1} / ${pages.length}`, 5)}</svg>`),
+    pages: pages.map((item, index) => `<svg xmlns="http://www.w3.org/2000/svg" width="${BOOKLET_WIDTH}" height="${BOOKLET_HEIGHT}" viewBox="0 0 ${BOOKLET_WIDTH} ${BOOKLET_HEIGHT}"><rect width="100%" height="100%" fill="#fff"/><rect width="100%" height="65" fill="${BAND}"/>${text(M, 18, data.teamName, 8, true, ON_BAND)}${wrapBookletText(item.title, WIDTH, 13).slice(0, 2).map((line, row) => text(M, 36 + row * 15, line, 13, true, ON_BAND)).join('')}${text(M, 77, wrapBookletText(context, WIDTH, 6)[0] ?? '', 6)}${item.elements.join('')}<line x1="${M}" y1="${BOOKLET_HEIGHT - 30}" x2="${BOOKLET_WIDTH - M}" y2="${BOOKLET_HEIGHT - 30}" stroke="${BORDER}"/>${text(M, BOOKLET_HEIGHT - 24, footer, footerSize)}${attributionLines.map((line, row) => text(M, BOOKLET_HEIGHT - 18 + row * 4.6, line, 3.8)).join('')}${text(M, BOOKLET_HEIGHT - 4, `${index + 1} / ${pages.length}`, 5)}</svg>`),
     width: BOOKLET_WIDTH,
     height: BOOKLET_HEIGHT,
     contentPages,

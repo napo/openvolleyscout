@@ -23,6 +23,8 @@ export interface PrintTheme {
   ink: string;
   /** Pale background of boxes and cells. */
   soft: string;
+  /** Background of total rows in tables. */
+  totals: string;
   /** Lines and borders. */
   border: string;
   /** Neutral bars and secondary shapes of a chart. */
@@ -87,16 +89,16 @@ const BASE = { text: '#111827', muted: '#475569' } as const;
 
 export const PRINT_THEMES: Record<Exclude<PrintThemeId, 'club'>, PrintTheme> = {
   ovs: {
-    id: 'ovs', primary: '#142e42', onPrimary: '#ffffff', accent: '#007e80', accentSoft: '#eaf3f3', ink: '#142e42', soft: '#f8fafc', border: '#cbd5e1', neutral: '#cbd5e1', ...BASE, flat: false,
+    id: 'ovs', primary: '#142e42', onPrimary: '#ffffff', accent: '#007e80', accentSoft: '#eaf3f3', ink: '#142e42', soft: '#f8fafc', totals: '#e3edee', border: '#cbd5e1', neutral: '#cbd5e1', ...BASE, flat: false,
   },
   'ovs-blue': {
-    id: 'ovs-blue', primary: '#002554', onPrimary: '#ffffff', accent: '#0169d8', accentSoft: '#e6f0fb', ink: '#002554', soft: '#eef5ff', border: '#7f93b4', neutral: '#c9d6ea', text: '#111827', muted: '#6b7280', flat: false,
+    id: 'ovs-blue', primary: '#002554', onPrimary: '#ffffff', accent: '#0169d8', accentSoft: '#e6f0fb', ink: '#002554', soft: '#eef5ff', totals: '#dfe8f7', border: '#7f93b4', neutral: '#c9d6ea', text: '#111827', muted: '#6b7280', flat: false,
   },
   'black-white': {
-    id: 'black-white', primary: '#e5e7eb', onPrimary: '#111827', accent: '#111827', accentSoft: '#f3f4f6', ink: '#000000', soft: '#ffffff', border: '#6b7280', neutral: '#d1d5db', text: '#000000', muted: '#374151', flat: true,
+    id: 'black-white', primary: '#e5e7eb', onPrimary: '#111827', accent: '#111827', accentSoft: '#f3f4f6', ink: '#000000', soft: '#ffffff', totals: '#e5e7eb', border: '#6b7280', neutral: '#d1d5db', text: '#000000', muted: '#374151', flat: true,
   },
   'high-contrast': {
-    id: 'high-contrast', primary: '#000000', onPrimary: '#ffffff', accent: '#0047b3', accentSoft: '#e6edf7', ink: '#000000', soft: '#ffffff', border: '#000000', neutral: '#9ca3af', text: '#000000', muted: '#1f2937', flat: false,
+    id: 'high-contrast', primary: '#000000', onPrimary: '#ffffff', accent: '#0047b3', accentSoft: '#e6edf7', ink: '#000000', soft: '#ffffff', totals: '#e5e7eb', border: '#000000', neutral: '#9ca3af', text: '#000000', muted: '#1f2937', flat: false,
   },
 };
 
@@ -114,6 +116,7 @@ export function clubPrintTheme(colors: Partial<ClubColors> = {}): PrintTheme {
     // A dark club colour also writes the titles; a light one leaves them near-black.
     ink: contrastRatio(primary, '#ffffff') >= 7 ? primary : '#111827',
     soft: mixColors(primary, '#ffffff', 0.94),
+    totals: mixColors(primary, '#ffffff', 0.86),
     border: mixColors(primary, '#ffffff', 0.7),
     neutral: mixColors(primary, '#ffffff', 0.78),
     ...BASE,
@@ -135,8 +138,8 @@ export interface PrintThemeChoice {
 
 const isThemeId = (value: unknown): value is PrintThemeId => PRINT_THEME_IDS.includes(value as PrintThemeId);
 
-/** The choice kept in this browser for every printed document; the OVS look until the user picks another. */
-export function readPrintThemeChoice(): PrintThemeChoice {
+/** The choice kept in this browser for every printed document, or null when the user never picked one. */
+export function readStoredPrintThemeChoice(): PrintThemeChoice | null {
   try {
     const raw = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
     const parsed = raw ? JSON.parse(raw) as Partial<PrintThemeChoice> : null;
@@ -147,7 +150,18 @@ export function readPrintThemeChoice(): PrintThemeChoice {
   } catch {
     // Unreadable or blocked storage: the default look.
   }
-  return { id: 'ovs' };
+  return null;
+}
+
+/** The tactical report's choice: the OVS look until the user picks another. */
+export function readPrintThemeChoice(): PrintThemeChoice {
+  return readStoredPrintThemeChoice() ?? { id: 'ovs' };
+}
+
+/** The look of the other PDFs (match report, exports): the OVS blue they always had, until the user picks a theme. */
+export function pdfPrintTheme(own?: PrintThemeChoice): PrintTheme {
+  const choice = own ?? readStoredPrintThemeChoice();
+  return choice ? resolvePrintTheme(choice.id, choice.club) : PRINT_THEMES['ovs-blue'];
 }
 
 const listeners = new Set<() => void>();
@@ -156,10 +170,15 @@ export function subscribePrintTheme(listener: () => void): () => void {
   return () => { listeners.delete(listener); };
 }
 
+/** Forgets the choice: the defaults of each document come back. */
+export function resetPrintThemeChoice(): void {
+  try { window.localStorage.removeItem(STORAGE_KEY); } catch { /* nothing to forget */ }
+  listeners.forEach((listener) => listener());
+}
+
 export function savePrintThemeChoice(choice: PrintThemeChoice): void {
   try {
-    if (choice.id === 'ovs') window.localStorage.removeItem(STORAGE_KEY);
-    else window.localStorage.setItem(STORAGE_KEY, JSON.stringify(choice));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(choice));
   } catch {
     // Private mode: the choice lasts until the page closes.
   }

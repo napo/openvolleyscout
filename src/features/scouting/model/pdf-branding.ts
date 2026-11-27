@@ -9,6 +9,7 @@ import notoSansJpBoldUrl from '../../../assets/fonts/noto-cjk/NotoSansJP-Bold.tt
 import notoSansScRegularUrl from '../../../assets/fonts/noto-cjk/NotoSansSC-Regular.ttf?url';
 import notoSansScBoldUrl from '../../../assets/fonts/noto-cjk/NotoSansSC-Bold.ttf?url';
 import openVolleyScoutLogoUrl from '../../../assets/openvolleyscout-ball-pdf.png?url';
+import { pdfPrintTheme, type PrintTheme, type PrintThemeChoice } from '../../../lib/theme/print-theme';
 
 /**
  * Shared PDF branding: colors, fonts and the OVS logo, plus the pdfmake
@@ -17,14 +18,35 @@ import openVolleyScoutLogoUrl from '../../../assets/openvolleyscout-ball-pdf.png
  * visually consistent regardless of which feature generated it.
  */
 
-export const COLOR_PRIMARY = '#002554';
-export const COLOR_ACCENT = '#0169D8';
-export const COLOR_SOFT_BG = '#eef5ff';
-export const COLOR_BORDER = '#7f93b4';
-export const COLOR_TEXT = '#111827';
-export const COLOR_TOTALS_BG = '#dfe8f7';
+/**
+ * The colours of the document being built. They follow the print theme (OVS blue unless the user chose another)
+ * and are set by `applyPdfTheme` at the start of each document, so the builders keep reading plain names.
+ * COLOR_PRIMARY is the colour of titles and heading text; COLOR_BAND with COLOR_ON_BAND is a filled header.
+ */
+export let COLOR_PRIMARY = '#002554';
+export let COLOR_BAND = '#002554';
+export let COLOR_ON_BAND = '#ffffff';
+export let COLOR_ACCENT = '#0169D8';
+export let COLOR_SOFT_BG = '#eef5ff';
+export let COLOR_BORDER = '#7f93b4';
+export let COLOR_TEXT = '#111827';
+export let COLOR_TOTALS_BG = '#dfe8f7';
 export const COLOR_STARTER_BG = '#444444';
-export const COLOR_MUTED = '#6b7280';
+export let COLOR_MUTED = '#6b7280';
+
+export function applyPdfTheme(own?: PrintThemeChoice): PrintTheme {
+  const theme = pdfPrintTheme(own);
+  COLOR_PRIMARY = theme.ink;
+  COLOR_BAND = theme.primary;
+  COLOR_ON_BAND = theme.onPrimary;
+  COLOR_ACCENT = theme.accent;
+  COLOR_SOFT_BG = theme.soft;
+  COLOR_BORDER = theme.border;
+  COLOR_TEXT = theme.text;
+  COLOR_TOTALS_BG = theme.totals;
+  COLOR_MUTED = theme.muted;
+  return theme;
+}
 
 export type PdfMakeApi = {
   createPdf: (docDefinition: unknown) => { getBlob: () => Promise<Blob> };

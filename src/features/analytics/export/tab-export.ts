@@ -4,6 +4,7 @@ import { APP_METADATA } from '@src/lib/constants/app';
 import { saveFile } from '@src/lib/utils/save-file';
 import { buildReportPptx } from '@src/features/opponent-reports/model/report-presentation-export';
 import { buildPdfLogo, loadPdfMakeApi, preparePdfFont } from '@src/features/scouting/model/pdf-branding';
+import { activePrintTheme } from '@src/lib/theme/print-theme';
 import type { WidgetPdfMeta } from './widget-pdf-export';
 import { inlineSvgStylesForCapture, serializeSvgForPdf } from './widget-vector-content';
 import type { SharedStatsBarItem, SharedStatsBlock, SharedStatsKpiItem } from './stats-share-link';
@@ -11,7 +12,9 @@ import type { SharedStatsBarItem, SharedStatsBlock, SharedStatsKpiItem } from '.
 export type TabExportFormat = 'pdf' | 'pptx' | 'ods' | 'svg';
 const ODS_MIME = 'application/vnd.oasis.opendocument.spreadsheet';
 const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-const TACTICAL_COLOR = '#142e42';
+// The tactical look of the exported tabs: the print theme chosen by the user (OVS by default).
+const tabTheme = () => activePrintTheme();
+const hex6 = (color: string) => color.slice(1).toUpperCase();
 const defaultTacticalFooter = () => `${APP_METADATA.name} · ${APP_METADATA.author.displayName} · ${APP_METADATA.urls.webApp} · GNU AGPL v3 or later (${APP_METADATA.license})`;
 const xml = (value: string) => value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[ch]!));
 const ignored = 'button, input, select, textarea, script, style, [data-html-to-image-ignore="true"]';
@@ -377,7 +380,7 @@ export function buildTabSvg(
   visit(root);
   const totalHeight = height + offset + footerHeight;
   const lineY = totalHeight - 32;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${totalHeight}" viewBox="0 0 ${width} ${totalHeight}"><title>${xml(title)}</title><rect width="100%" height="100%" fill="white"/><rect width="100%" height="65" fill="${TACTICAL_COLOR}"/><text x="20" y="20" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ffffff">${xml(headerSubtitle)}</text><text x="20" y="44" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff">${xml(title)}</text><text x="20" y="80" font-family="sans-serif" font-size="11" fill="${TACTICAL_COLOR}">${xml(matchLabel)}</text>${objects.join('')}<line x1="20" y1="${lineY}" x2="${Math.max(20, width - 20)}" y2="${lineY}" stroke="#cbd5e1"/><text x="20" y="${lineY + 14}" font-family="sans-serif" font-size="10" fill="${TACTICAL_COLOR}">${xml(footer)}</text><text x="20" y="${lineY + 26}" font-family="sans-serif" font-size="10" fill="${TACTICAL_COLOR}">1 / 1</text></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${totalHeight}" viewBox="0 0 ${width} ${totalHeight}"><title>${xml(title)}</title><rect width="100%" height="100%" fill="white"/><rect width="100%" height="65" fill="${tabTheme().primary}"/><text x="20" y="20" font-family="sans-serif" font-size="11" font-weight="bold" fill="${tabTheme().onPrimary}">${xml(headerSubtitle)}</text><text x="20" y="44" font-family="sans-serif" font-size="18" font-weight="bold" fill="${tabTheme().onPrimary}">${xml(title)}</text><text x="20" y="80" font-family="sans-serif" font-size="11" fill="${tabTheme().ink}">${xml(matchLabel)}</text>${objects.join('')}<line x1="20" y1="${lineY}" x2="${Math.max(20, width - 20)}" y2="${lineY}" stroke="#cbd5e1"/><text x="20" y="${lineY + 14}" font-family="sans-serif" font-size="10" fill="${tabTheme().ink}">${xml(footer)}</text><text x="20" y="${lineY + 26}" font-family="sans-serif" font-size="10" fill="${tabTheme().ink}">1 / 1</text></svg>`;
 }
 
 /** Reuse the existing OOXML package, adding one visual snapshot per slide with the tactical header and footer. */
@@ -399,7 +402,7 @@ export function buildTabPptx(
         y: 0,
         width: 960,
         height: 44,
-        paint: { fill: '142E42', fillOpacity: 1, strokeOpacity: 0, strokeWidth: 0, dashed: false },
+        paint: { fill: hex6(tabTheme().primary), fillOpacity: 1, strokeOpacity: 0, strokeWidth: 0, dashed: false },
       },
       ...(headerSubtitle ? [{
         kind: 'text' as const,
@@ -410,7 +413,7 @@ export function buildTabPptx(
         height: 12,
         fontSize: 8,
         bold: true,
-        color: 'FFFFFF',
+        color: hex6(tabTheme().onPrimary),
         rtl: false,
       }] : []),
       {
@@ -422,7 +425,7 @@ export function buildTabPptx(
         height: 24,
         fontSize: Math.min(15, 1650 / Math.max(title.length, 1)),
         bold: true,
-        color: 'FFFFFF',
+        color: hex6(tabTheme().onPrimary),
         rtl: false,
       },
       ...(context ? [{
@@ -434,7 +437,7 @@ export function buildTabPptx(
         height: 10,
         fontSize: 7,
         bold: false,
-        color: '142E42',
+        color: hex6(tabTheme().ink),
         rtl: false,
       }] : []),
       {
@@ -452,7 +455,7 @@ export function buildTabPptx(
         height: 14,
         fontSize: 6.5,
         bold: false,
-        color: '142E42',
+        color: hex6(tabTheme().ink),
         rtl: false,
       },
       {
@@ -464,7 +467,7 @@ export function buildTabPptx(
         height: 14,
         fontSize: 6.5,
         bold: false,
-        color: '142E42',
+        color: hex6(tabTheme().ink),
         rtl: false,
       },
     ]),
@@ -731,7 +734,7 @@ export async function exportTabDocument(root: HTMLElement, format: TabExportForm
             table: {
               widths: ['*'],
               body: [[{
-                fillColor: TACTICAL_COLOR,
+                fillColor: tabTheme().primary,
                 border: [false, false, false, false],
                 margin: [20, 8, 20, 8],
                 columns: [
@@ -740,15 +743,15 @@ export async function exportTabDocument(root: HTMLElement, format: TabExportForm
                     width: '*',
                     margin: [8, 0, 0, 0],
                     stack: [
-                      { text: matchLabel, fontSize: 8, bold: true, color: '#ffffff' },
-                      { text: title, fontSize: 13, bold: true, color: '#ffffff', margin: [0, 2, 0, 0] },
+                      { text: matchLabel, fontSize: 8, bold: true, color: tabTheme().onPrimary },
+                      { text: title, fontSize: 13, bold: true, color: tabTheme().onPrimary, margin: [0, 2, 0, 0] },
                     ],
                   },
                 ],
               }]],
             },
           },
-          { text: `${context} · ${meta.generatedAtLabel}`, fontSize: 7, color: TACTICAL_COLOR, margin: [24, 4, 24, 0] },
+          { text: `${context} · ${meta.generatedAtLabel}`, fontSize: 7, color: tabTheme().ink, margin: [24, 4, 24, 0] },
         ],
       }),
       footer: (currentPage: number, pageCount: number) => ({
@@ -758,8 +761,8 @@ export async function exportTabDocument(root: HTMLElement, format: TabExportForm
           {
             columns: [
               buildPdfLogo(12, 10),
-              { width: '*', text: footer, fontSize: 6, color: TACTICAL_COLOR, margin: [4, 1, 0, 0] },
-              { width: 'auto', text: `${currentPage} / ${pageCount}`, fontSize: 6, color: TACTICAL_COLOR, alignment: 'right', margin: [0, 1, 0, 0] },
+              { width: '*', text: footer, fontSize: 6, color: tabTheme().ink, margin: [4, 1, 0, 0] },
+              { width: 'auto', text: `${currentPage} / ${pageCount}`, fontSize: 6, color: tabTheme().ink, alignment: 'right', margin: [0, 1, 0, 0] },
             ],
           },
         ],

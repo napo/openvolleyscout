@@ -11,7 +11,10 @@ import { buildQrSvg } from './qr-svg';
 export { buildQrSvg };
 import { saveFile } from '@src/lib/utils/save-file';
 import {
+  applyPdfTheme,
+  COLOR_BAND,
   COLOR_BORDER,
+  COLOR_ON_BAND,
   COLOR_MUTED,
   COLOR_PRIMARY,
   COLOR_SOFT_BG,
@@ -116,8 +119,8 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
               widths: [42, '*'],
               body: [
                 [
-                  { text: t('tacticalPriorityColumn'), bold: true, fontSize: 9, color: '#ffffff', fillColor: COLOR_PRIMARY, alignment: 'center' },
-                  { text: t('tacticalAdviceColumn'), bold: true, fontSize: 9, color: '#ffffff', fillColor: COLOR_PRIMARY },
+                  { text: t('tacticalPriorityColumn'), bold: true, fontSize: 9, color: COLOR_ON_BAND, fillColor: COLOR_BAND, alignment: 'center' },
+                  { text: t('tacticalAdviceColumn'), bold: true, fontSize: 9, color: COLOR_ON_BAND, fillColor: COLOR_BAND },
                 ],
                 ...piece.items.map((text, index) => [
                   { text: String(index + 1), bold: true, fontSize: 12, alignment: 'center', color: COLOR_PRIMARY, fillColor: index % 2 === 0 ? COLOR_SOFT_BG : '#ffffff' },
@@ -300,6 +303,7 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
 
 export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInput, t: ViewT): Record<string, unknown> {
   const { report, view } = input;
+  applyPdfTheme(report.booklet?.printTheme);
   const cover = [
     { text: opponentReportTitle(report), style: 'title', margin: [0, 0, 0, 6] },
     { text: t('opponentReportPdfOpponent', { team: report.opponent.name }), fontSize: 11, margin: [0, 0, 0, 3] },

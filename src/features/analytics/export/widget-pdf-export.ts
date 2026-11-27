@@ -1,6 +1,7 @@
 import { toPng } from 'html-to-image';
 import { saveFile } from '@src/lib/utils/save-file';
 import {
+  applyPdfTheme,
   COLOR_MUTED,
   COLOR_PRIMARY,
   COLOR_SOFT_BG,
@@ -104,15 +105,16 @@ function buildPdfFooter(meta: WidgetPdfMeta): Record<string, unknown> {
   };
 }
 
-const PDF_WIDGET_STYLES = {
+const pdfWidgetStyles = () => ({
   pdfWidgetTitle: { fontSize: 12, bold: true, color: COLOR_PRIMARY },
   pdfWidgetMeta: { fontSize: 7, color: COLOR_MUTED },
   pdfWidgetSectionHeading: { fontSize: 10, bold: true, color: COLOR_PRIMARY, fillColor: COLOR_SOFT_BG },
   pdfWidgetFooter: { fontSize: 6, color: COLOR_MUTED },
-};
+});
 
 /** Saves one widget as a single-page A4 PDF (vector when possible). */
 export async function exportWidgetAsPdf(el: HTMLElement, title: string, meta: WidgetPdfMeta): Promise<void> {
+  applyPdfTheme();
   const font = await preparePdfFont(collectPdfText([el], [title], meta));
   const [pdfMake, body] = await Promise.all([loadPdfMakeApi(), buildWidgetBody(el, font)]);
 
@@ -121,7 +123,7 @@ export async function exportWidgetAsPdf(el: HTMLElement, title: string, meta: Wi
     pageOrientation: 'landscape',
     pageMargins: [24, 24, 24, 30],
     defaultStyle: { font, fontSize: 8 },
-    styles: PDF_WIDGET_STYLES,
+    styles: pdfWidgetStyles(),
     footer: () => buildPdfFooter(meta),
     content: [
       ...buildPdfHeader(title, meta),

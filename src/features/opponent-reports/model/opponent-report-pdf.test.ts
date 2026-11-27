@@ -34,6 +34,18 @@ describe('compact tactical report PDF', () => {
     expect(priority.table.keepWithHeaderRows).toBe(1);
     expect(nodes(doc.content).some((node) => node.ol)).toBe(false);
   });
+  it('colours the priority header with the print theme, and keeps the usual blue by default', () => {
+    const header = (doc: ReturnType<typeof buildDocument>) => nodes(doc.content).find((node) => node.table?.body?.[0]?.[0]?.text === 'Priority')!.table.body[0][0];
+    expect(header(buildDocument(['Serve short']))).toMatchObject({ fillColor: '#002554', color: '#ffffff' });
+    const report = createOpponentReport({ id: 'r', title: 'Prep', opponent: { name: 'Rivals' }, matchIds: ['m1'] });
+    report.booklet = { ...report.booklet!, printTheme: { id: 'black-white' } };
+    report.boardPieceIds = ['keys:main'];
+    report.pieceEdits = { 'keys:main': { items: ['Serve short'] } };
+    const view = buildReportView(report, computeOpponentReportMetrics([]), [], DEFAULT_THRESHOLDS, t, DEFAULT_RECEPTION_SYSTEM_BLOCK, computeAttackingReportMetrics([]));
+    const doc = buildOpponentReportPdfDocDefinition({ report, view, matchLines: [], sampleLine: '', sampleActions: 20, generatedOn: '06/11/2026' }, t);
+    expect(header(doc)).toMatchObject({ fillColor: '#e5e7eb', color: '#111827' });
+    expect(JSON.stringify(doc.styles)).not.toContain('#002554');
+  });
   it('keeps branding in the running header and allows sections to share pages', () => {
     const doc = buildDocument(['Serve short']);
     expect(nodes(doc.content).some((node) => node.image || node.text === 'OpenVolleyScout')).toBe(false);

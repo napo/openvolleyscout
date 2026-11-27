@@ -2,6 +2,7 @@ import { CROSS_ROTATION_THRESHOLDS } from '@src/features/analytics/cross-rotatio
 import type { TranslationKey } from '@src/i18n';
 import { saveFile } from '@src/lib/utils/save-file';
 import {
+  applyPdfTheme,
   COLOR_ACCENT,
   COLOR_BORDER,
   COLOR_MUTED,
@@ -763,6 +764,7 @@ export function buildMatchReportPdfDocDefinition(
   t: TFunction,
   extras?: { crossRotationStats?: CrossRotationStats; font?: PdfFontFamily },
 ): Record<string, unknown> {
+  applyPdfTheme();
   return {
     pageSize: 'A4',
     pageOrientation: 'portrait',

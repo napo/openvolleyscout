@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  activePrintTheme, clubPrintTheme, contrastRatio, PRINT_THEME_IDS, readPrintThemeChoice, readableInk, resolvePrintTheme, savePrintThemeChoice,
+  activePrintTheme, clubPrintTheme, contrastRatio, pdfPrintTheme, PRINT_THEME_IDS, readPrintThemeChoice, readStoredPrintThemeChoice, readableInk, resetPrintThemeChoice, resolvePrintTheme, savePrintThemeChoice,
 } from './print-theme';
 
 beforeEach(() => window.localStorage.clear());
@@ -41,8 +41,19 @@ describe('print themes', () => {
     expect(activePrintTheme().primary).toBe('#112233');
     // A report's own choice wins over the saved one.
     expect(activePrintTheme({ id: 'black-white' }).flat).toBe(true);
+    // OVS chosen on purpose is kept; resetting brings the defaults back.
     savePrintThemeChoice({ id: 'ovs' });
-    expect(window.localStorage.getItem('openvolleyscout.printTheme')).toBeNull();
+    expect(readStoredPrintThemeChoice()).toEqual({ id: 'ovs' });
+    resetPrintThemeChoice();
+    expect(readStoredPrintThemeChoice()).toBeNull();
+  });
+
+  it('gives the other PDFs their usual blue until a theme is chosen', () => {
+    expect(pdfPrintTheme().primary).toBe('#002554');
+    savePrintThemeChoice({ id: 'ovs' });
+    expect(pdfPrintTheme().primary).toBe('#142e42');
+    resetPrintThemeChoice();
+    expect(pdfPrintTheme({ id: 'black-white' }).flat).toBe(true);
   });
 
   it('ignores a damaged saved value', () => {

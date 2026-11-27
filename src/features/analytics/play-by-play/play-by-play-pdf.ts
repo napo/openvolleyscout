@@ -3,7 +3,7 @@ import type { Team } from '@src/domain/roster/types';
 import type { MatchMetadata } from '@src/domain/match/types';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { saveFile } from '@src/lib/utils/save-file';
-import { buildPdfLogo, loadPdfMakeApi, preparePdfFont, PDF_FONT_LATIN, type PdfFontFamily } from '@src/features/scouting/model/pdf-branding';
+import { applyPdfTheme, buildPdfLogo, COLOR_MUTED, loadPdfMakeApi, preparePdfFont, PDF_FONT_LATIN, type PdfFontFamily } from '@src/features/scouting/model/pdf-branding';
 import type { PlayByPlaySet } from './play-by-play';
 import { buildPlayByPlayChartSvg } from './play-by-play-chart';
 import { type PlayByPlayOptions, type PlayByPlayT } from './play-by-play-labels';
@@ -15,6 +15,7 @@ export interface PlayByPlayDocumentInput {
   options: PlayByPlayOptions;
 }
 export function buildPlayByPlayPdf(input: PlayByPlayDocumentInput, t: PlayByPlayT, font: PdfFontFamily = PDF_FONT_LATIN): Record<string, unknown> {
+  applyPdfTheme();
   const chosen = input.options.setNumbers ?? [];
   const sets = input.sets.filter((set) => chosen.length === 0 || chosen.includes(set.setNumber));
   const reference = input.options.reference;
@@ -31,9 +32,9 @@ export function buildPlayByPlayPdf(input: PlayByPlayDocumentInput, t: PlayByPlay
       chunks.push({ stack: [
         { text: `${input.teams[reference].name} - ${input.teams[other].name}`, bold: true, fontSize: 9, margin: [0, 0, 0, 2] },
         { text: [input.metadata?.competition, input.metadata?.season, input.metadata?.playedAt?.slice(0, 10)].filter(Boolean).join(' · '), fontSize: 7, margin: [0, 0, 0, 2] },
-        { text: t('pbpReference') + ': ' + input.teams[reference].name, fontSize: 7, color: '#475569', margin: [0, 0, 0, 4] },
+        { text: t('pbpReference') + ': ' + input.teams[reference].name, fontSize: 7, color: COLOR_MUTED, margin: [0, 0, 0, 4] },
         { text: `${t('setLabel', { setNumber: set.setNumber })} · ${score}`, bold: true, fontSize: 11, margin: [0, 0, 0, 4] },
-        { text: t('pbpSample', { matches: 1, rallies: set.pointCount, actions: set.touchCount }), color: '#475569', fontSize: 7, margin: [0, 0, 0, 4] },
+        { text: t('pbpSample', { matches: 1, rallies: set.pointCount, actions: set.touchCount }), color: COLOR_MUTED, fontSize: 7, margin: [0, 0, 0, 4] },
         ...(set.incomplete ? [{ text: t('pbpIncomplete'), color: '#92400e', bold: true, margin: [0, 0, 0, 5] }] : []),
         { svg: buildPlayByPlayChartSvg(input, set, t, { compact: true, rows }), width: 539, font },
       ], unbreakable: true });
@@ -46,7 +47,7 @@ export function buildPlayByPlayPdf(input: PlayByPlayDocumentInput, t: PlayByPlay
       { columns: [buildPdfLogo(22, 22), { text: `${t('pbpTitle')} · ${APP_METADATA.name}`, fontSize: 13, bold: true, margin: [7, 3, 0, 0] }] },
     ] }),
     footer: (page: number, pages: number) => ({ margin: [28, 10, 28, 0], stack: [
-      { text: `P: ${t('pbpRotation')}. ${t('pbpLegend')}`, fontSize: 6.5, color: '#475569' },
+      { text: `P: ${t('pbpRotation')}. ${t('pbpLegend')}`, fontSize: 6.5, color: COLOR_MUTED },
       { columns: [{ text: `${APP_METADATA.name} v${APP_METADATA.version} · ${APP_METADATA.urls.repository}`, fontSize: 6 }, { text: `${page} / ${pages}`, alignment: 'right', fontSize: 7, width: 44 }] },
     ] }),
     content: content.length ? content : [{ text: t('pbpEmpty') }],
