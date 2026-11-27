@@ -143,8 +143,9 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
     if (rotation !== undefined) update({ rotations: [rotation] });
   };
   useEffect(() => {
-    // Ctrl+PageUp is Rotation +, Ctrl+PageDown Rotation - (the shortcuts of DataVolley).
+    // Ctrl+PageUp is Rotation +, Ctrl+PageDown Rotation - (the shortcuts of DataVolley); Esc closes the list of a zone.
     const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && selection !== null) { setSelectedZone(null); return; }
       if (!event.ctrlKey || (event.key !== 'PageUp' && event.key !== 'PageDown')) return;
       const target = event.key === 'PageUp' ? rotationPlus : rotationMinus;
       if (target === undefined) return;
@@ -156,6 +157,17 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
   });
   const all = t('setterViewReceptionAll');
   const teamName = (side: TeamSide) => stats.teamStats[side].teamName || t(side === 'home' ? 'homeTeam' : 'awayTeam');
+  // The filters in words, written under every court as in the side-out study (the rotation is in the court title).
+  const filterSummary = [
+    lockedTeam ? null : teamName(team),
+    t(filters.mode === 'served' ? 'zoneAnalysisModeServed' : 'zoneAnalysisModeClassic'),
+    t(filters.grid === 9 ? 'zoneAnalysisGrid9' : 'zoneAnalysisGrid6'),
+    filters.phase === 'all' ? null : t(filters.phase === 'reception' ? 'zoneAnalysisPhaseReception' : 'zoneAnalysisPhaseTransition'),
+    filters.setNumbers.length > 0 ? `${t('filterSet')} ${[...filters.setNumbers].sort((a, b) => a - b).join(', ')}` : null,
+    filters.roles.length > 0 ? `${t('roleFilterLabel')}: ${filters.roles.map((role) => t(ROLE_GROUP_SHORT_KEYS[role])).join(', ')}` : null,
+    choiceList(filters.playerId).length > 0 ? `${t('zoneAnalysisPlayer')}: ${choiceList(filters.playerId).map((id) => shortName(playersById.get(String(id)))).join(', ')}` : null,
+    filters.evaluations.length > 0 ? `${t('zoneAnalysisResult')}: ${filters.evaluations.join(' ')}` : null,
+  ].filter(Boolean).join(' · ');
 
   const renderBox = (box: ZoneAnalysisBox, extremes: { low: ZoneAnalysisZone | null; high: ZoneAnalysisZone | null }, rotation: RotationNumber | null, extraClass = '') => {
     const isLow = extremes.low === box.zone;
@@ -368,12 +380,10 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
               const courtExtremes = zoneAnalysisExtremes(courtResult, values[0]);
               return (
                 <section key={rotation ?? 'one'} className="zone-analysis__court-card">
-                  {rotation !== null ? (
-                    <header className="zone-analysis__court-title">
-                      <strong>P{rotation}</strong>
-                      <span>{courtResult.total}</span>
-                    </header>
-                  ) : null}
+                  <header className="zone-analysis__court-title">
+                    <strong>{rotation !== null ? `P${rotation}` : currentRotation !== undefined ? `P${currentRotation}` : t('zoneAnalysisAllRotations')}</strong>
+                    <span>{t('zoneAnalysisTotal', { count: String(courtResult.total) })}</span>
+                  </header>
                   {courtResult.noZone.attacks.length > 0 ? (
                     <button
                       type="button"
@@ -394,6 +404,22 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
                       </div>
                     ) : null}
                   </div>
+                  <footer className="zone-analysis__court-filters">{filterSummary}</footer>
+                  {listBox && listBox.attacks.length > 0 && selection?.rotation === rotation ? (
+                    <section className="zone-analysis__list" aria-live="polite">
+                      <header className="zone-analysis__list-header">
+                        <h4>
+                          {rotation !== null ? `P${rotation} · ` : ''}
+                          {selectedZone === 'none' ? t('zoneAnalysisNoZone')
+                            : selectedZone === 'setter' ? t('zoneAnalysisSetterBox')
+                              : `${t('zoneAnalysisZone')} ${selectedZone}`}
+                          {' '}({listBox.attacks.length})
+                        </h4>
+                        <button type="button" className="zone-analysis__list-close" onClick={() => setSelectedZone(null)} aria-label={t('pickerClose')} title={t('pickerClose')}>×</button>
+                      </header>
+                      <ul>{listBox.attacks.map(renderAttackRow)}</ul>
+                    </section>
+                  ) : null}
                 </section>
               );
             })}
@@ -409,17 +435,6 @@ export function ZoneAnalysisPanel({ stats, codeTables, lockedTeam, videoSecondsO
         </div>
       )}
 
-      {listBox && listBox.attacks.length > 0 ? (
-        <section className="zone-analysis__list" aria-live="polite">
-          <h4>
-            {selectedZone === 'none' ? t('zoneAnalysisNoZone')
-              : selectedZone === 'setter' ? t('zoneAnalysisSetterBox')
-                : `${t('zoneAnalysisZone')} ${selectedZone}`}
-            {' '}({listBox.attacks.length})
-          </h4>
-          <ul>{listBox.attacks.map(renderAttackRow)}</ul>
-        </section>
-      ) : null}
     </div>
   );
 }
