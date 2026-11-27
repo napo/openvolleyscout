@@ -9,7 +9,7 @@ import notoSansJpBoldUrl from '../../../assets/fonts/noto-cjk/NotoSansJP-Bold.tt
 import notoSansScRegularUrl from '../../../assets/fonts/noto-cjk/NotoSansSC-Regular.ttf?url';
 import notoSansScBoldUrl from '../../../assets/fonts/noto-cjk/NotoSansSC-Bold.ttf?url';
 import openVolleyScoutLogoUrl from '../../../assets/openvolleyscout-ball-pdf.png?url';
-import { pdfPrintTheme, type PrintTheme, type PrintThemeChoice } from '../../../lib/theme/print-theme';
+import { pdfPrintTheme, readPrintLogo, type PrintTheme, type PrintThemeChoice } from '../../../lib/theme/print-theme';
 
 /**
  * Shared PDF branding: colors, fonts and the OVS logo, plus the pdfmake
@@ -215,6 +215,12 @@ export async function preparePdfFont(text: string): Promise<PdfFontFamily> {
  */
 export function buildPdfLogo(width: number, height: number): Record<string, unknown> {
   return logoDataUrl ? { width, image: logoDataUrl, fit: [width, height] } : { width, text: '' };
+}
+
+/** The club logo chosen in Settings, as a column at the right of a PDF header; nothing when there is none. */
+export function buildClubLogoColumn(width: number, height: number): Record<string, unknown>[] {
+  const logo = readPrintLogo();
+  return logo ? [{ width, image: logo, fit: [width, height], alignment: 'right' }] : [];
 }
 
 /** Embedded logo shared by standalone tactical SVG exports. */

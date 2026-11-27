@@ -2,6 +2,7 @@ import { toPng } from 'html-to-image';
 import { saveFile } from '@src/lib/utils/save-file';
 import {
   applyPdfTheme,
+  buildClubLogoColumn,
   COLOR_MUTED,
   COLOR_PRIMARY,
   COLOR_SOFT_BG,
@@ -87,6 +88,7 @@ function buildPdfHeader(title: string, meta: WidgetPdfMeta): Record<string, unkn
           margin: [8, 0, 0, 0],
         },
         { width: 'auto', text: meta.generatedAtLabel, style: 'pdfWidgetMeta', alignment: 'right' },
+        ...buildClubLogoColumn(28, 22),
       ],
       margin: [0, 0, 0, 8],
     },

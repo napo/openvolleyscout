@@ -3,7 +3,7 @@ import type { Team } from '@src/domain/roster/types';
 import type { MatchMetadata } from '@src/domain/match/types';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { saveFile } from '@src/lib/utils/save-file';
-import { applyPdfTheme, buildPdfLogo, COLOR_MUTED, loadPdfMakeApi, preparePdfFont, PDF_FONT_LATIN, type PdfFontFamily } from '@src/features/scouting/model/pdf-branding';
+import { applyPdfTheme, buildClubLogoColumn, buildPdfLogo, COLOR_MUTED, loadPdfMakeApi, preparePdfFont, PDF_FONT_LATIN, type PdfFontFamily } from '@src/features/scouting/model/pdf-branding';
 import type { PlayByPlaySet } from './play-by-play';
 import { buildPlayByPlayChartSvg } from './play-by-play-chart';
 import { type PlayByPlayOptions, type PlayByPlayT } from './play-by-play-labels';
@@ -44,7 +44,7 @@ export function buildPlayByPlayPdf(input: PlayByPlayDocumentInput, t: PlayByPlay
   return {
     pageSize: 'A4', pageMargins: [28, 64, 28, 54], defaultStyle: { font, fontSize: 7.5 },
     header: () => ({ margin: [28, 20, 28, 0], stack: [
-      { columns: [buildPdfLogo(22, 22), { text: `${t('pbpTitle')} · ${APP_METADATA.name}`, fontSize: 13, bold: true, margin: [7, 3, 0, 0] }] },
+      { columns: [buildPdfLogo(22, 22), { text: `${t('pbpTitle')} · ${APP_METADATA.name}`, fontSize: 13, bold: true, margin: [7, 3, 0, 0] }, ...buildClubLogoColumn(28, 28)] },
     ] }),
     footer: (page: number, pages: number) => ({ margin: [28, 10, 28, 0], stack: [
       { text: `P: ${t('pbpRotation')}. ${t('pbpLegend')}`, fontSize: 6.5, color: COLOR_MUTED },

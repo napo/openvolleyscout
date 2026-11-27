@@ -896,6 +896,9 @@
 .print-theme-picker__preview { width: 11rem; height: auto; border-radius: 4px; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2); }
 .print-theme-picker__colors { display: flex; gap: 1rem; flex-wrap: wrap; }
 .print-theme-picker__colors label { display: inline-flex; align-items: center; gap: 0.4rem; }
+.print-theme-picker__logo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+.print-theme-picker__logo img { max-width: 4rem; max-height: 4rem; object-fit: contain; border: 1px solid rgba(148, 163, 184, 0.5); border-radius: 4px; background: #fff; }
+.print-theme-picker__logo .form-label, .print-theme-picker__logo .settings-page__text { flex-basis: 100%; margin: 0; }
 .print-theme-picker__note { margin: 0; opacity: 0.75; }
 .tactical-booklet-settings__theme { display: flex; flex-direction: column; gap: 0.4rem; }
 .attacker-picker { display: flex; flex-direction: column; gap: 0.4rem; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; }

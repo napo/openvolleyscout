@@ -1,5 +1,6 @@
 import type { OpponentReport, OpponentReportBooklet } from '@src/domain/opponent-report/types';
 import { PrintThemePicker } from '@src/components/PrintThemePicker';
+import { readPrintLogo } from '@src/lib/theme/print-theme';
 import { useTranslation } from '@src/i18n';
 import type { ReportView } from '../model/report-view';
 import { playerLabel } from '../model/report-keys';
@@ -24,6 +25,7 @@ export function BookletSettings({ report, plan, attackers, update }: { report: O
         if (printTheme) booklet.printTheme = printTheme; else delete booklet.printTheme;
         return { ...current, booklet };
       })} />
+      {readPrintLogo() ? <label><input type="checkbox" checked={!report.booklet?.hideClubLogo} onChange={(event) => change({ hideClubLogo: !event.target.checked })} />{t('printLogoShowInReport')}</label> : null}
     </div>
     {settings.format === 'custom' ? <>
       <label>{t('bookletBase')}<select className="form-select" value={settings.base} onChange={(event) => change({ base: event.target.value as OpponentReportBooklet['base'] })}>

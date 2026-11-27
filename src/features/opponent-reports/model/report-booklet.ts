@@ -9,7 +9,7 @@ import { buildQrSvg } from './qr-svg';
 import { buildAttackDefenseLegendSvg, buildCustomLegendSvg, buildServeHowLegendSvg, buildServeTargetsLegendSvg } from './reception-formation';
 import { collectCustomLegendEntries, drawingHasMoveArrows, findMoveArrowColor } from './tactical-board';
 import { videoLinkWatchKey } from './attacker-video-links';
-import { activePrintTheme, PRINT_THEMES, type PrintTheme } from '@src/lib/theme/print-theme';
+import { activePrintTheme, PRINT_THEMES, readPrintLogo, type PrintTheme } from '@src/lib/theme/print-theme';
 
 export const BOOKLET_WIDTH = 419.528;
 export const BOOKLET_HEIGHT = 595.276;
@@ -157,8 +157,10 @@ export interface ReportBookletPlan {
 }
 
 /** Same plan drives the source-selection count, preview, A5 PDF and A4 imposition. */
-export function buildReportBooklet(report: OpponentReport, view: ReportView, t: ViewT, sampleLine = '', options: { a4?: boolean; matchLines?: string[]; theme?: PrintTheme } = {}): ReportBookletPlan {
+export function buildReportBooklet(report: OpponentReport, view: ReportView, t: ViewT, sampleLine = '', options: { a4?: boolean; matchLines?: string[]; theme?: PrintTheme; logo?: string | null } = {}): ReportBookletPlan {
   const theme = options.theme ?? activePrintTheme(report.booklet?.printTheme);
+  // The club logo sits at the right of the band; titles leave it room.
+  const logo = options.logo !== undefined ? options.logo : report.booklet?.hideClubLogo ? null : readPrintLogo();
   const text = (x: number, y: number, value: string, size = 8, bold = false, fill = theme.ink) => svgText(x, y, value, size, bold, fill);
   // Legends: the frame and its words follow the theme; the coloured symbols keep their meaning.
   const legend = (svg: string) => theme.id === 'ovs' ? svg : svg
@@ -170,6 +172,8 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const pageWidth = a4 ? 595.276 : BOOKLET_WIDTH;
   const pageHeight = a4 ? 841.89 : BOOKLET_HEIGHT;
   const WIDTH = pageWidth - M * 2, BOTTOM = pageHeight - 37;
+  const titleWidth = logo ? WIDTH - 60 : WIDTH;
+  const logoImage = logo ? `<image href="${logo}" x="${pageWidth - M - 52}" y="7" width="52" height="52" preserveAspectRatio="xMaxYMid meet"/>` : '';
   const settings = { ...DEFAULT_BOOKLET, ...report.booklet };
   const compact = !a4 && (settings.format === 'compact' || settings.format === 'custom' && settings.base === 'compact');
   const custom = settings.format === 'custom';
@@ -796,7 +800,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const context = [opponentReportTitle(report), sampleLine].filter(Boolean).join(' · ');
   if (wrapBookletText(context, WIDTH, 6).length > 1) deferred.unshift({ title: t('bookletNotes'), body: context });
   // Preserve long headings in a continuation rather than losing their trailing text.
-  for (const page of pages) if (wrapBookletText(page.title, WIDTH, 13).length > 2) deferred.push({ title: t('bookletNotes'), body: page.title });
+  for (const page of pages) if (wrapBookletText(page.title, titleWidth, 13).length > 2) deferred.push({ title: t('bookletNotes'), body: page.title });
   // Coalesce identical sheet-level notes repeated by several cards/bands.
   const seen = new Set<string>();
   const staffNotes: ReportStaffNote[] = [];
@@ -851,7 +855,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const attributionSize = 3.8;
   const attributionLines = wrapBookletText(attribution, WIDTH, attributionSize).slice(0, 2);
   return {
-    pages: pages.map((page, i) => `<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}" height="${pageHeight}" viewBox="0 0 ${pageWidth} ${pageHeight}"><rect width="100%" height="100%" fill="#fff"/><rect width="100%" height="65" fill="${theme.primary}"/>${text(M, 18, report.opponent.name, 8, true, theme.onPrimary)}${wrapBookletText(page.title, WIDTH, 13).slice(0, 2).map((line, j) => text(M, 36 + j * 15, line, 13, true, theme.onPrimary)).join('')}${text(M, 77, wrapBookletText(context, WIDTH, 6)[0] ?? '', 6)}${page.elements.join('')}<line x1="${M}" y1="${pageHeight - 30}" x2="${pageWidth - M}" y2="${pageHeight - 30}" stroke="${theme.border}"/>${text(M, pageHeight - 24, footer, footerSize)}${attributionLines.map((line, j) => text(M, pageHeight - 18 + j * 4.6, line, attributionSize)).join('')}${text(M, pageHeight - 4, `${i + 1} / ${pages.length}`, 5)}</svg>`),
+    pages: pages.map((page, i) => `<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}" height="${pageHeight}" viewBox="0 0 ${pageWidth} ${pageHeight}"><rect width="100%" height="100%" fill="#fff"/><rect width="100%" height="65" fill="${theme.primary}"/>${text(M, 18, report.opponent.name, 8, true, theme.onPrimary)}${logoImage}${wrapBookletText(page.title, titleWidth, 13).slice(0, 2).map((line, j) => text(M, 36 + j * 15, line, 13, true, theme.onPrimary)).join('')}${text(M, 77, wrapBookletText(context, WIDTH, 6)[0] ?? '', 6)}${page.elements.join('')}<line x1="${M}" y1="${pageHeight - 30}" x2="${pageWidth - M}" y2="${pageHeight - 30}" stroke="${theme.border}"/>${text(M, pageHeight - 24, footer, footerSize)}${attributionLines.map((line, j) => text(M, pageHeight - 18 + j * 4.6, line, attributionSize)).join('')}${text(M, pageHeight - 4, `${i + 1} / ${pages.length}`, 5)}</svg>`),
     staffNotes,
     width: pageWidth, height: pageHeight,
     contentPages, paddingPages: pages.length - contentPages, sheets: pages.length / 4, format: settings,

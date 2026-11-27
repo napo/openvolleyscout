@@ -7,7 +7,7 @@
 import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import type { SkillStats } from '@src/features/scouting/model/match-stats';
 import { APP_METADATA } from '@src/lib/constants/app';
-import { activePrintTheme } from '@src/lib/theme/print-theme';
+import { activePrintTheme, readPrintLogo } from '@src/lib/theme/print-theme';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { RADAR_AXES, DEFAULT_RADAR_AXIS_IDS } from '@src/features/analytics/radar/model/radar-metrics';
 import { BOOKLET_HEIGHT, BOOKLET_WIDTH, DEFAULT_BOOKLET, wrapBookletText, type ReportBookletPlan } from '@src/features/opponent-reports/model/report-booklet';
@@ -300,7 +300,7 @@ function applyReviewTheme(): void {
 export function buildTeamReviewBooklet(
   data: TeamReviewData,
   t: ReviewT,
-  options: { notes?: string; title?: string; config?: Partial<TeamReviewConfig> } = {},
+  options: { notes?: string; title?: string; config?: Partial<TeamReviewConfig>; logo?: string | null } = {},
 ): ReportBookletPlan {
   applyReviewTheme();
   const config: TeamReviewConfig = { ...DEFAULT_TEAM_REVIEW_CONFIG, ...(options.config ?? {}) };
@@ -553,9 +553,12 @@ export function buildTeamReviewBooklet(
   const footer = `${APP_METADATA.name} · ${APP_METADATA.author.displayName} · ${APP_METADATA.urls.webApp} · ${t('bookletFreeSoftware')} · GNU AGPL v3 or later (${APP_METADATA.license})`;
   const footerSize = Math.min(4.5, WIDTH / Math.max(1, [...footer].length * 0.64));
   const attributionLines = wrapBookletText(t('tacticalAttributionFooter'), WIDTH, 3.8).slice(0, 2);
+  // The club logo at the right of the band, as on the tactical report.
+  const logo = options.logo !== undefined ? options.logo : readPrintLogo();
+  const logoImage = logo ? `<image href="${logo}" x="${BOOKLET_WIDTH - M - 52}" y="7" width="52" height="52" preserveAspectRatio="xMaxYMid meet"/>` : '';
   const context = `${title} · ${t('teamReviewRecord', { won: data.wins, lost: data.losses, total: data.matches.length })}`;
   return {
-    pages: pages.map((item, index) => `<svg xmlns="http://www.w3.org/2000/svg" width="${BOOKLET_WIDTH}" height="${BOOKLET_HEIGHT}" viewBox="0 0 ${BOOKLET_WIDTH} ${BOOKLET_HEIGHT}"><rect width="100%" height="100%" fill="#fff"/><rect width="100%" height="65" fill="${BAND}"/>${text(M, 18, data.teamName, 8, true, ON_BAND)}${wrapBookletText(item.title, WIDTH, 13).slice(0, 2).map((line, row) => text(M, 36 + row * 15, line, 13, true, ON_BAND)).join('')}${text(M, 77, wrapBookletText(context, WIDTH, 6)[0] ?? '', 6)}${item.elements.join('')}<line x1="${M}" y1="${BOOKLET_HEIGHT - 30}" x2="${BOOKLET_WIDTH - M}" y2="${BOOKLET_HEIGHT - 30}" stroke="${BORDER}"/>${text(M, BOOKLET_HEIGHT - 24, footer, footerSize)}${attributionLines.map((line, row) => text(M, BOOKLET_HEIGHT - 18 + row * 4.6, line, 3.8)).join('')}${text(M, BOOKLET_HEIGHT - 4, `${index + 1} / ${pages.length}`, 5)}</svg>`),
+    pages: pages.map((item, index) => `<svg xmlns="http://www.w3.org/2000/svg" width="${BOOKLET_WIDTH}" height="${BOOKLET_HEIGHT}" viewBox="0 0 ${BOOKLET_WIDTH} ${BOOKLET_HEIGHT}"><rect width="100%" height="100%" fill="#fff"/><rect width="100%" height="65" fill="${BAND}"/>${text(M, 18, data.teamName, 8, true, ON_BAND)}${logoImage}${wrapBookletText(item.title, logo ? WIDTH - 60 : WIDTH, 13).slice(0, 2).map((line, row) => text(M, 36 + row * 15, line, 13, true, ON_BAND)).join('')}${text(M, 77, wrapBookletText(context, WIDTH, 6)[0] ?? '', 6)}${item.elements.join('')}<line x1="${M}" y1="${BOOKLET_HEIGHT - 30}" x2="${BOOKLET_WIDTH - M}" y2="${BOOKLET_HEIGHT - 30}" stroke="${BORDER}"/>${text(M, BOOKLET_HEIGHT - 24, footer, footerSize)}${attributionLines.map((line, row) => text(M, BOOKLET_HEIGHT - 18 + row * 4.6, line, 3.8)).join('')}${text(M, BOOKLET_HEIGHT - 4, `${index + 1} / ${pages.length}`, 5)}</svg>`),
     width: BOOKLET_WIDTH,
     height: BOOKLET_HEIGHT,
     contentPages,

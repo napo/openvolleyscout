@@ -289,6 +289,13 @@ describe('booklet planning and printing',()=>{
     // A theme passed by the caller wins (the preview of a choice not saved yet).
     expect(buildReportBooklet(report,view,t,'',{theme:resolvePrintTheme('high-contrast')}).pages[0]).toContain('height="65" fill="#000000"');
   });
+  it('prints the club logo at the right of the band and leaves the title room for it',()=>{
+    const {report,view}=fixture();
+    const logo='data:image/png;base64,iVBORw0KGgo=';
+    const pages=buildReportBooklet(report,view,t,'',{logo}).pages;
+    expect(pages.every(page=>page.includes(`<image href="${logo}"`))).toBe(true);
+    expect(buildReportBooklet(report,view,t,'',{logo:null}).pages.some(page=>page.includes('<image'))).toBe(false);
+  });
   it('shares the component order between the navigator and every export layout',()=>{
     const {report,view}=fixture();
     report.notes='Staff note moved to the beginning';

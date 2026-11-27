@@ -190,3 +190,32 @@ export function activePrintTheme(own?: PrintThemeChoice): PrintTheme {
   const choice = own ?? readPrintThemeChoice();
   return resolvePrintTheme(choice.id, choice.club);
 }
+
+const LOGO_KEY = 'openvolleyscout.printLogo';
+/** Largest stored logo (a 256 px PNG weighs far less). */
+export const MAX_LOGO_LENGTH = 400_000;
+
+/** A club logo as stored: a PNG or JPEG data URL, small enough for every document. */
+export function isPrintLogo(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= MAX_LOGO_LENGTH && /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(value);
+}
+
+/** The club logo printed in the band of reports and in the header of PDFs, or null. */
+export function readPrintLogo(): string | null {
+  try {
+    const value = typeof window !== 'undefined' ? window.localStorage.getItem(LOGO_KEY) : null;
+    return isPrintLogo(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function savePrintLogo(logo: string | null): void {
+  try {
+    if (logo && isPrintLogo(logo)) window.localStorage.setItem(LOGO_KEY, logo);
+    else window.localStorage.removeItem(LOGO_KEY);
+  } catch {
+    // Storage full or blocked: the logo is simply not kept.
+  }
+  listeners.forEach((listener) => listener());
+}

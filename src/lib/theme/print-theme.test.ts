@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  activePrintTheme, clubPrintTheme, contrastRatio, pdfPrintTheme, PRINT_THEME_IDS, readPrintThemeChoice, readStoredPrintThemeChoice, readableInk, resetPrintThemeChoice, resolvePrintTheme, savePrintThemeChoice,
+  activePrintTheme, clubPrintTheme, isPrintLogo, readPrintLogo, savePrintLogo, contrastRatio, pdfPrintTheme, PRINT_THEME_IDS, readPrintThemeChoice, readStoredPrintThemeChoice, readableInk, resetPrintThemeChoice, resolvePrintTheme, savePrintThemeChoice,
 } from './print-theme';
 
 beforeEach(() => window.localStorage.clear());
@@ -54,6 +54,19 @@ describe('print themes', () => {
     expect(pdfPrintTheme().primary).toBe('#142e42');
     resetPrintThemeChoice();
     expect(pdfPrintTheme({ id: 'black-white' }).flat).toBe(true);
+  });
+
+  it('keeps a small PNG or JPEG logo and refuses anything else', () => {
+    const png = 'data:image/png;base64,iVBORw0KGgo=';
+    expect(isPrintLogo(png)).toBe(true);
+    expect(isPrintLogo('data:image/svg+xml;base64,PHN2Zz4=')).toBe(false);
+    expect(isPrintLogo(`data:image/png;base64,${'A'.repeat(400_001)}`)).toBe(false);
+    savePrintLogo(png);
+    expect(readPrintLogo()).toBe(png);
+    savePrintLogo('javascript:alert(1)');
+    expect(readPrintLogo()).toBeNull();
+    window.localStorage.setItem('openvolleyscout.printLogo', 'data:text/html;base64,PGI+');
+    expect(readPrintLogo()).toBeNull();
   });
 
   it('ignores a damaged saved value', () => {

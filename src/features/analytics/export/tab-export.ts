@@ -3,7 +3,7 @@ import { toPng } from 'html-to-image';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { saveFile } from '@src/lib/utils/save-file';
 import { buildReportPptx } from '@src/features/opponent-reports/model/report-presentation-export';
-import { buildPdfLogo, loadPdfMakeApi, preparePdfFont } from '@src/features/scouting/model/pdf-branding';
+import { buildClubLogoColumn, buildPdfLogo, loadPdfMakeApi, preparePdfFont } from '@src/features/scouting/model/pdf-branding';
 import { activePrintTheme } from '@src/lib/theme/print-theme';
 import type { WidgetPdfMeta } from './widget-pdf-export';
 import { inlineSvgStylesForCapture, serializeSvgForPdf } from './widget-vector-content';
@@ -747,6 +747,7 @@ export async function exportTabDocument(root: HTMLElement, format: TabExportForm
                       { text: title, fontSize: 13, bold: true, color: tabTheme().onPrimary, margin: [0, 2, 0, 0] },
                     ],
                   },
+                  ...buildClubLogoColumn(34, 34),
                 ],
               }]],
             },

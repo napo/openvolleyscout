@@ -12,6 +12,7 @@ export { buildQrSvg };
 import { saveFile } from '@src/lib/utils/save-file';
 import {
   applyPdfTheme,
+  buildClubLogoColumn,
   COLOR_BAND,
   COLOR_BORDER,
   COLOR_ON_BAND,
@@ -377,7 +378,7 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
           { text: input.sampleLine, fontSize: 8 },
           { text: t('tacticalDownloadSoftware'), link: APP_METADATA.urls.releases, fontSize: 8, color: COLOR_PRIMARY },
         ],
-      }], columnGap: 8,
+      }, ...(report.booklet?.hideClubLogo ? [] : buildClubLogoColumn(48, 48))], columnGap: 8,
     }),
     footer: (currentPage: number, pageCount: number) => ({
       stack: [

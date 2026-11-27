@@ -3,6 +3,7 @@ import type { TranslationKey } from '@src/i18n';
 import { saveFile } from '@src/lib/utils/save-file';
 import {
   applyPdfTheme,
+  buildClubLogoColumn,
   COLOR_ACCENT,
   COLOR_BORDER,
   COLOR_MUTED,
@@ -739,6 +740,7 @@ function buildCrossRotationSection(report: MatchTabellinoReport, crossRotationSt
 // ---------------------------------------------------------------------------
 function buildFooter(report: MatchTabellinoReport): unknown {
   const logoColumn = [buildPdfLogo(16, 13)];
+  const clubColumn = buildClubLogoColumn(22, 16);
 
   return {
     margin: [28, 6, 28, 0],
@@ -752,6 +754,7 @@ function buildFooter(report: MatchTabellinoReport): unknown {
           { text: report.footer.attributionNotice, style: 'footerText' },
         ],
       },
+      ...clubColumn,
     ],
   };
 }
