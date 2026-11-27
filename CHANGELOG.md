@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Looks for reports and PDFs: in Settings you choose how the tactical report and every PDF and export (match report, tables, play-by-play, team review) look: OVS, OVS blue, your club colours, black and white (for plain printers) or high contrast. In Format each report can use its own look. The look of the app (light or dark) is separate and a printed page stays light. Colours that carry a meaning, such as traffic lights and evaluations, do not change. If you choose nothing, everything looks as it did before.
+
 ## 0.52.0 - 2026-11-27
 
 ### Added

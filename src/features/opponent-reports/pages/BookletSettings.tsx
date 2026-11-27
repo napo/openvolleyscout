@@ -1,4 +1,5 @@
 import type { OpponentReport, OpponentReportBooklet } from '@src/domain/opponent-report/types';
+import { PrintThemePicker } from '@src/components/PrintThemePicker';
 import { useTranslation } from '@src/i18n';
 import type { ReportView } from '../model/report-view';
 import { playerLabel } from '../model/report-keys';
@@ -16,6 +17,14 @@ export function BookletSettings({ report, plan, attackers, update }: { report: O
       <option value="compact">{t('bookletCompact')}</option><option value="extended">{t('bookletExtended')}</option><option value="custom">{t('bookletCustom')}</option>
     </select></label>
     <p className="opponent-report__hint">{t('bookletHelp')}</p>
+    <div className="tactical-booklet-settings__theme">
+      <strong>{t('printThemeReportTitle')}</strong>
+      <PrintThemePicker allowInherit value={report.booklet?.printTheme} onChange={(printTheme) => update((current) => {
+        const booklet = { ...DEFAULT_BOOKLET, ...current.booklet };
+        if (printTheme) booklet.printTheme = printTheme; else delete booklet.printTheme;
+        return { ...current, booklet };
+      })} />
+    </div>
     {settings.format === 'custom' ? <>
       <label>{t('bookletBase')}<select className="form-select" value={settings.base} onChange={(event) => change({ base: event.target.value as OpponentReportBooklet['base'] })}>
         <option value="compact">{t('bookletCompact')}</option><option value="extended">{t('bookletExtended')}</option>

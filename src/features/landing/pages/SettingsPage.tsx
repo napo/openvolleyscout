@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
 import { AppearanceSetting } from './AppearanceSetting';
+import { PrintThemeSetting } from './PrintThemeSetting';
 import { EfficiencySettings } from './EfficiencySettings';
 import { ScoreSituationSettings } from './ScoreSituationSettings';
 import { CloudSyncDeviceSettings } from '@src/features/sync/cloud/CloudSyncDeviceSettings';
@@ -337,6 +338,7 @@ export function SettingsPage() {
               />
             </section>
             <AppearanceSetting />
+            <PrintThemeSetting />
             <section className="settings-page__section">
               <label className="form-label" htmlFor="settings-toolbar-size">
                 {t('toolbarSize')}
