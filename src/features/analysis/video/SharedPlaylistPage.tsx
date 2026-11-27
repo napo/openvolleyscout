@@ -162,7 +162,14 @@ export function SharedPlaylistPage() {
   const playerRef = useRef<YouTubePlayerLike | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const [localReady, setLocalReady] = useState(false);
-  const sharedVideoUrl = youtubePlaylist?.clips.find((c) => Boolean(c.videoUrl))?.videoUrl;
+  // A playlist can hold clips of several matches, each with its own video file: the player
+  // loads the file of the clip being played (the first one to start with).
+  const firstVideoUrl = youtubePlaylist?.clips.find((c) => Boolean(c.videoUrl))?.videoUrl;
+  // The file chosen belongs to one playlist: a new link or file starts again from its first video.
+  const [loadedVideo, setLoadedVideo] = useState<{ playlist: typeof youtubePlaylist; url: string } | null>(null);
+  const sharedVideoUrl = loadedVideo && loadedVideo.playlist === youtubePlaylist ? loadedVideo.url : firstVideoUrl;
+  const sharedVideoUrlRef = useRef(sharedVideoUrl);
+  sharedVideoUrlRef.current = sharedVideoUrl;
   // Google Drive links play through the Drive API, which allows seeking to each clip.
   const remoteClipUrl = sharedVideoUrl ? toPlayableVideoUrl(sharedVideoUrl) : undefined;
   const usesHtmlVideo = Boolean(localPlaylist || remoteClipUrl);
@@ -188,6 +195,17 @@ export function SharedPlaylistPage() {
     const ytClip = youtubePlaylist?.clips[clipIndex];
     if (localPlaylist || ytClip?.videoUrl) {
       if (!video) return;
+      if (ytClip?.videoUrl && ytClip.videoUrl !== sharedVideoUrlRef.current) {
+        // A clip of another match: load its video, then seek once its metadata has arrived.
+        // The old one stops first, so its time is not taken for the new clip's.
+        video.pause();
+        sharedVideoUrlRef.current = ytClip.videoUrl;
+        pendingRemoteSeekRef.current = { clipIndex, seconds: startSeconds };
+        clipRef.current = clipIndex;
+        setPlaybackError(false);
+        setLoadedVideo({ playlist: youtubePlaylist, url: ytClip.videoUrl });
+        return;
+      }
       if (video.readyState < 1) {
         if (ytClip?.videoUrl) {
           pendingRemoteSeekRef.current = { clipIndex, seconds: startSeconds };
