@@ -12,7 +12,7 @@ import { bookletImposition, buildReportBooklet, fitBookletCourt, imposeBooklet, 
 import { buildReceptionFormationSvg } from './reception-formation';
 import { buildSetterRotationCourtSvg } from './report-view';
 import { moveReportComponent, reportComponentOrder } from './report-components';
-import { assignLineupCell, resolveLineupCells } from './board-pieces';
+import { assignLineupCell, attackerBoardViews, resolveLineupCells, selectedAttackers, setSelectedAttackers } from './board-pieces';
 import { recoverArchivedSetterSheets } from './report-draft';
 import type { KeySuggestion } from './report-keys';
 const translator = (messages: Record<string,string>): ViewT => (key, params) => (messages[key] ?? key).replace(/{{(\w+)}}/g, (_, name) => String(params?.[name] ?? name));
@@ -244,6 +244,24 @@ describe('booklet planning and printing',()=>{
     expect(page.indexOf('>Gio Out<')).toBeGreaterThan(page.indexOf(`>${t('teamStartersTitle')}<`));
     // Only one libero cell is drawn when the second is empty.
     expect(page.match(/rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width=".8"/g)).toHaveLength(7);
+  });
+  it('chooses the athletes of Block and defence for one view, or for all views at once',()=>{
+    const {report,view}=fixture();
+    view.attackers.forEach((attacker,i)=>{attacker.attempts=60-i;});
+    // Default view: the choice prints only the chosen athletes.
+    const one=setSelectedAttackers(report,view,[undefined],['1','3']);
+    expect([...selectedAttackers(one,view)]).toEqual(['1','3']);
+    expect(buildReportBooklet(one,view,t).pages.join('')).not.toContain('>#2 Player 2<');
+    // Custom views: one view changes alone; "apply to all" replaces every view's choice.
+    view.attackerViews=['rec','dig'].map(id=>({id,label:id,attackers:view.attackers.map(a=>({...a,player:a.player,attempts:a.attempts??0,hasDirections:true}))}));
+    expect(attackerBoardViews(view).map(entry=>entry.id)).toEqual(['rec','dig']);
+    const everyone=setSelectedAttackers(report,view,['rec','dig'],['1','2','3','4','5','6']);
+    const perView=setSelectedAttackers(everyone,view,['rec'],['2']);
+    expect([...selectedAttackers(perView,view,'rec')]).toEqual(['2']);
+    expect(selectedAttackers(perView,view,'dig').size).toBe(6);
+    const all=setSelectedAttackers(perView,view,['rec','dig'],['4','5']);
+    expect([...selectedAttackers(all,view,'rec')]).toEqual(['4','5']);
+    expect([...selectedAttackers(all,view,'dig')]).toEqual(['4','5']);
   });
   it('shares the component order between the navigator and every export layout',()=>{
     const {report,view}=fixture();

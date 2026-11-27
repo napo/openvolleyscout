@@ -3,7 +3,8 @@ import { nextChartRotation } from '@src/lib/utils/chart-rotation';
 import { expandAttackerViews, expandSetterViews } from '../model/split-views';
 import { BookletSettings } from './BookletSettings';
 import { chartedSetterKeys, DEFAULT_BOOKLET, rankSetterGroups, TEAM_CHART_BAR, TEAM_CHART_HIGHLIGHT, teamStartsElements, type ReportBookletPlan, type ReportStaffNote } from '../model/report-booklet';
-import { PIECE_TEAM_LINEUP, PIECE_TEAM_STARTS } from '../model/board-pieces';
+import { attackerBoardViews, PIECE_TEAM_LINEUP, PIECE_TEAM_STARTS, selectedAttackers, setSelectedAttackers } from '../model/board-pieces';
+import { AttackerPicker } from './AttackerPicker';
 import { TeamLineupEditor } from './TeamLineupEditor';
 import { playerLabel } from '../model/report-keys';
 import { moveReportComponent, reportComponentOrder } from '../model/report-components';
@@ -230,6 +231,8 @@ export function TacticalBoardSheet({
   const catalogGroups = useMemo(() => {
     const groups = new Map<ResolvedBoardPiece['sheetId'], { sheetId: ResolvedBoardPiece['sheetId']; pieces: ResolvedBoardPiece[]; onBoard: number }>();
     for (const piece of catalog.values()) {
+      // Block and defence athletes are chosen in the section itself.
+      if (piece.sheetId === 'attackers') continue;
       const group = groups.get(piece.sheetId) ?? { sheetId: piece.sheetId, pieces: [], onBoard: 0 };
       group.pieces.push(piece);
       if (isPieceOnBoard(report, view, piece.id)) group.onBoard += 1;
@@ -405,6 +408,7 @@ export function TacticalBoardSheet({
         <summary><ActionIcon name="manage" />{t('tacticalManageSheets')}</summary>
         <p className="opponent-report__hint">{t('tacticalManageSheetsHelp')}</p>
         <button type="button" className="btn-secondary" onClick={handleAddExtraSheet}><ActionIcon name="add" />{t('opponentReportBoardAddExtraSheet')}</button>
+        <p className="opponent-report__hint">{t('tacticalManageAttackersHint')}</p>
         <div className="opponent-report__board-catalog-groups">
           {catalogGroups.map((group) => (
             <details key={group.sheetId} className="opponent-report__board-catalog-group">
@@ -484,6 +488,15 @@ export function TacticalBoardSheet({
                   ...(nextBoardPieceIds ? { boardPieceIds: nextBoardPieceIds } : {}),
                 };
               })}
+            />
+          ) : null}
+          {selected === 'attackers' && attackerBoardViews(view).some((entry) => entry.attackers.length) ? (
+            <AttackerPicker
+              key={attackerBoardViews(view).map((entry) => entry.id ?? '').join('|')}
+              views={attackerBoardViews(view)}
+              selected={(viewId) => selectedAttackers(report, view, viewId)}
+              onChangeView={(viewId, keys) => update((current) => setSelectedAttackers(current, view, [viewId], keys))}
+              onApplyAll={(keys) => update((current) => setSelectedAttackers(current, view, attackerBoardViews(view).map((entry) => entry.id), keys))}
             />
           ) : null}
           {selected === 'attackers' ? (

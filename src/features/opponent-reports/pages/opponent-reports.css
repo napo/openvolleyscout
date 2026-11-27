@@ -892,6 +892,13 @@
 .opponent-report__team-chart-editor svg { width: min(100%, 38rem); height: auto; background: #fff; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 6px; }
 .opponent-report__team-chart-colors { display: flex; flex-direction: column; gap: 0.4rem; }
 .opponent-report__team-chart-colors label { display: flex; align-items: center; gap: 0.5rem; }
+.attacker-picker { display: flex; flex-direction: column; gap: 0.4rem; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; }
+.attacker-picker h4 { margin: 0; }
+.attacker-picker__athletes { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; }
+.attacker-picker__athletes label { display: inline-flex; align-items: center; gap: 0.3rem; }
+.attacker-picker__athletes small, .attacker-picker__view summary small { opacity: 0.7; }
+.attacker-picker > .btn-small { align-self: flex-start; }
+.attacker-picker__view summary { cursor: pointer; font-weight: 600; }
 .team-lineup-editor { display: flex; flex-direction: column; gap: 0.4rem; }
 .team-lineup-editor__row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
 .team-lineup-editor__row--net { border-top: 3px solid var(--slate-700, #334155); padding-top: 0.4rem; }

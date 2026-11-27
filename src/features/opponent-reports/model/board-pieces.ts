@@ -717,6 +717,31 @@ export function resolveActiveBoardPieceIds(
   return base;
 }
 
+/** The attacker views on the board: the custom ones, or the default view (id undefined) with every attacker. */
+export function attackerBoardViews(view: ReportView): Array<{ id?: string; label?: string; attackers: Array<{ key: string; label: string; attacks: number }> }> {
+  const athletes = (list: ReadonlyArray<{ player: { key: string; jersey: string; name: string }; attempts?: number }>) =>
+    list.map((attacker) => ({ key: attacker.player.key, label: playerLabel(attacker.player), attacks: attacker.attempts ?? 0 })).filter((attacker) => attacker.attacks > 0);
+  return view.attackerViews?.length
+    ? view.attackerViews.map((entry) => ({ id: entry.id, label: entry.label, attackers: athletes(entry.attackers) }))
+    : [{ attackers: athletes(view.attackers) }];
+}
+
+/** Athletes whose card of this attacker view is in the report. */
+export function selectedAttackers(report: OpponentReport, view: ReportView, viewId?: string): Set<string> {
+  const active = new Set(resolveActiveBoardPieceIds(report, view));
+  const entry = attackerBoardViews(view).find((candidate) => candidate.id === viewId);
+  return new Set((entry?.attackers ?? []).filter((attacker) => active.has(attackerPieceId(attacker.key, viewId))).map((attacker) => attacker.key));
+}
+
+/** Prints exactly these athletes in the given attacker views; the other attackers of those views leave the report. */
+export function setSelectedAttackers(report: OpponentReport, view: ReportView, viewIds: ReadonlyArray<string | undefined>, keys: ReadonlyArray<string>): OpponentReport {
+  const views = attackerBoardViews(view).filter((entry) => viewIds.includes(entry.id));
+  const remove = new Set(views.flatMap((entry) => entry.attackers.map((attacker) => attackerPieceId(attacker.key, entry.id))));
+  const add = views.flatMap((entry) => entry.attackers.filter((attacker) => keys.includes(attacker.key)).map((attacker) => attackerPieceId(attacker.key, entry.id)));
+  const kept = resolveActiveBoardPieceIds(report, view).filter((id) => !remove.has(id));
+  return { ...report, boardPieceIds: [...kept, ...add.filter((id) => !kept.includes(id))] };
+}
+
 export function isPieceOnBoard(
   report: OpponentReport,
   view: ReportView,
