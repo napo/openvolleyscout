@@ -263,6 +263,16 @@ describe('booklet planning and printing',()=>{
     expect([...selectedAttackers(all,view,'rec')]).toEqual(['4','5']);
     expect([...selectedAttackers(all,view,'dig')]).toEqual(['4','5']);
   });
+  it('prints "back to the same attacker" for the charted setter: lines in the booklet, a table in A4',()=>{
+    const {report,view}=fixture();
+    const cell=(text:string)=>({text});
+    view.setter.groups[0].repeat={columns:['Attacker','After error','After block','Usually','In the rally'],rows:[['#4 Player 4','40% (2/5)','-','30% (12/40)','50% (3/6)'].map(cell)]};
+    const booklet=buildReportBooklet(report,view,t);
+    expect(booklet.staffNotes?.find(note=>note.id==='setter-repeat:2:lines')?.body).toContain('#4 Player 4: After error 40% (2/5) · After block - · Usually 30% (12/40) · In the rally 50% (3/6)');
+    const a4=buildReportBooklet(report,view,t,'',{a4:true}).pages.join('');
+    expect(a4).toContain(`>${t('setterRepeatTitle')} · #2 Player 2<`);
+    expect(a4).toContain('>40% (2/5)<');
+  });
   it('shares the component order between the navigator and every export layout',()=>{
     const {report,view}=fixture();
     report.notes='Staff note moved to the beginning';

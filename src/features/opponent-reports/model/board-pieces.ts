@@ -46,6 +46,8 @@ export const PIECE_RECEPTION_FIRST_BALL = 'reception:first-ball';
 export const PIECE_RECEPTION_POSITIVE = 'reception:positive-reception';
 export const PIECE_RECEPTION_SERVE_TARGETS = 'reception:serve-targets';
 
+/** "Back to the same attacker?" table of one setter. */
+export const setterRepeatPieceId = (playerKey: string) => `setter-repeat:${playerKey}`;
 export const setterPieceId = (playerKey: string, bandKey: string) =>
   `setter:${playerKey}:${bandKey}`;
 export const attackerPieceId = (playerKey: string, viewId?: string) =>
@@ -463,6 +465,20 @@ export function buildBoardPieceCatalog(
         isModified: hasPieceEdit(edit),
       });
     }
+    if (group.repeat) {
+      const id = setterRepeatPieceId(group.player.key);
+      const edit = edits[id];
+      catalog.set(id, {
+        id,
+        sheetId: 'setter',
+        kind: 'table',
+        title: edit?.title ?? `${t('setterRepeatTitle')} · ${setterLabel}`,
+        subtitle: edit?.subtitle ?? t('setterRepeatHelp'),
+        table: applyTableEdit(group.repeat, edit?.table),
+        note: edit?.note ?? '',
+        isModified: hasPieceEdit(edit),
+      });
+    }
   }
 
   // ── 5. Attackers ───────────────────────────────────────────────────────────
@@ -649,9 +665,10 @@ export function getPieceIdsForSheet(
     case 'serveTargets':
       return [PIECE_RECEPTION_SERVE_TARGETS];
     case 'setter':
-      return view.setter.groups.flatMap((group) =>
-        group.bands.map((band) => setterPieceId(group.player.key, band.key)),
-      );
+      return view.setter.groups.flatMap((group) => [
+        ...group.bands.map((band) => setterPieceId(group.player.key, band.key)),
+        ...(group.repeat ? [setterRepeatPieceId(group.player.key)] : []),
+      ]);
     case 'attackers':
       return view.attackerViews?.length
         ? view.attackerViews.flatMap((customView) =>

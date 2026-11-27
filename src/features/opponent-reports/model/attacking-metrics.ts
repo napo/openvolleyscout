@@ -128,6 +128,93 @@ export interface SetterCustomGroupMetrics {
 export interface AttackingReportMetrics {
   attackers: AttackerReportMetrics[];
   setters: SetterReportMetrics[];
+  /** Does the setter go back to the same attacker? Per setter and attacker. */
+  setterRepeats?: SetterRepeatMetrics[];
+}
+
+export interface SetterRepeatMetrics {
+  setter: ReportPlayer;
+  attackers: Array<{
+    player: ReportPlayer;
+    /** Her attack error (=), then the first set of the next rally: how often it went to her again. */
+    afterError: { count: number; total: number };
+    /** The same after her attack was blocked (/). */
+    afterBlocked: { count: number; total: number };
+    /** Her usual share of the setter's first sets after reception. */
+    usual: { count: number; total: number };
+    /** Her attack, then the team's next attack in the same rally set by the setter: how often it was her again. */
+    repeated: { count: number; total: number };
+  }>;
+}
+
+/**
+ * The setter's choice after an attacker failed (the first set of the next rally) and within a rally
+ * (the team's next attack set by the setter). Only sets of the analysed team's setters count.
+ */
+export function computeSetterRepeats(matches: readonly ReportMatchInput[]): SetterRepeatMetrics[] {
+  type Counter = { count: number; total: number };
+  const counter = (): Counter => ({ count: 0, total: 0 });
+  const bySetter = new Map<string, { setter: ReportPlayer; attackers: Map<string, { player: ReportPlayer; afterError: Counter; afterBlocked: Counter; usual: Counter; repeated: Counter }> }>();
+  const entry = (setter: ReportPlayer, attacker: ReportPlayer) => {
+    const group = bySetter.get(setter.key) ?? { setter, attackers: new Map() };
+    bySetter.set(setter.key, group);
+    const row = group.attackers.get(attacker.key) ?? { player: attacker, afterError: counter(), afterBlocked: counter(), usual: counter(), repeated: counter() };
+    group.attackers.set(attacker.key, row);
+    return row;
+  };
+  // Usual share: every first set of each setter, over all matches.
+  const usualTotals = new Map<string, number>();
+  for (const match of matches) {
+    const { playerById, setterIds, setterPlayerIds } = resolveMatchSetters(match);
+    const ordered = (touches: readonly BallTouch[]) => [...touches].sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
+    // First set of each side-out of the team, keyed by rally: the setter and the attacker it went to.
+    const firstSets = new Map<string, { setter: ReportPlayer; attacker: ReportPlayer }>();
+    for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
+      if (sequence.teamSide !== match.side || !sequence.attack?.playerId || !sequence.setterPlayerId || !setterIds.has(sequence.setterPlayerId)) continue;
+      const setter = playerById.get(sequence.setterPlayerId), attacker = playerById.get(sequence.attack.playerId);
+      if (!setter || !attacker || setter.key === attacker.key) continue;
+      firstSets.set(`${sequence.setNumber}:${sequence.rallyNumber}`, { setter, attacker });
+    }
+    for (const { setter } of firstSets.values()) usualTotals.set(setter.key, (usualTotals.get(setter.key) ?? 0) + 1);
+    for (const { setter, attacker } of firstSets.values()) entry(setter, attacker).usual.count += 1;
+    const rallies = [...match.rallies].sort((a, b) => a.setNumber - b.setNumber || a.rallyNumber - b.rallyNumber);
+    rallies.forEach((rally, index) => {
+      const touches = ordered(rally.touches);
+      const attacks = touches.filter((touch) => touch.teamSide === match.side && touch.skill === 'attack' && touch.playerId);
+      // A3: each attack and the team's next attack in the same rally, when the setter set it.
+      attacks.forEach((attack, i) => {
+        const next = attacks[i + 1];
+        if (!next) return;
+        const set = previousSet(touches, touches.indexOf(next), match.side);
+        if (!set?.playerId || !setterIds.has(set.playerId)) return;
+        const setter = playerById.get(set.playerId), first = playerById.get(attack.playerId!), second = playerById.get(next.playerId!);
+        if (!setter || !first || !second || setter.key === first.key) return;
+        const row = entry(setter, first);
+        row.repeated.total += 1;
+        if (second.key === first.key) row.repeated.count += 1;
+      });
+      // A2: the rally ended on her error or block; the next rally of the set is a side-out of the team.
+      const last = attacks[attacks.length - 1];
+      const nextRally = rallies[index + 1];
+      if (!last || !nextRally || nextRally.setNumber !== rally.setNumber) return;
+      if (last.evaluation !== '=' && last.evaluation !== '/') return;
+      if (touches.some((touch) => touch.sequenceNumber > last.sequenceNumber && touch.teamSide === match.side)) return;
+      const first = firstSets.get(`${nextRally.setNumber}:${nextRally.rallyNumber}`);
+      const attacker = playerById.get(last.playerId!);
+      if (!first || !attacker || first.setter.key === attacker.key) return;
+      const row = entry(first.setter, attacker);
+      const target = last.evaluation === '=' ? row.afterError : row.afterBlocked;
+      target.total += 1;
+      if (first.attacker.key === attacker.key) target.count += 1;
+    });
+  }
+  for (const group of bySetter.values()) {
+    for (const row of group.attackers.values()) row.usual.total = usualTotals.get(group.setter.key) ?? 0;
+  }
+  return [...bySetter.values()].map((group) => ({
+    setter: group.setter,
+    attackers: [...group.attackers.values()].sort((a, b) => b.usual.count - a.usual.count || compareReportPlayers(a.player, b.player)),
+  }));
 }
 
 interface MutableDistribution {
@@ -570,6 +657,7 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
       }))
       .sort((left, right) => right.all.attacks - left.all.attacks),
     setters: sortedSetters,
+    setterRepeats: computeSetterRepeats(matches),
   };
 }
 

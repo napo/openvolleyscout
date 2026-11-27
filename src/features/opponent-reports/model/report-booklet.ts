@@ -2,7 +2,7 @@ import type { OpponentReport, OpponentReportBooklet, OpponentReportComponentId }
 import { opponentReportTitle } from './report-title';
 import { reportComponentOrder } from './report-components';
 import { APP_METADATA } from '@src/lib/constants/app';
-import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_TEAM_ROSTER, PIECE_TEAM_STARTS, PIECE_TEAM_LINEUP, PIECE_TEAM_STARTERS, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, attackerPlayerKeyFromPieceId, attackerViewIdFromPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
+import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_TEAM_ROSTER, PIECE_TEAM_STARTS, PIECE_TEAM_LINEUP, PIECE_TEAM_STARTERS, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, setterRepeatPieceId, attackerPieceId, attackerPlayerKeyFromPieceId, attackerViewIdFromPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
 import { formatViewCell, type ReportView, type ViewT } from './report-view';
 import { playerLabel } from './report-keys';
 import { buildQrSvg } from './qr-svg';
@@ -623,6 +623,17 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       else deferred.push({ id: 'setter-summary', title: t('bookletSecondSummary'), body: summaries.map(entry => entry.body).join('\n') });
     }
     for (const group of charted.slice(1)) setterGrid(group);
+    // "Back to the same attacker?": a table in A4 (with the detail tables), lines in the booklet's notes.
+    if (!a4) for (const group of charted) {
+      const piece = boardPieceIdSet.has(setterRepeatPieceId(group.player.key)) || !hasBoardSelection ? catalog.get(setterRepeatPieceId(group.player.key)) : undefined;
+      if (!piece?.table) continue;
+      const [, afterError, afterBlocked, usual, inRally] = piece.table.columns;
+      const lines = piece.table.rows.map((row) => {
+        const cells = row.map(formatViewCell);
+        return `${cells[0]}: ${afterError} ${cells[1]} · ${afterBlocked} ${cells[2]} · ${usual} ${cells[3]} · ${inRally} ${cells[4]}`;
+      });
+      deferred.push({ id: `${piece.id}:lines`, title: piece.title, body: [piece.subtitle, ...lines].filter(Boolean).join('\n') });
+    }
   }
   // Zone analysis: one page per phase, the six rotations as on the setter's page.
   // On the board, or (without a board selection) when the sheet is switched on.
@@ -730,10 +741,13 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     detailed.delete(PIECE_TEAM_STARTS);
     detailed.delete(PIECE_TEAM_LINEUP);
     detailed.delete(PIECE_TEAM_STARTERS);
+    // Setters printed as text only: their "back to the same attacker" table stays out too.
+    for (const group of textSetters) detailed.delete(setterRepeatPieceId(group.player.key));
     for (const piece of [
       ...(showServeTargets ? [reception] : []),
       ...(showAttackers ? attackers : []),
       ...(showSetter ? charted.flatMap((group) => group.bands.filter((b) => !hasBoardSelection || boardPieceIdSet.has(setterPieceId(group.player.key, b.key))).map(b => catalog.get(setterPieceId(group.player.key, b.key)))) : []),
+      ...(showSetter ? charted.filter((group) => !hasBoardSelection || boardPieceIdSet.has(setterRepeatPieceId(group.player.key))).map((group) => catalog.get(setterRepeatPieceId(group.player.key))) : []),
     ]) {
       if (piece) detailed.set(piece.id, piece);
     }

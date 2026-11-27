@@ -13,6 +13,7 @@ import {
   collectAttackCombinationCodes,
   collectSetterCallCodes,
   computeAttackerDirectionViews,
+  computeSetterRepeats,
   computeAttackingReportMetrics,
   computeSetterDistributionViews,
 } from './attacking-metrics';
@@ -676,6 +677,43 @@ describe('opponent attacking metrics', () => {
     expect(count(['H'])).toBe(1);
     expect(count(['Q', 'T'])).toBe(2);
     expect(count(['U'])).toBe(0);
+  });
+
+  it('counts how often the setter goes back to an attacker after her error and within a rally', () => {
+    const rally = (number: number, serving: 'home' | 'away', touches: BallTouch[], winner: 'home' | 'away'): RallyStats => ({
+      setNumber: 1, rallyNumber: number, touches, dataVolleyCode: '', servingTeam: serving, pointWinner: winner, terminalReason: null,
+    });
+    const fixture = match([
+      // Side-out attempt: #4 hits out.
+      rally(1, 'home', [
+        touch('s1', 1, 'h1', 'serve', '+', { teamSide: 'home', rallyNumber: 1 }),
+        touch('r1', 2, 'a4', 'receive', '#', { awaySetterPosition: 1, rallyNumber: 1 }),
+        touch('set1', 3, 'a1', 'set', '#', { rallyNumber: 1 }),
+        touch('atk1', 4, 'a4', 'attack', '=', { rallyNumber: 1 }),
+      ], 'home'),
+      // Next rally: the first set goes back to #4.
+      rally(2, 'home', [
+        touch('s2', 5, 'h1', 'serve', '+', { teamSide: 'home', rallyNumber: 2 }),
+        touch('r2', 6, 'a4', 'receive', '+', { awaySetterPosition: 1, rallyNumber: 2 }),
+        touch('set2', 7, 'a1', 'set', '#', { rallyNumber: 2 }),
+        touch('atk2', 8, 'a4', 'attack', '#', { rallyNumber: 2 }),
+      ], 'away'),
+      // In transition #3 is blocked and covered, and the setter gives her the ball again.
+      rally(3, 'away', [
+        touch('s3', 9, 'a3', 'serve', '+', { rallyNumber: 3 }),
+        touch('d3', 10, 'a4', 'dig', '+', { rallyNumber: 3 }),
+        touch('set3', 11, 'a1', 'set', '#', { rallyNumber: 3 }),
+        touch('atk3', 12, 'a3', 'attack', '!', { rallyNumber: 3 }),
+        touch('c3', 13, 'a4', 'dig', '+', { rallyNumber: 3 }),
+        touch('set3b', 14, 'a1', 'set', '#', { rallyNumber: 3 }),
+        touch('atk3b', 15, 'a3', 'attack', '#', { rallyNumber: 3 }),
+      ], 'away'),
+    ], 'm1', 'a1');
+    const [setter] = computeSetterRepeats([fixture]);
+    expect(setter.setter.name).toBe('Sara Setter');
+    const row = (jersey: string) => setter.attackers.find((entry) => entry.player.jersey === jersey)!;
+    expect(row('4')).toMatchObject({ afterError: { count: 1, total: 1 }, afterBlocked: { count: 0, total: 0 }, usual: { count: 2, total: 2 } });
+    expect(row('3').repeated).toEqual({ count: 1, total: 1 });
   });
 
   it('keeps attacks against an open block (players at net 4) apart from the others', () => {

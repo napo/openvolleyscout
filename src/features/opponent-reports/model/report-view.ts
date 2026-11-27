@@ -22,6 +22,7 @@ import type {
   AttackPerformance,
   SetterCustomGroupMetrics,
   SetterReceptionBandMetrics,
+  SetterRepeatMetrics,
   SetterReportMetrics,
 } from './attacking-metrics';
 import type { AttackerVideoLink } from './attacker-video-links';
@@ -116,6 +117,8 @@ export interface ReportView {
       attempts?: number;
       /** Touches of every skill in the analysed matches: the setters are printed in this order. */
       touches?: number;
+      /** Does she go back to the same attacker after an error, a block, or within the rally? */
+      repeat?: ViewTable;
       bands: Array<{
         key: string;
         title: string;
@@ -1057,6 +1060,19 @@ function buildSetterBandEntry(
   return { key, title, players, courts, summary };
 }
 
+function setterRepeatTable(entry: SetterRepeatMetrics | undefined, thresholds: OpponentReportThresholds, t: ViewT): ViewTable | undefined {
+  if (!entry) return undefined;
+  const cell = ({ count, total }: { count: number; total: number }): ViewCell => (total > 0
+    ? { text: `${percent(count / total)} (${count}/${total})`, few: total < thresholds.minSample }
+    : plain('-'));
+  const rows = entry.attackers
+    .filter((row) => row.afterError.total + row.afterBlocked.total + row.repeated.total > 0)
+    .map((row) => [plain(playerLabel(row.player)), cell(row.afterError), cell(row.afterBlocked), cell(row.usual), cell(row.repeated)]);
+  return rows.length
+    ? { columns: [t('setterRepeatColAttacker'), t('setterRepeatColAfterError'), t('setterRepeatColAfterBlocked'), t('setterRepeatColUsual'), t('setterRepeatColInRally')], rows }
+    : undefined;
+}
+
 function setterDistributionView(
   metrics: AttackingReportMetrics,
   report: OpponentReport,
@@ -1105,7 +1121,8 @@ function setterDistributionView(
           t,
         )];
       });
-    return { player: setter.player, bands, attempts: setter.rotations.reduce((sum, rotation) => sum + rotation.positive.attempts + rotation.negative.attempts, 0), touches: touchesByPlayer[setter.player.key] };
+    const repeat = setterRepeatTable(metrics.setterRepeats?.find((entry) => entry.setter.key === setter.player.key), thresholds, t);
+    return { player: setter.player, bands, attempts: setter.rotations.reduce((sum, rotation) => sum + rotation.positive.attempts + rotation.negative.attempts, 0), touches: touchesByPlayer[setter.player.key], ...(repeat ? { repeat } : {}) };
   }).filter((group) => group.bands.length > 0);
   return {
     groups,
