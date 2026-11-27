@@ -17,6 +17,7 @@ import type { CompetitionArchiveEntry } from '@src/domain/archive/types';
 import type { MatchProject } from '@src/domain/match/types';
 import type { OpponentReport } from '@src/domain/opponent-report/types';
 import type { ArchivedRoster, ArchivedTeam } from '@src/domain/team/types';
+import type { AppAssetRecord } from '@src/infrastructure/db/match-project-db';
 import type { Presence } from './presence';
 
 export type CloudCollection =
@@ -26,7 +27,8 @@ export type CloudCollection =
   | 'competitions'
   | 'opponentReports'
   | 'receptionSystems'
-  | 'defenseSystems';
+  | 'defenseSystems'
+  | 'appAssets';
 
 /** Tombstones keyed by `${collection}:${id}` -> ISO timestamp when deleted. */
 export type DeletionMap = Record<string, string>;
@@ -48,6 +50,8 @@ export interface CloudSnapshot {
   readonly opponentReports: readonly OpponentReport[];
   readonly receptionSystems: readonly CloudSystemRecord[];
   readonly defenseSystems: readonly CloudSystemRecord[];
+  /** Print look and club logo; absent (none) in cloud files written before they were synced. */
+  readonly appAssets?: readonly AppAssetRecord[];
   readonly deletions: DeletionMap;
   /** Scouting claims and devices, only in the cloud file (never merged as data). */
   readonly presence?: Presence;
@@ -61,6 +65,7 @@ export const EMPTY_CLOUD_SNAPSHOT: CloudSnapshot = {
   opponentReports: [],
   receptionSystems: [],
   defenseSystems: [],
+  appAssets: [],
   deletions: {},
 };
 
@@ -99,6 +104,11 @@ export function recordStamp(collection: CloudCollection, item: unknown): string 
     const report = item as OpponentReport;
     return `t:${report.updatedAt}`;
   }
+  if (collection === 'appAssets') {
+    // The time of the change, and the value itself in case two devices changed it at the same instant.
+    const asset = item as AppAssetRecord;
+    return `t:${asset.updatedAt}|${simpleHash(JSON.stringify(asset.value) ?? '')}`;
+  }
   if (collection === 'teams' || collection === 'rosters' || collection === 'competitions') {
     const rec = item as { updatedAt?: string | number };
     if (rec.updatedAt !== undefined && rec.updatedAt !== null && rec.updatedAt !== '') {
@@ -111,6 +121,7 @@ export function recordStamp(collection: CloudCollection, item: unknown): string 
 function recordTime(collection: CloudCollection, item: unknown): number {
   if (collection === 'matches') return isoTime((item as MatchProject).updatedAt);
   if (collection === 'opponentReports') return isoTime((item as OpponentReport).updatedAt);
+  if (collection === 'appAssets') return isoTime((item as AppAssetRecord).updatedAt);
   if (collection === 'teams' || collection === 'rosters' || collection === 'competitions') {
     return isoTime((item as { updatedAt?: string }).updatedAt);
   }
@@ -126,6 +137,7 @@ export function snapshotStamps(snapshot: CloudSnapshot): Map<string, string> {
   for (const o of snapshot.opponentReports) stamps.set(keyOf('opponentReports', o.id), recordStamp('opponentReports', o));
   for (const s of snapshot.receptionSystems) stamps.set(keyOf('receptionSystems', s.id), recordStamp('receptionSystems', s));
   for (const s of snapshot.defenseSystems) stamps.set(keyOf('defenseSystems', s.id), recordStamp('defenseSystems', s));
+  for (const a of snapshot.appAssets ?? []) stamps.set(keyOf('appAssets', a.id), recordStamp('appAssets', a));
   for (const [k, deletedAt] of Object.entries(snapshot.deletions)) {
     if (!stamps.has(k)) stamps.set(k, `del:${deletedAt}`);
   }
@@ -268,6 +280,7 @@ export function mergeCloudSnapshots(
   const opponentReports = mergeCollection('opponentReports', (o) => o.id, local.opponentReports, remote.opponentReports, local.deletions, remote.deletions, base, now, nextDeletions);
   const receptionSystems = mergeCollection('receptionSystems', (s) => s.id, local.receptionSystems, remote.receptionSystems, local.deletions, remote.deletions, base, now, nextDeletions);
   const defenseSystems = mergeCollection('defenseSystems', (s) => s.id, local.defenseSystems, remote.defenseSystems, local.deletions, remote.deletions, base, now, nextDeletions);
+  const appAssets = mergeCollection('appAssets', (a) => a.id, local.appAssets ?? [], remote.appAssets ?? [], local.deletions, remote.deletions, base, now, nextDeletions);
 
   const merged: CloudSnapshot = {
     matches: matches.merged,
@@ -277,6 +290,7 @@ export function mergeCloudSnapshots(
     opponentReports: opponentReports.merged,
     receptionSystems: receptionSystems.merged,
     defenseSystems: defenseSystems.merged,
+    appAssets: appAssets.merged,
     deletions: nextDeletions,
   };
 
@@ -293,6 +307,7 @@ export interface SnapshotDiff {
   readonly putOpponentReports: OpponentReport[];
   readonly putReceptionSystems: CloudSystemRecord[];
   readonly putDefenseSystems: CloudSystemRecord[];
+  readonly putAppAssets: AppAssetRecord[];
   readonly deleteIds: Record<CloudCollection, string[]>;
   readonly deletions: DeletionMap;
 }
@@ -327,6 +342,7 @@ export function diffCloudSnapshots(from: CloudSnapshot, to: CloudSnapshot): Snap
   const opponentReports = diffCollection('opponentReports', (o) => o.id, from.opponentReports, to.opponentReports);
   const receptionSystems = diffCollection('receptionSystems', (s) => s.id, from.receptionSystems, to.receptionSystems);
   const defenseSystems = diffCollection('defenseSystems', (s) => s.id, from.defenseSystems, to.defenseSystems);
+  const appAssets = diffCollection('appAssets', (a) => a.id, from.appAssets ?? [], to.appAssets ?? []);
 
   const deletionsChanged = JSON.stringify(from.deletions) !== JSON.stringify(to.deletions);
   const changed = Boolean(
@@ -337,7 +353,8 @@ export function diffCloudSnapshots(from: CloudSnapshot, to: CloudSnapshot): Snap
     || competitions.puts.length || competitions.deletes.length
     || opponentReports.puts.length || opponentReports.deletes.length
     || receptionSystems.puts.length || receptionSystems.deletes.length
-    || defenseSystems.puts.length || defenseSystems.deletes.length,
+    || defenseSystems.puts.length || defenseSystems.deletes.length
+    || appAssets.puts.length || appAssets.deletes.length,
   );
 
   return {
@@ -349,6 +366,7 @@ export function diffCloudSnapshots(from: CloudSnapshot, to: CloudSnapshot): Snap
     putOpponentReports: opponentReports.puts,
     putReceptionSystems: receptionSystems.puts,
     putDefenseSystems: defenseSystems.puts,
+    putAppAssets: appAssets.puts,
     deleteIds: {
       matches: matches.deletes,
       teams: teams.deletes,
@@ -357,6 +375,7 @@ export function diffCloudSnapshots(from: CloudSnapshot, to: CloudSnapshot): Snap
       opponentReports: opponentReports.deletes,
       receptionSystems: receptionSystems.deletes,
       defenseSystems: defenseSystems.deletes,
+      appAssets: appAssets.deletes,
     },
     deletions: to.deletions,
   };

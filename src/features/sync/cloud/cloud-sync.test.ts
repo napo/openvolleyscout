@@ -7,8 +7,9 @@ import { CloudSyncController } from './controller';
 import { DriveClient } from './drive';
 import { DropboxClient } from './dropbox';
 import { META, synchronise } from './engine';
-import { writeCloudSyncFile } from './file';
-import { type CloudSnapshot, EMPTY_CLOUD_SNAPSHOT, mergeCloudSnapshots } from './merge';
+import { readCloudSyncFile, writeCloudSyncFile } from './file';
+import { type CloudSnapshot, EMPTY_CLOUD_SNAPSHOT, diffCloudSnapshots, mergeCloudSnapshots } from './merge';
+import type { AppAssetRecord } from '@src/infrastructure/db/match-project-db';
 import { OneDriveClient } from './onedrive';
 import type { SyncProvider } from './provider';
 import { type Fetch, type RemoteStorage, StorageError } from './storage';
@@ -56,6 +57,84 @@ describe('cloud snapshot merge', () => {
     expect(result.merged.matches.find((m) => m.metadata.id === 'm1')?.metadata.competition).toBe('Cup Local');
     expect(result.merged.matches.find((m) => m.metadata.id === 'm1-copy')?.metadata.competition).toBe('Cup Remote (copy)');
     expect(result.merged.deletions['matches:m2']).toBe('2026-11-02T10:00:00.000Z');
+  });
+});
+
+const LOGO_A = 'data:image/png;base64,QUFBQQ==';
+const LOGO_B = 'data:image/png;base64,QkJCQg==';
+const logo = (value: string, updatedAt: string): AppAssetRecord => ({ id: 'image:clubLogo', kind: 'image', value, updatedAt });
+const theme = (id: string, updatedAt: string): AppAssetRecord => ({ id: 'printTheme', kind: 'printTheme', value: { id }, updatedAt });
+
+describe('cloud merge of the print look and the club logo', () => {
+  const start = { ...EMPTY_CLOUD_SNAPSHOT, appAssets: [logo(LOGO_A, '2026-11-01T10:00:00.000Z'), theme('ovs', '2026-11-01T10:00:00.000Z')] };
+  const { base } = mergeCloudSnapshots(start, start, {}, () => 'unused', new Date('2026-11-01T10:05:00.000Z'));
+
+  it('keeps the newer change when both devices changed the same value', () => {
+    const local: CloudSnapshot = { ...start, appAssets: [logo(LOGO_B, '2026-11-02T09:00:00.000Z'), theme('club', '2026-11-02T08:00:00.000Z')] };
+    const remote: CloudSnapshot = { ...start, appAssets: [logo(LOGO_A.replace('QUFB', 'Q0ND'), '2026-11-02T08:30:00.000Z'), theme('black-white', '2026-11-02T08:45:00.000Z')] };
+    const { merged, conflicts } = mergeCloudSnapshots(local, remote, base, () => 'unused', new Date('2026-11-02T10:00:00.000Z'));
+    expect(conflicts).toBe(0);
+    expect(merged.appAssets?.find((a) => a.id === 'image:clubLogo')?.value).toBe(LOGO_B);
+    expect(merged.appAssets?.find((a) => a.id === 'printTheme')?.value).toEqual({ id: 'black-white' });
+    expect(merged.appAssets).toHaveLength(2);
+  });
+
+  it('takes a change made on one side only', () => {
+    const remote: CloudSnapshot = { ...start, appAssets: [logo(LOGO_B, '2026-11-02T08:30:00.000Z'), theme('ovs', '2026-11-01T10:00:00.000Z')] };
+    const { merged } = mergeCloudSnapshots(start, remote, base, () => 'unused', new Date('2026-11-02T10:00:00.000Z'));
+    expect(merged.appAssets?.find((a) => a.id === 'image:clubLogo')?.value).toBe(LOGO_B);
+    const diff = diffCloudSnapshots(start, merged);
+    expect(diff.putAppAssets.map((a) => a.id)).toEqual(['image:clubLogo']);
+  });
+
+  it('removes a logo deleted on one device and unchanged on the other', () => {
+    const local: CloudSnapshot = {
+      ...start,
+      appAssets: [theme('ovs', '2026-11-01T10:00:00.000Z')],
+      deletions: { 'appAssets:image:clubLogo': '2026-11-02T09:00:00.000Z' },
+    };
+    const { merged } = mergeCloudSnapshots(local, start, base, () => 'unused', new Date('2026-11-02T10:00:00.000Z'));
+    expect(merged.appAssets?.map((a) => a.id)).toEqual(['printTheme']);
+    expect(merged.deletions['appAssets:image:clubLogo']).toBe('2026-11-02T09:00:00.000Z');
+    const toRemote = diffCloudSnapshots(start, merged);
+    expect(toRemote.deleteIds.appAssets).toEqual(['image:clubLogo']);
+  });
+
+  it('keeps the values of this device when the cloud file was written before they were synced', () => {
+    const remote: CloudSnapshot = { ...EMPTY_CLOUD_SNAPSHOT, appAssets: undefined };
+    const { merged } = mergeCloudSnapshots(start, remote, {}, () => 'unused', new Date('2026-11-02T10:00:00.000Z'));
+    expect(merged.appAssets).toEqual(start.appAssets);
+    expect(diffCloudSnapshots(start, merged).changed).toBe(false);
+  });
+
+  it('lets a change or a deletion made elsewhere win over a value copied from an older version of the app', () => {
+    // Device B upgrades late: its logo comes from localStorage and is dated at the oldest time.
+    const legacy: CloudSnapshot = { ...EMPTY_CLOUD_SNAPSHOT, appAssets: [logo(LOGO_A, new Date(0).toISOString())] };
+    const deletedRemote: CloudSnapshot = { ...EMPTY_CLOUD_SNAPSHOT, deletions: { 'appAssets:image:clubLogo': '2026-11-02T09:00:00.000Z' } };
+    const afterDeletion = mergeCloudSnapshots(legacy, deletedRemote, {}, () => 'unused', new Date('2026-11-03T10:00:00.000Z')).merged;
+    expect(afterDeletion.appAssets).toEqual([]);
+    expect(afterDeletion.deletions['appAssets:image:clubLogo']).toBe('2026-11-02T09:00:00.000Z');
+
+    const changedRemote: CloudSnapshot = { ...EMPTY_CLOUD_SNAPSHOT, appAssets: [logo(LOGO_B, '2026-11-02T09:00:00.000Z')] };
+    const afterChange = mergeCloudSnapshots(legacy, changedRemote, {}, () => 'unused', new Date('2026-11-03T10:00:00.000Z')).merged;
+    expect(afterChange.appAssets?.map((a) => a.value)).toEqual([LOGO_B]);
+  });
+
+  it('keeps a value saved by a later version of the app as it is, without writing its own one back', () => {
+    // A later version adds a theme and a field this version does not know.
+    const future: AppAssetRecord = { id: 'printTheme', kind: 'printTheme', value: { id: 'sepia', paper: 'cream' }, updatedAt: '2026-11-02T09:00:00.000Z' };
+    const remote = readCloudSyncFile(writeCloudSyncFile({ ...start, appAssets: [logo(LOGO_A, '2026-11-01T10:00:00.000Z'), future] }));
+    expect(remote.appAssets?.find((a) => a.id === 'printTheme')).toEqual(future);
+    const { merged } = mergeCloudSnapshots(start, remote, base, () => 'unused', new Date('2026-11-03T10:00:00.000Z'));
+    expect(merged.appAssets?.find((a) => a.id === 'printTheme')).toEqual(future);
+    expect(diffCloudSnapshots(remote, merged).changed).toBe(false);
+  });
+
+  it('carries them in the cloud file; an older file reads as having none', () => {
+    const read = readCloudSyncFile(writeCloudSyncFile(start));
+    expect(read.appAssets).toEqual(start.appAssets);
+    const legacy = readCloudSyncFile(writeCloudSyncFile({ ...EMPTY_CLOUD_SNAPSHOT, appAssets: undefined }));
+    expect(legacy.appAssets).toEqual([]);
   });
 });
 

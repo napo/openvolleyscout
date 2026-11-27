@@ -78,6 +78,15 @@ export function OvsBackupImportPreview({
         </p>
       ) : null}
 
+      {preview.appAssetsPreview.records.length > 0 ? (
+        <p>
+          {t('ovsBackupAppAssetsSummary', {
+            addedCount: preview.appAssetsPreview.added,
+            unchangedCount: preview.appAssetsPreview.unchanged,
+          })}
+        </p>
+      ) : null}
+
       {(preview.archivePreview.remote.opponentReports?.length ?? 0) > 0 ? (
         <p>{t('ovsBackupOpponentReportsSummary', { count: preview.archivePreview.remote.opponentReports?.length ?? 0 })}</p>
       ) : null}

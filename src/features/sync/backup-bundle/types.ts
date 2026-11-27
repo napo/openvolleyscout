@@ -16,6 +16,8 @@ export interface OvsBackupManifest {
   includesSystems?: boolean;
   /** Opponent reports in `opponent_reports.json`; absent in older backups. */
   includesOpponentReports?: boolean;
+  /** Print look and club logo in `app_assets.json`; absent in older backups. */
+  includesAppAssets?: boolean;
   exportedAt: string;
   exportedByDeviceId: string;
   appVersion: string;
@@ -29,6 +31,8 @@ export interface BackupSelection {
   includeArchivedCompetitions?: boolean;
   includeSystems?: boolean;
   includeOpponentReports?: boolean;
+  /** The print look and the club logo (default: included). */
+  includeAppAssets?: boolean;
 }
 
 export interface ArchivedDataSnapshot {
@@ -47,4 +51,6 @@ export interface ParsedOvsBackupBundle {
   archives: ArchivedDataSnapshot;
   /** Raw systems (normalized on import); empty when the backup has none. */
   systems: { receptionSystems: unknown[]; defenseSystems: unknown[] };
+  /** Raw app assets (print look, club logo), checked on import; empty when the backup has none. */
+  appAssets: unknown[];
 }

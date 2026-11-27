@@ -130,6 +130,11 @@ export function resolvePrintTheme(id: PrintThemeId | undefined, club?: Partial<C
 }
 
 const STORAGE_KEY = 'openvolleyscout.printTheme';
+const LOGO_KEY = 'openvolleyscout.printLogo';
+
+/** Ids of the print look and of the club logo among the app assets kept with the data. */
+export const PRINT_THEME_ASSET_ID = 'printTheme';
+export const CLUB_LOGO_ASSET_ID = 'image:clubLogo';
 
 export interface PrintThemeChoice {
   id: PrintThemeId;
@@ -138,15 +143,90 @@ export interface PrintThemeChoice {
 
 const isThemeId = (value: unknown): value is PrintThemeId => PRINT_THEME_IDS.includes(value as PrintThemeId);
 
-/** The choice kept in this browser for every printed document, or null when the user never picked one. */
+/** A saved choice checked field by field, or null when it is not one. */
+export function parsePrintThemeChoice(value: unknown): PrintThemeChoice | null {
+  if (!value || typeof value !== 'object') return null;
+  const parsed = value as Partial<PrintThemeChoice>;
+  if (!isThemeId(parsed.id)) return null;
+  const club = parsed.club && isHexColor(parsed.club.primary) && isHexColor(parsed.club.accent)
+    ? { primary: parsed.club.primary, accent: parsed.club.accent }
+    : undefined;
+  return { id: parsed.id, ...(club ? { club } : {}) };
+}
+
+/** Largest stored logo (a 256 px PNG weighs far less). */
+export const MAX_LOGO_LENGTH = 400_000;
+
+/** A club logo as stored: a PNG or JPEG data URL, small enough for every document. */
+export function isPrintLogo(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= MAX_LOGO_LENGTH && /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(value);
+}
+
+/** The print look and the club logo, as saved with the data of the app. */
+export interface PrintBranding {
+  themeChoice: PrintThemeChoice | null;
+  logo: string | null;
+}
+
+/** One change made in Settings, handed to whoever keeps the data (the database). */
+export type PrintBrandingChange =
+  | { id: typeof PRINT_THEME_ASSET_ID; value: PrintThemeChoice | null }
+  | { id: typeof CLUB_LOGO_ASSET_ID; value: string | null };
+
+/**
+ * The values loaded from the database. Until they are loaded (the first
+ * render, tests, scripts) the copy kept in localStorage is read instead; this
+ * module stays free of the database so it runs anywhere.
+ */
+let hydrated: PrintBranding | null = null;
+let persister: ((change: PrintBrandingChange) => void) | null = null;
+
+const listeners = new Set<() => void>();
+const notify = () => listeners.forEach((listener) => listener());
+export function subscribePrintTheme(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+function mirror(key: string, value: string | null): void {
+  try {
+    if (typeof window === 'undefined') return;
+    if (value === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, value);
+  } catch {
+    // Private mode or storage full: the copy in memory and in the database is enough.
+  }
+}
+
+/** Receives every change made with the save and reset functions below, to write it to the database. */
+export function setPrintBrandingPersister(next: ((change: PrintBrandingChange) => void) | null): void {
+  persister = next;
+}
+
+/**
+ * Takes the values saved with the data (at start-up, after cloud sync or a
+ * restored backup) and tells the subscribers. `null` goes back to reading
+ * localStorage only.
+ */
+export function hydratePrintBranding(branding: PrintBranding | null): void {
+  if (branding === null) {
+    hydrated = null;
+  } else {
+    const themeChoice = parsePrintThemeChoice(branding.themeChoice);
+    const logo = isPrintLogo(branding.logo) ? branding.logo : null;
+    hydrated = { themeChoice, logo };
+    mirror(STORAGE_KEY, themeChoice ? JSON.stringify(themeChoice) : null);
+    mirror(LOGO_KEY, logo);
+  }
+  notify();
+}
+
+/** The choice kept for every printed document, or null when the user never picked one. */
 export function readStoredPrintThemeChoice(): PrintThemeChoice | null {
+  if (hydrated) return hydrated.themeChoice;
   try {
     const raw = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
-    const parsed = raw ? JSON.parse(raw) as Partial<PrintThemeChoice> : null;
-    if (parsed && isThemeId(parsed.id)) {
-      const club = parsed.club && isHexColor(parsed.club.primary) && isHexColor(parsed.club.accent) ? parsed.club : undefined;
-      return { id: parsed.id, ...(club ? { club } : {}) };
-    }
+    return raw ? parsePrintThemeChoice(JSON.parse(raw)) : null;
   } catch {
     // Unreadable or blocked storage: the default look.
   }
@@ -164,25 +244,21 @@ export function pdfPrintTheme(own?: PrintThemeChoice): PrintTheme {
   return choice ? resolvePrintTheme(choice.id, choice.club) : PRINT_THEMES['ovs-blue'];
 }
 
-const listeners = new Set<() => void>();
-export function subscribePrintTheme(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => { listeners.delete(listener); };
-}
-
 /** Forgets the choice: the defaults of each document come back. */
 export function resetPrintThemeChoice(): void {
-  try { window.localStorage.removeItem(STORAGE_KEY); } catch { /* nothing to forget */ }
-  listeners.forEach((listener) => listener());
+  mirror(STORAGE_KEY, null);
+  if (hydrated) hydrated = { ...hydrated, themeChoice: null };
+  notify();
+  persister?.({ id: PRINT_THEME_ASSET_ID, value: null });
 }
 
 export function savePrintThemeChoice(choice: PrintThemeChoice): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(choice));
-  } catch {
-    // Private mode: the choice lasts until the page closes.
-  }
-  listeners.forEach((listener) => listener());
+  const next = parsePrintThemeChoice(choice);
+  if (!next) return;
+  mirror(STORAGE_KEY, JSON.stringify(next));
+  if (hydrated) hydrated = { ...hydrated, themeChoice: next };
+  notify();
+  persister?.({ id: PRINT_THEME_ASSET_ID, value: next });
 }
 
 /** The theme to print with: the report's own choice when it has one, else the default of the app. */
@@ -191,17 +267,9 @@ export function activePrintTheme(own?: PrintThemeChoice): PrintTheme {
   return resolvePrintTheme(choice.id, choice.club);
 }
 
-const LOGO_KEY = 'openvolleyscout.printLogo';
-/** Largest stored logo (a 256 px PNG weighs far less). */
-export const MAX_LOGO_LENGTH = 400_000;
-
-/** A club logo as stored: a PNG or JPEG data URL, small enough for every document. */
-export function isPrintLogo(value: unknown): value is string {
-  return typeof value === 'string' && value.length <= MAX_LOGO_LENGTH && /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(value);
-}
-
 /** The club logo printed in the band of reports and in the header of PDFs, or null. */
 export function readPrintLogo(): string | null {
+  if (hydrated) return hydrated.logo;
   try {
     const value = typeof window !== 'undefined' ? window.localStorage.getItem(LOGO_KEY) : null;
     return isPrintLogo(value) ? value : null;
@@ -211,11 +279,9 @@ export function readPrintLogo(): string | null {
 }
 
 export function savePrintLogo(logo: string | null): void {
-  try {
-    if (logo && isPrintLogo(logo)) window.localStorage.setItem(LOGO_KEY, logo);
-    else window.localStorage.removeItem(LOGO_KEY);
-  } catch {
-    // Storage full or blocked: the logo is simply not kept.
-  }
-  listeners.forEach((listener) => listener());
+  const next = logo && isPrintLogo(logo) ? logo : null;
+  mirror(LOGO_KEY, next);
+  if (hydrated) hydrated = { ...hydrated, logo: next };
+  notify();
+  persister?.({ id: CLUB_LOGO_ASSET_ID, value: next });
 }

@@ -29,6 +29,7 @@ const ARCHIVED_ROSTERS_ENTRY = 'archived_rosters.json';
 const ARCHIVED_COMPETITIONS_ENTRY = 'archived_competitions.json';
 const SYSTEMS_ENTRY = 'systems.json';
 const OPPONENT_REPORTS_ENTRY = 'opponent_reports.json';
+const APP_ASSETS_ENTRY = 'app_assets.json';
 
 /** Reception and defense systems as stored by the Systems page. */
 export interface BackupSystemsSnapshot {
@@ -42,12 +43,15 @@ export function buildOvsBackupBundle(
   selection: BackupSelection,
   deviceId: string,
   systems?: BackupSystemsSnapshot,
+  /** The print look and the images of the app, as stored in the database. */
+  appAssets?: readonly unknown[],
 ): Uint8Array {
   const includesArchivedTeams = selection.includeArchivedTeams ?? true;
   const includesArchivedRosters = selection.includeArchivedRosters ?? true;
   const includesArchivedCompetitions = selection.includeArchivedCompetitions ?? true;
   const includesSystems = Boolean(systems) && (selection.includeSystems ?? true);
   const includesOpponentReports = selection.includeOpponentReports ?? true;
+  const includesAppAssets = Boolean(appAssets) && (selection.includeAppAssets ?? true);
 
   const manifest: OvsBackupManifest = {
     ovsFormatVersion: OVS_BACKUP_FORMAT_VERSION,
@@ -58,6 +62,7 @@ export function buildOvsBackupBundle(
     includesArchivedCompetitions,
     includesSystems,
     includesOpponentReports,
+    includesAppAssets,
     exportedAt: new Date().toISOString(),
     exportedByDeviceId: deviceId,
     appVersion: APP_VERSION,
@@ -100,6 +105,9 @@ export function buildOvsBackupBundle(
   if (includesSystems && systems) {
     entries[SYSTEMS_ENTRY] = strToU8(JSON.stringify(systems));
   }
+  if (includesAppAssets && appAssets) {
+    entries[APP_ASSETS_ENTRY] = strToU8(JSON.stringify(appAssets));
+  }
 
   return zipSync(entries);
 }
@@ -134,6 +142,8 @@ export function readOvsBackupBundle(bytes: Uint8Array): ParsedOvsBackupBundle {
   const systemsEntry = entries[SYSTEMS_ENTRY];
   const opponentReportsEntry = entries[OPPONENT_REPORTS_ENTRY];
   const systems = systemsEntry ? JSON.parse(strFromU8(systemsEntry)) as Partial<BackupSystemsSnapshot> : {};
+  const appAssetsEntry = entries[APP_ASSETS_ENTRY];
+  const appAssets = appAssetsEntry ? JSON.parse(strFromU8(appAssetsEntry)) as unknown : [];
 
   return {
     manifest,
@@ -150,6 +160,7 @@ export function readOvsBackupBundle(bytes: Uint8Array): ParsedOvsBackupBundle {
       receptionSystems: Array.isArray(systems.receptionSystems) ? systems.receptionSystems : [],
       defenseSystems: Array.isArray(systems.defenseSystems) ? systems.defenseSystems : [],
     },
+    appAssets: Array.isArray(appAssets) ? appAssets : [],
   };
 }
 

@@ -822,6 +822,7 @@ export function LoadDataPage() {
         includeArchivedRosters: options.everything || includeArchivesInExport,
         includeArchivedCompetitions: options.everything || includeArchivesInExport,
         includeSystems: options.everything || includeArchivesInExport,
+        includeAppAssets: options.everything || includeArchivesInExport,
       });
       // Only a backup of every match counts for the reminder.
       if (isFullBackup) {

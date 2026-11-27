@@ -2,6 +2,9 @@ import { competitionRepository } from '@src/infrastructure/repositories/competit
 import { opponentReportRepository } from '@src/infrastructure/repositories/opponent-report-repository';
 import { teamRepository } from '@src/infrastructure/repositories/team-repository';
 import { getArchiveSyncState } from '@src/infrastructure/storage/archive-sync-state-storage';
+import { differsFromLocalAppAsset } from '@src/infrastructure/storage/app-asset-storage';
+import { isUsableAppAsset } from '@src/features/branding/app-asset-records';
+import type { AppAssetRecord } from '@src/infrastructure/db/match-project-db';
 import { parseOvsBackupBundleFile } from '../backup-bundle';
 import type { ArchivedDataSnapshot } from '../backup-bundle/types';
 import { mergeArchives, type ArchiveMergeResult } from '../merge/archive-merge';
@@ -22,6 +25,14 @@ export interface SystemsImportPreview {
   unchanged: number;
 }
 
+export interface AppAssetsImportPreview {
+  /** Print look and club logo from the backup that this version can use, put in place on confirm. */
+  records: AppAssetRecord[];
+  /** Values that differ from the ones on this device (they replace them) / already the same here. */
+  added: number;
+  unchanged: number;
+}
+
 export interface ArchivePreview {
   local: ArchivedDataSnapshot;
   remote: ArchivedDataSnapshot;
@@ -33,6 +44,7 @@ export interface OvsBackupImportPreview {
   matchPreviews: OvsImportPreview[];
   archivePreview: ArchivePreview;
   systemsPreview: SystemsImportPreview;
+  appAssetsPreview: AppAssetsImportPreview;
 }
 
 /**
@@ -83,6 +95,14 @@ export async function buildOvsBackupImportPreview(bytes: Uint8Array): Promise<Ov
     keepName,
   );
 
+  // A backup is a restore: its print look and logo replace the ones here when
+  // they differ, even if those were changed after the backup was made.
+  const appAssetRecords = parsed.appAssets.filter(isUsableAppAsset);
+  let differingAppAssets = 0;
+  for (const record of appAssetRecords) {
+    if (await differsFromLocalAppAsset(record)) differingAppAssets += 1;
+  }
+
   return {
     peerDeviceId,
     matchPreviews,
@@ -92,6 +112,11 @@ export async function buildOvsBackupImportPreview(bytes: Uint8Array): Promise<Ov
       defenseSystems: parsed.systems.defenseSystems,
       added: receptionMerge.added + defenseMerge.added,
       unchanged: receptionMerge.unchanged + defenseMerge.unchanged,
+    },
+    appAssetsPreview: {
+      records: appAssetRecords,
+      added: differingAppAssets,
+      unchanged: appAssetRecords.length - differingAppAssets,
     },
   };
 }

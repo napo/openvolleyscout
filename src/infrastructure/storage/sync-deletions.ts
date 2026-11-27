@@ -15,7 +15,8 @@ export type SyncCollection =
   | 'competitions'
   | 'opponentReports'
   | 'receptionSystems'
-  | 'defenseSystems';
+  | 'defenseSystems'
+  | 'appAssets';
 
 export const syncKey = (collection: SyncCollection, id: string) => `${collection}:${id}`;
 

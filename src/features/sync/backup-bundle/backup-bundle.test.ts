@@ -4,6 +4,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchProject } from '@src/domain/match/types';
 import { APP_VERSION } from '@src/lib/constants/app';
 import { buildOvsBackupBundle, readOvsBackupBundle, reconstructMatchEvents } from './zip-backup-bundle';
+import { isUsableAppAsset, printBrandingFromRecords, readAppAssetRecords } from '../../branding/app-asset-records';
 import type { ArchivedDataSnapshot, BackupSelection } from './types';
 
 function buildProject(matchId: string, events: MatchEvent[]): MatchProject {
@@ -200,4 +201,54 @@ test('carries opponent reports; a backup without them reads as none', () => {
   ));
   assert.equal(excluded.manifest.includesOpponentReports, false);
   assert.deepEqual(excluded.archives.opponentReports, []);
+});
+
+test('carries the print look and the club logo; older backups read as having none', () => {
+  const projectA = buildProject('match-a', matchAEvents);
+  const logo = 'data:image/png;base64,iVBORw0KGgo=';
+  const appAssets = [
+    { id: 'printTheme', kind: 'printTheme', value: { id: 'club', club: { primary: '#112233', accent: '#aa5500' } }, updatedAt: '2026-11-27T10:00:00.000Z' },
+    { id: 'image:clubLogo', kind: 'image', value: logo, updatedAt: '2026-11-27T10:01:00.000Z' },
+  ];
+  const parsed = readOvsBackupBundle(buildOvsBackupBundle([projectA], emptyArchives, {}, 'device-1', undefined, appAssets));
+  assert.equal(parsed.manifest.includesAppAssets, true);
+  assert.deepEqual(parsed.appAssets, appAssets);
+  assert.deepEqual(readAppAssetRecords(parsed.appAssets), appAssets);
+  assert.deepEqual(printBrandingFromRecords(readAppAssetRecords(parsed.appAssets)), {
+    themeChoice: { id: 'club', club: { primary: '#112233', accent: '#aa5500' } },
+    logo,
+  });
+
+  const excluded = readOvsBackupBundle(buildOvsBackupBundle([projectA], emptyArchives, { includeAppAssets: false }, 'device-1', undefined, appAssets));
+  assert.equal(excluded.manifest.includesAppAssets, false);
+  assert.deepEqual(excluded.appAssets, []);
+
+  const legacy = readOvsBackupBundle(buildOvsBackupBundle([projectA], emptyArchives, {}, 'device-1'));
+  assert.equal(legacy.manifest.includesAppAssets, false);
+  assert.deepEqual(legacy.appAssets, []);
+  assert.deepEqual(printBrandingFromRecords(readAppAssetRecords(legacy.appAssets)), { themeChoice: null, logo: null });
+});
+
+test('reads app assets by their shape only, keeps their values as they are, and uses only valid ones', () => {
+  const records = readAppAssetRecords([
+    { id: 'printTheme', kind: 'printTheme', value: { id: 'neon', paper: 'cream' }, updatedAt: '2026-11-27T10:00:00.000Z' },
+    { id: 'image:clubLogo', kind: 'image', value: 'javascript:alert(1)', updatedAt: '2026-11-27T10:00:00.000Z' },
+    { id: 'image:sponsor', kind: 'image', value: 'data:image/jpeg;base64,/9j/4AAQ', updatedAt: 'not a date' },
+    { id: 'font:title', kind: 'font', value: 'Inter', updatedAt: '2026-11-27T10:00:00.000Z' },
+    { id: '', kind: 'image', value: 'x', updatedAt: '2026-11-27T10:00:00.000Z' },
+    null,
+    'text',
+  ]);
+  // A value saved by a later version is not cut down, so this version never writes a trimmed copy back.
+  assert.deepEqual(records, [
+    { id: 'printTheme', kind: 'printTheme', value: { id: 'neon', paper: 'cream' }, updatedAt: '2026-11-27T10:00:00.000Z' },
+    { id: 'image:clubLogo', kind: 'image', value: 'javascript:alert(1)', updatedAt: '2026-11-27T10:00:00.000Z' },
+    { id: 'font:title', kind: 'font', value: 'Inter', updatedAt: '2026-11-27T10:00:00.000Z' },
+  ]);
+  // Printed documents and backup restores use only what this version can read.
+  assert.deepEqual(printBrandingFromRecords(records), { themeChoice: null, logo: null });
+  assert.deepEqual(records.map(isUsableAppAsset), [false, false, true]);
+  assert.equal(isUsableAppAsset({ id: 'printTheme', kind: 'printTheme', value: { id: 'ovs', extra: 1 }, updatedAt: '2026-11-27T10:00:00.000Z' }), true);
+  assert.equal(isUsableAppAsset({ id: 'image:clubLogo', kind: 'image', value: 'data:image/png;base64,iVBORw0KGgo=', updatedAt: '2026-11-27T10:00:00.000Z' }), true);
+  assert.deepEqual(readAppAssetRecords({ not: 'a list' }), []);
 });

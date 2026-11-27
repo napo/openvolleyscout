@@ -5,6 +5,7 @@
 ### Added
 - Looks for reports and PDFs: in Settings you choose how the tactical report and every PDF and export (match report, tables, play-by-play, team review) look: OVS, OVS blue, your club colours, black and white (for plain printers) or high contrast. In Format each report can use its own look. The look of the app (light or dark) is separate and a printed page stays light. Colours that carry a meaning, such as traffic lights and evaluations, do not change. If you choose nothing, everything looks as it did before.
 - Club logo: in Settings you can add your club logo (PNG, JPEG, WebP or SVG; best square, at least 256 x 256 px, with a transparent background). Any empty border is cut away by itself, and a very wide logo gets a warning because it prints small. It is printed at the right of the band of the tactical report and of the team review, in the header of the PDFs and in the presentations (PPTX, ODP), next to the OpenVolleyScout logo. In Format a single report can leave it out.
+- The club logo and the look of reports and PDFs are now saved with the rest of your data: they are included in backups (with archived teams, rosters, competitions and systems) and follow you to your other devices through cloud sync. What you had already chosen is kept automatically.
 
 ## 0.52.0 - 2026-11-27
 

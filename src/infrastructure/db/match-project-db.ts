@@ -6,6 +6,7 @@ import type { OpponentReport } from '@src/domain/opponent-report/types';
 import type { MatchSyncStateRecord } from './match-sync-state-types';
 import type { ArchiveSyncStateRecord } from './archive-sync-state-types';
 import type { MatchSummaryRecord } from './match-summary-types';
+import { CLUB_LOGO_ASSET_ID, PRINT_THEME_ASSET_ID, isPrintLogo, parsePrintThemeChoice } from '../../lib/theme/print-theme';
 
 export interface MatchProjectRecord extends MatchProject {}
 export interface ArchivedTeamRecord extends ArchivedTeam {}
@@ -37,12 +38,52 @@ export interface SystemBlockRecord {
   block: { id: string; [field: string]: unknown };
 }
 
-/** localStorage keys used before version 8 moved them into the database. */
+/**
+ * A piece of the look of what the app prints, kept with the data: the print
+ * theme (`printTheme`) and images such as the club logo (`image:clubLogo`).
+ * New images take an id of the form `image:<name>`.
+ */
+export interface AppAssetRecord {
+  id: string;
+  kind: 'printTheme' | 'image';
+  value: unknown;
+  /** ISO time of the last change: cloud sync and backups keep the newer one. */
+  updatedAt: string;
+}
+
+/** localStorage keys used before version 8 (systems, sync) and 10 (print look, logo) moved them into the database. */
 export const LEGACY_STORAGE_KEYS = {
   syncMetaPrefix: 'openvolleyscout.cloudSync.',
   receptionSystems: 'openvolleyscout.receptionSystemBlocks',
   defenseSystems: 'openvolleyscout.defenseSystemBlocks',
+  printTheme: 'openvolleyscout.printTheme',
+  printLogo: 'openvolleyscout.printLogo',
 } as const;
+
+function readLegacyText(key: string): string | null {
+  try {
+    return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The date given to a print look or logo copied from localStorage. Nothing
+ * says when it was chosen, so it gets the oldest possible date: a change or a
+ * deletion made on another device since then always wins in cloud sync.
+ */
+export const LEGACY_APP_ASSET_TIME = new Date(0).toISOString();
+
+/** The print look and logo saved in this browser before version 10, when they are valid. */
+export function readLegacyAppAssets(updatedAt: string = LEGACY_APP_ASSET_TIME): AppAssetRecord[] {
+  const records: AppAssetRecord[] = [];
+  const theme = parsePrintThemeChoice(readLegacyJson(LEGACY_STORAGE_KEYS.printTheme));
+  if (theme) records.push({ id: PRINT_THEME_ASSET_ID, kind: 'printTheme', value: theme, updatedAt });
+  const logo = readLegacyText(LEGACY_STORAGE_KEYS.printLogo);
+  if (isPrintLogo(logo)) records.push({ id: CLUB_LOGO_ASSET_ID, kind: 'image', value: logo, updatedAt });
+  return records;
+}
 
 function readLegacyJson(key: string): unknown {
   try {
@@ -66,6 +107,7 @@ export class MatchProjectDatabase extends Dexie {
   syncDeletions!: Table<SyncDeletionRecord, string>;
   syncMeta!: Table<SyncMetaRecord, string>;
   systemBlocks!: Table<SystemBlockRecord, string>;
+  appAssets!: Table<AppAssetRecord, string>;
 
   constructor() {
     super('OpenVolleyScoutDatabase');
@@ -158,6 +200,16 @@ export class MatchProjectDatabase extends Dexie {
     // Match summaries now say whether a video is linked: rebuilt once from the matches.
     this.version(9).stores({}).upgrade(async (tx) => {
       await tx.table('matchSummaries').clear();
+    });
+
+    // The print look and the club logo become data: saved, backed up and synced
+    // like the rest. What this browser kept in localStorage is copied over.
+    this.version(10).stores({
+      appAssets: 'id, kind',
+    }).upgrade(async (tx) => {
+      for (const record of readLegacyAppAssets()) {
+        await tx.table('appAssets').put(record);
+      }
     });
   }
 }

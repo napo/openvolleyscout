@@ -44,12 +44,14 @@ export function writeCloudSyncFile(snapshot: CloudSnapshot, presence: Presence =
       includeArchivedCompetitions: true,
       includeOpponentReports: true,
       includeSystems: true,
+      includeAppAssets: true,
     },
     getOrCreateDeviceId(),
     {
       receptionSystems: [...snapshot.receptionSystems],
       defenseSystems: [...snapshot.defenseSystems],
     },
+    [...(snapshot.appAssets ?? [])],
   );
   const entries = unzipSync(baseBytes);
   entries[DELETIONS_ENTRY] = strToU8(JSON.stringify(snapshot.deletions));
@@ -98,6 +100,8 @@ export function readCloudSyncFile(bytes: Uint8Array): CloudSnapshot {
       opponentReports: parsed.archives.opponentReports ?? [],
       receptionSystems: asSystemRecords(parsed.systems.receptionSystems),
       defenseSystems: asSystemRecords(parsed.systems.defenseSystems),
+      // Checked when the backup is parsed; none in files written before they were synced.
+      appAssets: parsed.appAssets,
       deletions,
       presence: entries[PRESENCE_ENTRY]
         ? parsePresence(JSON.parse(strFromU8(entries[PRESENCE_ENTRY])))

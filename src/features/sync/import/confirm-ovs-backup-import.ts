@@ -9,6 +9,9 @@ import { confirmOvsImport } from './confirm-ovs-import';
 import type { OvsBackupImportPreview } from './build-ovs-backup-preview';
 import type { OvsImportPreview } from './build-ovs-import-preview';
 import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/systems/model';
+import { restoreAppAssets } from '@src/infrastructure/storage/app-asset-storage';
+import { refreshPrintBrandingFromDatabase } from '@src/features/branding/print-branding';
+import { notifyLocalDataChanged } from '../cloud/local-change-bus';
 
 function playerMergeKey(player: ArchivedPlayer): string {
   const nameKey = normalizeDataVolleyTeamName(`${player.lastName} ${player.firstName}`);
@@ -41,6 +44,8 @@ export interface ConfirmOvsBackupImportResult {
   archiveConflicts: PathConflict[];
   /** Reception/defense systems added from the backup. */
   addedSystems: number;
+  /** Print look and club logo taken from the backup (where they differ from the ones here). */
+  restoredAppAssets: number;
 }
 
 function matchNeedsManualResolution(preview: OvsImportPreview): boolean {
@@ -141,11 +146,20 @@ export async function confirmOvsBackupImport(
   const defense = useDefenseSystemStore.getState()
     .importDefenseSystemBlocks(preview.systemsPreview.defenseSystems, renameConflict);
 
+  // Print look and club logo: the backup's value takes the place of the one here,
+  // saved as a new change so cloud sync passes it on.
+  const restoredAppAssets = await restoreAppAssets(preview.appAssetsPreview?.records ?? []);
+  if (restoredAppAssets > 0) {
+    await refreshPrintBrandingFromDatabase();
+    notifyLocalDataChanged();
+  }
+
   return {
     importedMatchIds,
     pendingMatchPreviews,
     failedMatches,
     archiveConflicts: conflicts,
     addedSystems: reception.added + defense.added,
+    restoredAppAssets,
   };
 }

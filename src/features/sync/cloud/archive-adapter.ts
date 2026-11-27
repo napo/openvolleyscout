@@ -14,6 +14,8 @@ import { matchProjectDb } from '@src/infrastructure/db/match-project-db';
 import { buildMatchSummary, loadStoredProject } from '@src/infrastructure/storage/match-project-storage';
 import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/systems/model';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems/types';
+import { refreshPrintBrandingFromDatabase } from '@src/features/branding/print-branding';
+import type { AppAssetRecord } from '@src/infrastructure/db/match-project-db';
 import { CloudSyncController } from './controller';
 import type { CloudSyncArchive } from './engine';
 import { notifyLocalDataChanged } from './local-change-bus';
@@ -35,6 +37,7 @@ const SYNC_TABLES = () => [
   matchProjectDb.archivedCompetitions,
   matchProjectDb.opponentReports,
   matchProjectDb.systemBlocks,
+  matchProjectDb.appAssets,
   matchProjectDb.syncDeletions,
 ];
 
@@ -49,6 +52,7 @@ async function readRecord(collection: CloudCollection, id: string): Promise<unkn
     case 'receptionSystems':
     case 'defenseSystems':
       return (await matchProjectDb.systemBlocks.get(keyOf(collection, id)))?.block;
+    case 'appAssets': return matchProjectDb.appAssets.get(id);
   }
 }
 
@@ -68,6 +72,11 @@ async function writeRecord(collection: CloudCollection, record: unknown): Promis
     case 'defenseSystems': {
       const block = record as CloudSystemRecord;
       await matchProjectDb.systemBlocks.put({ key: keyOf(collection, block.id), kind: collection, block });
+      return;
+    }
+    case 'appAssets': {
+      const asset = record as AppAssetRecord;
+      await matchProjectDb.appAssets.put({ id: asset.id, kind: asset.kind, value: asset.value, updatedAt: asset.updatedAt });
     }
   }
 }
@@ -85,6 +94,8 @@ async function deleteRecord(collection: CloudCollection, id: string): Promise<vo
     case 'receptionSystems':
     case 'defenseSystems':
       await matchProjectDb.systemBlocks.delete(keyOf(collection, id));
+      return;
+    case 'appAssets': await matchProjectDb.appAssets.delete(id);
   }
 }
 
@@ -104,6 +115,7 @@ const PUTS: [CloudCollection, (diff: SnapshotDiff) => readonly unknown[], (recor
   ['opponentReports', (d) => d.putOpponentReports, (r: { id: string }) => r.id],
   ['receptionSystems', (d) => d.putReceptionSystems, (r: { id: string }) => r.id],
   ['defenseSystems', (d) => d.putDefenseSystems, (r: { id: string }) => r.id],
+  ['appAssets', (d) => d.putAppAssets, (r: { id: string }) => r.id],
 ];
 
 async function refreshSystemStores(): Promise<void> {
@@ -126,13 +138,14 @@ export function createLiveCloudSyncArchive(): CloudSyncArchive {
 
     async snapshot(): Promise<CloudSnapshot> {
       return matchProjectDb.transaction('r', SYNC_TABLES(), async () => {
-        const [matches, teams, rosters, competitions, opponentReports, systems, deletionRows] = await Promise.all([
+        const [matches, teams, rosters, competitions, opponentReports, systems, appAssets, deletionRows] = await Promise.all([
           matchProjectDb.matchProjects.toArray(),
           matchProjectDb.archivedTeams.toArray(),
           matchProjectDb.archivedRosters.toArray(),
           matchProjectDb.archivedCompetitions.toArray(),
           matchProjectDb.opponentReports.toArray(),
           matchProjectDb.systemBlocks.toArray(),
+          matchProjectDb.appAssets.toArray(),
           matchProjectDb.syncDeletions.toArray(),
         ]);
         const deletions: DeletionMap = {};
@@ -145,6 +158,7 @@ export function createLiveCloudSyncArchive(): CloudSyncArchive {
           opponentReports,
           receptionSystems: systems.filter((row) => row.kind === 'receptionSystems').map((row) => row.block),
           defenseSystems: systems.filter((row) => row.kind === 'defenseSystems').map((row) => row.block),
+          appAssets,
           deletions,
         };
       });
@@ -152,6 +166,7 @@ export function createLiveCloudSyncArchive(): CloudSyncArchive {
 
     async applySync(diff: SnapshotDiff, read: ReadonlyMap<string, string>): Promise<number> {
       let systemsChanged = false;
+      let appAssetsChanged = false;
       const written = await matchProjectDb.transaction('rw', SYNC_TABLES(), async () => {
         let count = 0;
         /** Records this round already wrote or deleted: their stamp changed because of it. */
@@ -167,6 +182,7 @@ export function createLiveCloudSyncArchive(): CloudSyncArchive {
             await matchProjectDb.syncDeletions.delete(keyOf(collection, id));
             applied.add(keyOf(collection, id));
             if (collection === 'receptionSystems' || collection === 'defenseSystems') systemsChanged = true;
+            if (collection === 'appAssets') appAssetsChanged = true;
             count += 1;
           }
         }
@@ -177,6 +193,7 @@ export function createLiveCloudSyncArchive(): CloudSyncArchive {
             await deleteRecord(collection, id);
             applied.add(keyOf(collection, id));
             if (collection === 'receptionSystems' || collection === 'defenseSystems') systemsChanged = true;
+            if (collection === 'appAssets') appAssetsChanged = true;
             count += 1;
           }
         }
@@ -197,6 +214,7 @@ export function createLiveCloudSyncArchive(): CloudSyncArchive {
         return count;
       });
       if (systemsChanged) await refreshSystemStores();
+      if (appAssetsChanged) await refreshPrintBrandingFromDatabase();
       if (written > 0) notifyLocalDataChanged('sync');
       return written;
     },

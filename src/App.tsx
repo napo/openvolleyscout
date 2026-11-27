@@ -9,6 +9,7 @@ import { cloudSyncController } from './features/sync/cloud';
 import { ScoutingClaimKeeper } from './features/sync/cloud/ScoutingClaimKeeper';
 import { CloudVideoUploadPrompt } from './features/sync/cloud/CloudVideoUploadPrompt';
 import { hydrateDefenseSystemsFromDatabase, hydrateReceptionSystemsFromDatabase } from './features/systems/model';
+import { hydratePrintBrandingFromDatabase } from './features/branding/print-branding';
 
 /**
  * Reopens the match that was open before the page was reloaded. The router
@@ -48,8 +49,12 @@ export default function App() {
   const isRestored = useRestoreActiveProject();
   useEffect(() => {
     void seedDemoMatchOnce();
-    // Systems live in the database (cloud sync reads them there): load them before sync starts.
-    void Promise.all([hydrateReceptionSystemsFromDatabase(), hydrateDefenseSystemsFromDatabase()])
+    // Systems, the print look and the club logo live in the database (cloud sync reads them there): load them before sync starts.
+    void Promise.all([
+      hydrateReceptionSystemsFromDatabase(),
+      hydrateDefenseSystemsFromDatabase(),
+      hydratePrintBrandingFromDatabase().catch((error) => console.warn('Could not load the print look from the database', error)),
+    ])
       .catch((error) => console.warn('Could not load the systems from the database', error))
       .finally(() => void cloudSyncController.init());
   }, []);

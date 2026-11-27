@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  hydratePrintBranding, setPrintBrandingPersister, subscribePrintTheme, type PrintBrandingChange,
   activePrintTheme, clubPrintTheme, isPrintLogo, readPrintLogo, savePrintLogo, contrastRatio, pdfPrintTheme, PRINT_THEME_IDS, readPrintThemeChoice, readStoredPrintThemeChoice, readableInk, resetPrintThemeChoice, resolvePrintTheme, savePrintThemeChoice,
 } from './print-theme';
 
-beforeEach(() => window.localStorage.clear());
+beforeEach(() => {
+  window.localStorage.clear();
+  setPrintBrandingPersister(null);
+  hydratePrintBranding(null);
+});
 
 describe('print themes', () => {
   it('keeps the look of today as the default', () => {
@@ -74,5 +79,55 @@ describe('print themes', () => {
     expect(readPrintThemeChoice()).toEqual({ id: 'ovs' });
     window.localStorage.setItem('openvolleyscout.printTheme', 'not json');
     expect(readPrintThemeChoice()).toEqual({ id: 'ovs' });
+  });
+
+  it('answers from the values loaded from the database once they are there, and tells the subscribers', () => {
+    const png = 'data:image/png;base64,iVBORw0KGgo=';
+    window.localStorage.setItem('openvolleyscout.printTheme', '{"id":"black-white"}');
+    const listener = vi.fn();
+    const unsubscribe = subscribePrintTheme(listener);
+    hydratePrintBranding({ themeChoice: { id: 'club', club: { primary: '#112233', accent: '#aa5500' } }, logo: png });
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(readStoredPrintThemeChoice()).toEqual({ id: 'club', club: { primary: '#112233', accent: '#aa5500' } });
+    expect(readPrintLogo()).toBe(png);
+    // localStorage follows, so the next start shows the same look before the database is read.
+    expect(JSON.parse(window.localStorage.getItem('openvolleyscout.printTheme') ?? 'null')).toEqual({ id: 'club', club: { primary: '#112233', accent: '#aa5500' } });
+    expect(window.localStorage.getItem('openvolleyscout.printLogo')).toBe(png);
+
+    // A value removed elsewhere (cloud sync) is gone here too, even if localStorage still had it.
+    window.localStorage.setItem('openvolleyscout.printLogo', png);
+    hydratePrintBranding({ themeChoice: null, logo: null });
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(readPrintLogo()).toBeNull();
+    expect(readStoredPrintThemeChoice()).toBeNull();
+    expect(window.localStorage.getItem('openvolleyscout.printLogo')).toBeNull();
+    unsubscribe();
+  });
+
+  it('hands every change to the database writer and keeps it in memory', () => {
+    const changes: PrintBrandingChange[] = [];
+    setPrintBrandingPersister((change) => changes.push(change));
+    hydratePrintBranding({ themeChoice: null, logo: null });
+    const png = 'data:image/png;base64,iVBORw0KGgo=';
+    savePrintThemeChoice({ id: 'high-contrast' });
+    savePrintLogo(png);
+    expect(readPrintThemeChoice()).toEqual({ id: 'high-contrast' });
+    expect(readPrintLogo()).toBe(png);
+    resetPrintThemeChoice();
+    savePrintLogo(null);
+    expect(changes).toEqual([
+      { id: 'printTheme', value: { id: 'high-contrast' } },
+      { id: 'image:clubLogo', value: png },
+      { id: 'printTheme', value: null },
+      { id: 'image:clubLogo', value: null },
+    ]);
+    expect(readStoredPrintThemeChoice()).toBeNull();
+    expect(readPrintLogo()).toBeNull();
+  });
+
+  it('drops a damaged value handed by the database', () => {
+    hydratePrintBranding({ themeChoice: { id: 'neon' } as never, logo: 'data:text/html;base64,PGI+' });
+    expect(readStoredPrintThemeChoice()).toBeNull();
+    expect(readPrintLogo()).toBeNull();
   });
 });

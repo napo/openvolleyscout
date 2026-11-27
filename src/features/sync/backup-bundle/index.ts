@@ -19,6 +19,9 @@ import type { ArchivedDataSnapshot, BackupSelection, OvsBackupManifest, ParsedOv
 import { todayLocalDate } from '../../../lib/utils/local-date';
 import { useDefenseSystemStore } from '@src/features/systems/model/defense-system-store';
 import { useReceptionSystemStore } from '@src/features/systems/model/reception-system-store';
+import { loadAppAssets } from '@src/infrastructure/storage/app-asset-storage';
+import type { AppAssetRecord } from '@src/infrastructure/db/match-project-db';
+import { readAppAssetRecords } from '@src/features/branding/app-asset-records';
 
 export { OVS_BACKUP_FORMAT_VERSION } from './types';
 export type { ArchivedDataSnapshot, BackupSelection, OvsBackupManifest, ParsedOvsBackupBundle } from './types';
@@ -55,8 +58,10 @@ export async function exportBackupToOvsBundle(selection: BackupSelection = {}): 
     defenseSystems: useDefenseSystemStore.getState().defenseSystemBlocks,
   };
 
+  const appAssets = (selection.includeAppAssets ?? true) ? await loadAppAssets() : undefined;
+
   const deviceId = getOrCreateDeviceId();
-  const bytes = buildOvsBackupBundle(projects, archives, selection, deviceId, systems);
+  const bytes = buildOvsBackupBundle(projects, archives, selection, deviceId, systems, appAssets);
 
   return { fileName: getOvsBackupExportFileName(), bytes };
 }
@@ -73,6 +78,8 @@ export interface ParsedOvsBackup {
   matches: ParsedOvsBackupMatch[];
   archives: ArchivedDataSnapshot;
   systems: ParsedOvsBackupBundle['systems'];
+  /** Print look and club logo, checked; empty for backups without them. */
+  appAssets: AppAssetRecord[];
 }
 
 export function parseOvsBackupBundleFile(bytes: Uint8Array): ParsedOvsBackup {
@@ -97,5 +104,11 @@ export function parseOvsBackupBundleFile(bytes: Uint8Array): ParsedOvsBackup {
     };
   });
 
-  return { manifest: parsed.manifest, matches, archives: parsed.archives, systems: parsed.systems };
+  return {
+    manifest: parsed.manifest,
+    matches,
+    archives: parsed.archives,
+    systems: parsed.systems,
+    appAssets: readAppAssetRecords(parsed.appAssets),
+  };
 }
