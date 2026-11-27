@@ -2671,6 +2671,7 @@ export const de = {
   attackerViewNewLabel: "Angriffsansicht {{n}}",
   attackerViewPhaseLabel: "Phase",
   attackerViewBaseLabel: "Kombination",
+  attackerViewAttackBallTypeLabel: "Angriffsart",
   attackerViewEvaluationLabel: "Bewertung",
   progressComputingMatchStats: "Spieldaten werden verarbeitet...",
   progressGeneratingMatchReport: "Spielbericht wird erstellt...",

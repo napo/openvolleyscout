@@ -2671,6 +2671,7 @@ export const sl = {
   attackerViewNewLabel: "Pogled napada {{n}}",
   attackerViewPhaseLabel: "Faza",
   attackerViewBaseLabel: "Baza / Kombinacija",
+  attackerViewAttackBallTypeLabel: "Vrsta napada",
   attackerViewEvaluationLabel: "Ocena",
   progressComputingMatchStats: "Obdelujem podatke tekme...",
   progressGeneratingMatchReport: "Ustvarjam poročilo tekme...",

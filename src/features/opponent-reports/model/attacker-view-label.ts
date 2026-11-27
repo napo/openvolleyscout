@@ -21,6 +21,7 @@ export function attackerViewFilterLabel(view: AttackerDirectionViewConfig, t: (k
   }
   if (view.blockers?.length) parts.push(`${t('opponentReportAttackBlockers')}: ${view.blockers.join('/')}`);
   if (view.evaluations?.length) parts.push(`${t('attackerViewEvaluationLabel')}: ${view.evaluations.join('/')}`);
+  if (view.attackBallTypes?.length) parts.push(`${t('attackerViewAttackBallTypeLabel')}: ${view.attackBallTypes.join('/')}`);
   if (view.combinationCodes?.length) parts.push(`${t('attackerViewBaseLabel')}: ${view.combinationCodes.join('/')}`);
   return parts.join(' · ');
 }

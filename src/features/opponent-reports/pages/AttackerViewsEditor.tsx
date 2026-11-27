@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { SplitToggle } from './SplitToggle';
 import { attackerViewFilterLabel } from '../model/attacker-view-label';
+import { ATTACK_BALL_TYPES } from '../model/split-views';
 import { BaseCodeTable, ChipSelect, EvaluationChips, FilterGroup, FilterGroups } from '@src/components/filter-chips/FilterChips';
 import type { AttackSubtype } from '@src/domain/touch/types';
 import type {
@@ -85,6 +86,7 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
           blockers: base.blockers ? [...base.blockers] : undefined,
           attackSubtypes: base.attackSubtypes ? [...base.attackSubtypes] : undefined,
           combinationCodes: base.combinationCodes ? [...base.combinationCodes] : undefined,
+          attackBallTypes: base.attackBallTypes ? [...base.attackBallTypes] : undefined,
         }
       : {
           id,
@@ -187,7 +189,8 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
                       <SplitToggle separate={view.splitBy === 'phases'} onChange={(separate) => patchView(index, { splitBy: separate ? 'phases' : undefined })} />
                       <ChipSelect
                         allLabel={all}
-                        options={PHASES.map((phase) => ({ value: phase.value, label: t(phase.labelKey) }))}
+                        // "High ball" gave way to the attack type H: it stays only on views that already use it.
+                        options={PHASES.filter((phase) => phase.value !== 'high_ball' || view.phases?.includes('high_ball')).map((phase) => ({ value: phase.value, label: t(phase.labelKey) }))}
                         selected={view.phases ?? []}
                         onChange={(next) => setField(index, 'phases', next)}
                       />
@@ -225,6 +228,16 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
             options={ATTACK_ZONES.map((zone) => ({ value: zone, label: `Z${zone}` }))}
                         selected={view.attackZones ?? []}
                         onChange={(next) => setField(index, 'attackZones', next)}
+                      />
+                    </FilterGroup>
+
+                    <FilterGroup title={t('attackerViewAttackBallTypeLabel')} active={Boolean(view.attackBallTypes?.length)}>
+                      <SplitToggle separate={view.splitBy === 'attackBallTypes'} onChange={(separate) => patchView(index, { splitBy: separate ? 'attackBallTypes' : undefined })} />
+                      <ChipSelect
+                        allLabel={all}
+                        options={ATTACK_BALL_TYPES.map((type) => ({ value: type, label: type, title: t(`ballType${type}` as TranslationKey).split(' / ')[0] }))}
+                        selected={view.attackBallTypes ?? []}
+                        onChange={(next) => setField(index, 'attackBallTypes', next)}
                       />
                     </FilterGroup>
 

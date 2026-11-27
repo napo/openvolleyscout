@@ -6,18 +6,22 @@ import type {
   SetterDistributionViewConfig,
 } from '@src/domain/opponent-report/types';
 
+/** DataVolley attack ball types: high, medium, quick, tense, super, fast, other. */
+export const ATTACK_BALL_TYPES = ['H', 'M', 'Q', 'T', 'U', 'N', 'O'] as const;
+
 /**
  * "Draw separately": a view split by one of its filters becomes one view per
  * value (the chosen values, or every value when none is chosen), each drawn on
  * its own card. "Draw together" (no split) keeps one card for all values.
  */
-export type AttackerSplitField = 'attackZones' | 'rotations' | 'phases';
+export type AttackerSplitField = 'attackZones' | 'rotations' | 'phases' | 'attackBallTypes';
 export type SetterSplitField = 'serveStartZones' | 'receptionZones' | 'serveTypes' | 'setterCalls';
 
 export const ATTACKER_SPLIT_VALUES: { [K in AttackerSplitField]: ReadonlyArray<NonNullable<AttackerDirectionViewConfig[K]>[number]> } = {
   attackZones: ['4', '3', '2', '6', '1', '5'],
   rotations: [1, 2, 3, 4, 5, 6],
   phases: ['after_receive', 'after_dig', 'high_ball', 'late_set'] as AttackerDirectionPhase[],
+  attackBallTypes: ATTACK_BALL_TYPES,
 };
 
 /** The setter calls have no fixed list: they are the ones found in the matches (see `collectSetterCallCodes`). */

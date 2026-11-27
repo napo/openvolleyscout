@@ -2703,6 +2703,7 @@ export const en = {
   attackerViewNewLabel: "Attack view {{n}}",
   attackerViewPhaseLabel: "Phase",
   attackerViewBaseLabel: "Base / Combination",
+  attackerViewAttackBallTypeLabel: "Attack type",
   attackerViewEvaluationLabel: "Evaluation",
   progressComputingMatchStats: "Processing match data...",
   progressGeneratingMatchReport: "Generating match report...",

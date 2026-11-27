@@ -2673,6 +2673,7 @@ export const es = {
   attackerViewNewLabel: "Vista de ataque {{n}}",
   attackerViewPhaseLabel: "Fase",
   attackerViewBaseLabel: "Base / Combinación",
+  attackerViewAttackBallTypeLabel: "Tipo de ataque",
   attackerViewEvaluationLabel: "Valoración",
   progressComputingMatchStats: "Procesando los datos del partido...",
   progressGeneratingMatchReport: "Generando el informe del partido...",

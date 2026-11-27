@@ -2652,6 +2652,7 @@ export const ja = {
   attackerViewNewLabel: "攻撃ビュー {{n}}",
   attackerViewPhaseLabel: "フェーズ",
   attackerViewBaseLabel: "コンビ / ベース",
+  attackerViewAttackBallTypeLabel: "攻撃タイプ",
   attackerViewEvaluationLabel: "評価",
   progressComputingMatchStats: "試合データを処理中...",
   progressGeneratingMatchReport: "試合レポートを作成中...",

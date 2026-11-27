@@ -196,7 +196,7 @@ export function OpponentReportEditorPage() {
     const attackCombinationCodes = useMemo(() => collectAttackCombinationCodes(inputs), [inputs]);
     const attackerCustomViews = useMemo(
         () => report?.attackerViews?.length
-            ? computeAttackerDirectionViews(inputs, expandAttackerViews(report.attackerViews, (field, value) => field === 'attackZones' ? `Z${value}` : field === 'rotations' ? `P${value}` : t(SPLIT_PHASE_KEYS[value as keyof typeof SPLIT_PHASE_KEYS])), attacking.attackers)
+            ? computeAttackerDirectionViews(inputs, expandAttackerViews(report.attackerViews, (field, value) => field === 'attackZones' ? `Z${value}` : field === 'rotations' ? `P${value}` : field === 'attackBallTypes' ? String(value) : t(SPLIT_PHASE_KEYS[value as keyof typeof SPLIT_PHASE_KEYS])), attacking.attackers)
             : [],
         [inputs, report?.attackerViews, attacking.attackers, t],
     );

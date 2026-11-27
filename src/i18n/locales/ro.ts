@@ -2673,6 +2673,7 @@ export const ro = {
   attackerViewNewLabel: "Vedere atac {{n}}",
   attackerViewPhaseLabel: "Fază",
   attackerViewBaseLabel: "Bază / Combinație",
+  attackerViewAttackBallTypeLabel: "Tip de atac",
   attackerViewEvaluationLabel: "Evaluare",
   progressComputingMatchStats: "Se procesează datele meciului...",
   progressGeneratingMatchReport: "Se generează raportul de meci...",

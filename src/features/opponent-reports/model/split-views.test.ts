@@ -21,6 +21,12 @@ describe('draw separately', () => {
     expect(views.map((view) => view.id)).toEqual(['r~1', 'r~2', 'r~3', 'r~4', 'r~5', 'r~6', 'all']);
   });
 
+  it('splits attacker views by attack type, one card per letter', () => {
+    const views = expandAttackerViews([{ id: 't', label: 'T', splitBy: 'attackBallTypes' }], (_, value) => String(value));
+    expect(views.map((view) => view.id)).toEqual(['t~H', 't~M', 't~Q', 't~T', 't~U', 't~N', 't~O']);
+    expect(views[2].attackBallTypes).toEqual(['Q']);
+  });
+
   it('splits setter views by serve start zone', () => {
     const views = expandSetterViews([{ id: 's', label: 'S', receptionBand: 'positive', splitBy: 'serveStartZones' }], (_, value) => `Z${value}`);
     expect(views).toHaveLength(5);

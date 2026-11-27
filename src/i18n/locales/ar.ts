@@ -2673,6 +2673,7 @@ export const ar = {
   attackerViewNewLabel: "عرض هجوم {{n}}",
   attackerViewPhaseLabel: "المرحلة",
   attackerViewBaseLabel: "التركيبة / القاعدة",
+  attackerViewAttackBallTypeLabel: "نوع الهجوم",
   attackerViewEvaluationLabel: "التقييم",
   progressComputingMatchStats: "جارٍ معالجة بيانات المباراة...",
   progressGeneratingMatchReport: "جارٍ إنشاء تقرير المباراة...",

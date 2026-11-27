@@ -2667,6 +2667,7 @@ export const tr = {
   attackerViewNewLabel: "Hücum görünümü {{n}}",
   attackerViewPhaseLabel: "Aşama",
   attackerViewBaseLabel: "Baz / Kombinasyon",
+  attackerViewAttackBallTypeLabel: "Hücum tipi",
   attackerViewEvaluationLabel: "Değerlendirme",
   progressComputingMatchStats: "Maç verileri işleniyor...",
   progressGeneratingMatchReport: "Maç raporu oluşturuluyor...",

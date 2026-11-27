@@ -2671,6 +2671,7 @@ export const zh = {
   attackerViewNewLabel: "进攻视图 {{n}}",
   attackerViewPhaseLabel: "阶段",
   attackerViewBaseLabel: "战术 / 组合",
+  attackerViewAttackBallTypeLabel: "进攻类型",
   attackerViewEvaluationLabel: "评价",
   progressComputingMatchStats: "正在处理比赛数据...",
   progressGeneratingMatchReport: "正在生成比赛报告...",

@@ -650,6 +650,34 @@ describe('opponent attacking metrics', () => {
     expect(attempts({ id: 'both', label: 'K1 + KC', receptionBand: 'all', setterCalls: ['K1', 'KC'] })).toBe(3);
   });
 
+  it('filters custom attacker direction views by attack type (H M Q T U N O)', () => {
+    const attack = (id: string, order: number, type: string, rally: number): RallyStats => ({
+      setNumber: 1,
+      rallyNumber: rally,
+      touches: [
+        touch(`d${id}`, order, 'a4', 'dig', '+', { rallyNumber: rally }),
+        touch(id, order + 1, 'a4', 'attack', '#', {
+          startZoneCode: '4',
+          attackType: type,
+          ballDirection: { start: { x: 55, y: 20 }, end: { x: 25, y: 70 } },
+          rallyNumber: rally,
+        }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'away',
+      pointWinner: 'away',
+      terminalReason: null,
+    });
+    const fixture = match([attack('high', 1, 'H', 1), attack('quick', 3, 'Q', 2), attack('tense', 5, 'T', 3)], 'm1', 'a1');
+    const metrics = computeAttackingReportMetrics([fixture]);
+    const count = (attackBallTypes: string[]) => computeAttackerDirectionViews([fixture], [{ id: 'v', label: 'V', attackBallTypes }], metrics.attackers)[0]
+      .attackers.find((entry) => entry.player.jersey === '4')?.attacks ?? 0;
+    expect(count([])).toBe(3);
+    expect(count(['H'])).toBe(1);
+    expect(count(['Q', 'T'])).toBe(2);
+    expect(count(['U'])).toBe(0);
+  });
+
   it('keeps attacks against an open block (players at net 4) apart from the others', () => {
     const attack = (id: string, order: number, numBlockers: 0 | 1 | 2 | 3 | 4, rally: number): RallyStats => ({
       setNumber: 1,

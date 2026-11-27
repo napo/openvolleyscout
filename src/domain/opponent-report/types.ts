@@ -240,8 +240,10 @@ export interface AttackerDirectionViewConfig {
   attackSubtypes?: AttackSubtype[];
   /** Empty or omitted = all attack combination / base codes (e.g. 'X5', 'V5', 'XP', 'K1'). */
   combinationCodes?: string[];
+  /** Empty or omitted = all attack types (DataVolley ball type letter: H, M, Q, T, U, N, O). */
+  attackBallTypes?: string[];
   /** Draw one card per value of this filter ("draw separately"); omitted = one card ("draw together"). */
-  splitBy?: 'attackZones' | 'rotations' | 'phases';
+  splitBy?: 'attackZones' | 'rotations' | 'phases' | 'attackBallTypes';
 }
 
 export interface OpponentReport {

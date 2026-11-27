@@ -812,6 +812,7 @@ export interface AttackerDirectionSampleContext {
   blockerCount?: number;
   attackSubtype?: AttackSubtype;
   combinationCode?: string;
+  attackBallType?: string;
 }
 
 export interface AttackerCustomViewPlayerMetrics {
@@ -881,6 +882,10 @@ export function matchesAttackerDirectionFilter(
 
   if (filter.combinationCodes && filter.combinationCodes.length > 0) {
     if (!sample.combinationCode || !filter.combinationCodes.includes(sample.combinationCode)) return false;
+  }
+
+  if (filter.attackBallTypes && filter.attackBallTypes.length > 0) {
+    if (!sample.attackBallType || !filter.attackBallTypes.includes(sample.attackBallType)) return false;
   }
 
   return true;
@@ -1001,6 +1006,7 @@ export function computeAttackerDirectionViews(
           blockerCount,
           attackSubtype: getAttackSubtypeOrDefault(touch),
           combinationCode: resolveAttackCombinationCode(touch, set),
+          attackBallType: (touch.attackType ?? touch.skillTypeCode)?.trim().toUpperCase() || undefined,
         };
         const drawing = drawingByTouch.get(touch.id);
 
