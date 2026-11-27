@@ -14,6 +14,13 @@
 - Numbers can change: a setter's call now also counts the attacks that have their own combination code, while before they counted only under their combination. Saved tactical reports, saved Video analysis filters and shared statistics links that had setter calls in the old combined list are moved to Base by themselves, with nothing to do; the title of a view saved earlier keeps its old wording until you change it. To count only one combination, choose it under Combination.
 - Zone analysis: the courts are smaller cards, as in the Side-out study, so the filters stay in view; under each court a line repeats the filters in use. Click a zone and its attacks open right under that court (on a phone they push the next courts down); close the list with the cross or Esc.
 
+### Fixed
+- Cloud sync with Google Drive in the browser stopped after an hour until you reconnected it by hand, so the last part of a match could stay on one computer. Now it reconnects at your next tap, and a warning on every screen, the scouting screen included, says when sync is paused and how long ago the last sync was.
+- While you scout, the actions are now sent at least every 30 seconds, and at once when you leave the page or switch to another app; the browser asks before you close it with changes not sent. You can change the 30 seconds in Settings (from 15 to 300 seconds); with any cloud service, existing matches and settings keep working as before.
+- When you open a match to scout and the latest data could not be read from the cloud, the app now asks you to reconnect first, so you do not go on from an old copy of the match, or to continue anyway.
+- Tactical report, video QR codes over several matches: when the videos are files (for example on Dropbox or Google Drive) and not on YouTube, each clip now plays on the video of its own match; before, every clip played at the right time but on the video of the first match. Codes already printed work without making the report again.
+- Tactical report shared by link: with a club logo, the link of a long report no longer fails because it got too big; the logo is still shown on every page.
+
 ## 0.52.0 - 2026-11-27
 
 ### Added

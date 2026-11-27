@@ -20,11 +20,17 @@ export interface DeviceInfo {
 
 const NAME_KEY = 'openvolleyscout.sync.deviceName';
 const TAKEOVER_KEY = 'openvolleyscout.sync.takeoverMinutes';
+const SCOUTING_INTERVAL_KEY = 'openvolleyscout.sync.scoutingIntervalSeconds';
 
 /** Minutes without new actions after which another device may take over scouting. */
 export const DEFAULT_TAKEOVER_MINUTES = 5;
 export const MIN_TAKEOVER_MINUTES = 1;
 export const MAX_TAKEOVER_MINUTES = 60;
+
+/** While scouting, new actions wait at most this many seconds before they are sent. */
+export const DEFAULT_SCOUTING_SYNC_SECONDS = 30;
+export const MIN_SCOUTING_SYNC_SECONDS = 15;
+export const MAX_SCOUTING_SYNC_SECONDS = 300;
 
 const OS_NAMES: Record<string, string> = {
   windows: 'Windows',
@@ -126,6 +132,26 @@ export function writeTakeoverMinutes(minutes: number): void {
   try {
     const value = Math.round(Math.min(MAX_TAKEOVER_MINUTES, Math.max(MIN_TAKEOVER_MINUTES, minutes)));
     localStorage.setItem(TAKEOVER_KEY, String(value));
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+export function readScoutingSyncSeconds(): number {
+  try {
+    const raw = localStorage.getItem(SCOUTING_INTERVAL_KEY);
+    const value = Number(raw);
+    if (raw !== null && Number.isFinite(value) && value >= MIN_SCOUTING_SYNC_SECONDS && value <= MAX_SCOUTING_SYNC_SECONDS) return value;
+  } catch {
+    // Use the default.
+  }
+  return DEFAULT_SCOUTING_SYNC_SECONDS;
+}
+
+export function writeScoutingSyncSeconds(seconds: number): void {
+  try {
+    const value = Math.round(Math.min(MAX_SCOUTING_SYNC_SECONDS, Math.max(MIN_SCOUTING_SYNC_SECONDS, seconds)));
+    localStorage.setItem(SCOUTING_INTERVAL_KEY, String(value));
   } catch {
     // Ignore storage errors.
   }

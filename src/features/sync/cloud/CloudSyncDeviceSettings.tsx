@@ -3,7 +3,8 @@
 /**
  * Settings of cloud sync on this device: the name the other devices see, the
  * minutes without new actions after which another device may take over
- * scouting, and the devices that use the same cloud file.
+ * scouting, how often actions are sent while scouting, and the devices that
+ * use the same cloud file.
  */
 
 import { useEffect, useState } from 'react';
@@ -16,13 +17,17 @@ import { confirmAction } from '@src/components/confirm-dialog';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import { isMatchBeingScouted } from './ScoutingClaimKeeper';
 import {
+  MAX_SCOUTING_SYNC_SECONDS,
   MAX_TAKEOVER_MINUTES,
+  MIN_SCOUTING_SYNC_SECONDS,
   MIN_TAKEOVER_MINUTES,
   automaticDeviceName,
   detectOs,
   readDeviceName,
+  readScoutingSyncSeconds,
   readTakeoverMinutes,
   writeDeviceName,
+  writeScoutingSyncSeconds,
   writeTakeoverMinutes,
 } from './device';
 import { APP_VERSION } from '@src/lib/constants/app';
@@ -34,6 +39,7 @@ export function CloudSyncDeviceSettings() {
   const [os, setOs] = useState('');
   const [name, setName] = useState(() => readDeviceName() ?? '');
   const [minutes, setMinutes] = useState(() => readTakeoverMinutes());
+  const [seconds, setSeconds] = useState(() => readScoutingSyncSeconds());
   const selfId = getOrCreateDeviceId();
 
   useEffect(() => {
@@ -86,6 +92,30 @@ export function CloudSyncDeviceSettings() {
         }}
       />
       <p className="cloud-sync-card__note">{t('cloudSyncTakeoverHelp')}</p>
+
+      <label className="form-label" htmlFor="cloud-sync-scouting-interval">{t('cloudSyncScoutingInterval')}</label>
+      <input
+        id="cloud-sync-scouting-interval"
+        className="form-input cloud-sync-device-settings__minutes"
+        type="number"
+        min={MIN_SCOUTING_SYNC_SECONDS}
+        max={MAX_SCOUTING_SYNC_SECONDS}
+        step={5}
+        value={seconds}
+        onChange={(event) => {
+          const value = Number(event.target.value);
+          if (!Number.isFinite(value)) return;
+          setSeconds(value);
+          if (value >= MIN_SCOUTING_SYNC_SECONDS && value <= MAX_SCOUTING_SYNC_SECONDS) writeScoutingSyncSeconds(value);
+        }}
+        onBlur={() => {
+          writeScoutingSyncSeconds(seconds);
+          setSeconds(readScoutingSyncSeconds());
+        }}
+      />
+      <p className="cloud-sync-card__note">
+        {t('cloudSyncScoutingIntervalHelp', { min: MIN_SCOUTING_SYNC_SECONDS, max: MAX_SCOUTING_SYNC_SECONDS })}
+      </p>
 
       <CloudSyncVideoSettings />
 

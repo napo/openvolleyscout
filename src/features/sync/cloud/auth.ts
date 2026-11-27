@@ -18,6 +18,19 @@ export interface CloudAuth {
   signOut(): Promise<void>;
   /** The user gave up a sign-in in progress: it ends at once. */
   cancel?(): void;
+  /**
+   * Services without a refresh token (Google on the web): true when the access
+   * token is missing or about to expire, so it has to be renewed with renew()
+   * from the next tap or key press of the user.
+   */
+  needsRenewal?(): boolean;
+  /**
+   * Asks the service for a new access token even when the current one is still
+   * valid. It opens a window, so it must be called from a user gesture.
+   */
+  renew?(): Promise<string | null>;
+  /** Loads what renew() needs, so the window can open at once on the next gesture. */
+  prepareRenewal?(): void;
 }
 
 /** An access token with its expiry, kept in memory. */
@@ -29,6 +42,11 @@ export class TokenCache {
   get(): string | null {
     // One minute of margin: a token about to expire could fail mid-upload.
     return this.value && this.value.expires - 60_000 > this.clock() ? this.value.token : null;
+  }
+
+  /** When the cached token expires (milliseconds since the epoch), or null without a token. */
+  expiresAt(): number | null {
+    return this.value ? this.value.expires : null;
   }
 
   set(token: string, expiresInSeconds: number) {

@@ -1,4 +1,3 @@
-import { Modal } from '@src/components/Modal';
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
@@ -7,17 +6,23 @@ import { Modal } from '@src/components/Modal';
  * match or the scout handed it over from here, the screen stays visible (it
  * follows the other device's changes) but cannot be used: the scout can take
  * it over once the other device has been idle, or resume a handed-over match.
+ * When the cloud could not be read on opening the match (sign-in expired,
+ * offline), the scout is asked to reconnect first, since this copy of the
+ * match may be older than the one in the cloud, or to go on anyway.
  */
 
 import { useEffect, useState } from 'react';
+import { Modal } from '@src/components/Modal';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@src/app/store/app-store';
+import { useScoutingStore } from '@src/features/scouting/model/scouting-store';
 import { confirmAction } from '@src/components/confirm-dialog';
 import type { MatchProject } from '@src/domain/match/types';
 import { useTranslation } from '@src/i18n';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { cloudSyncController } from './archive-adapter';
-import { useCloudSyncStatus } from './controller';
+import { SERVICE_NAME_KEY } from './CloudSyncCard';
+import { NO_RENEW_ATTRIBUTE, useCloudSyncStatus } from './controller';
 import { readTakeoverMinutes } from './device';
 import { subscribeDataChanges } from './local-change-bus';
 import './scouting-lock-gate.css';
@@ -38,6 +43,8 @@ export function ScoutingLockGate({ project }: { project: MatchProject }) {
   const matchId = project.metadata.id;
   const [, setTick] = useState(0);
   const [busy, setBusy] = useState(false);
+  /** The scout chose to go on with a match that could not be checked: only the small notice stays. */
+  const [continuedUnverified, setContinuedUnverified] = useState<string | null>(null);
 
   const lock = status.scouting;
   const heldElsewhere = (lock.state === 'other' || lock.state === 'handed-over') && lock.matchId === matchId;
@@ -64,11 +71,70 @@ export function ScoutingLockGate({ project }: { project: MatchProject }) {
     };
   }, [heldElsewhere, matchId, setActiveProject]);
 
+  // Until the claim is checked, a newer copy of the match brought by sync (scouted on
+  // another device) replaces the one on screen, so scouting goes on from the latest rally.
+  const unchecked = (lock.state === 'checking' || lock.state === 'unverified') && lock.matchId === matchId;
+  useEffect(() => {
+    if (!unchecked) return undefined;
+    return subscribeDataChanges((origin) => {
+      if (origin !== 'sync') return;
+      void matchRepository.getById(matchId).catch(() => null).then((fresh) => {
+        const shown = useAppStore.getState().activeProject;
+        if (!fresh || shown?.metadata.id !== matchId || (fresh.updatedAt ?? 0) <= (shown.updatedAt ?? 0)) return;
+        // The live match is rebuilt from the newer copy together with the match itself:
+        // otherwise the save of the screen would write the old rallies over the newer copy.
+        useScoutingStore.getState().syncWithProject(fresh);
+        setActiveProject(fresh);
+      });
+    });
+  }, [unchecked, matchId, setActiveProject]);
+
   if (lock.state === 'unverified' && lock.matchId === matchId) {
+    if (continuedUnverified === matchId) {
+      return (
+        <p className="scouting-lock-gate__notice" role="status">
+          {t('scoutingLockUnverified')}
+        </p>
+      );
+    }
+    const service = t(SERVICE_NAME_KEY[status.provider]);
+    const offline = status.problem === 'offline';
+    const signIn = status.problem === 'sign-in';
+    const working = busy || status.state === 'syncing';
+    const retry = async () => {
+      setBusy(true);
+      try {
+        await cloudSyncController.syncNow(true);
+      } finally {
+        setBusy(false);
+      }
+    };
+    const proceed = () => {
+      // The scout chose not to reconnect now: the next taps must not open the sign-in window.
+      if (signIn) cloudSyncController.declineRenewal();
+      setContinuedUnverified(matchId);
+    };
     return (
-      <p className="scouting-lock-gate__notice" role="status">
-        {t('scoutingLockUnverified')}
-      </p>
+      <Modal className="scouting-lock-gate" labelledBy="scouting-lock-gate-title" onClose={proceed} closeOnBackdrop={false}>
+        <section className="scouting-lock-gate__card">
+          <h2 id="scouting-lock-gate-title" className="scouting-lock-gate__title">{t('scoutingStaleTitle')}</h2>
+          <p className="scouting-lock-gate__text">
+            {offline
+              ? t('scoutingStaleOffline', { service })
+              : signIn
+                ? t('scoutingStaleSignIn', { service })
+                : t('scoutingStaleError', { service })}
+          </p>
+          <div className="scouting-lock-gate__actions">
+            <button type="button" className="btn-primary btn-small" onClick={() => void retry()} disabled={working}>
+              {signIn ? t('scoutingStaleReconnect') : t('scoutingStaleRetry')}
+            </button>
+            <button type="button" className="btn-secondary btn-small" onClick={proceed} {...{ [NO_RENEW_ATTRIBUTE]: '' }}>
+              {t('scoutingStaleContinue')}
+            </button>
+          </div>
+        </section>
+      </Modal>
     );
   }
   if (lock.state === 'handed-over' && lock.matchId === matchId) {

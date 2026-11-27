@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { AppNavigation } from '../components/AppNavigation';
 import { UpdateChecker } from '../components/UpdateChecker';
 import { PwaUpdateBanner } from '../components/PwaUpdateBanner';
+import { CloudSyncAlert } from '@src/features/sync/cloud/CloudSyncAlert';
 
 export function StandardAppShell({ children }: { children?: ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export function StandardAppShell({ children }: { children?: ReactNode }) {
       <main className="standard-app-shell__content">
         {children ?? <Outlet />}
       </main>
+      <CloudSyncAlert />
     </div>
   );
 }
@@ -25,6 +27,7 @@ export function ScoutingAppShell({ children }: { children?: ReactNode }) {
       <main className="scouting-app-shell__content">
         {children ?? <Outlet />}
       </main>
+      <CloudSyncAlert placement="inline" />
     </div>
   );
 }
