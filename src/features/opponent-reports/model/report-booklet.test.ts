@@ -136,6 +136,25 @@ describe('booklet planning and printing',()=>{
       expect(pages.some(page=>page!==attackPage&&page.includes('END-MARKER')),`a4=${a4}`).toBe(true);
     }
   });
+  it('charts the setter with most touches by default and the setters the coach ticks, in touch order',()=>{
+    const {report,view,player}=fixture();
+    // Player 5 set less but touched more balls overall: she is the main setter.
+    view.setter.groups[0].touches=210;
+    view.setter.groups.push({...structuredClone(view.setter.groups[0]),player:player('5'),attempts:150,touches:320});
+    const setterPages=(plan:ReturnType<typeof buildReportBooklet>)=>plan.pages.filter(page=>page.includes(`>${t('opponentReportSheet_setter')} · `));
+    const titleOf=(page:string)=>page.match(new RegExp(`>${t('opponentReportSheet_setter')} · ([^<]+)<`))![1];
+    const byDefault=buildReportBooklet(report,view,t);
+    expect(setterPages(byDefault).map(titleOf)).toEqual(['#5 Player 5']);
+    expect(byDefault.staffNotes).toContainEqual(expect.objectContaining({id:'setter-summary',body:expect.stringContaining('Player 2')}));
+    report.booklet={...report.booklet!,setterChartKeys:['2','5']};
+    const both=buildReportBooklet(report,view,t);
+    expect([...new Set(setterPages(both).map(titleOf))]).toEqual(['#5 Player 5','#2 Player 2']);
+    expect(both.staffNotes?.some(note=>note.id==='setter-summary')).toBe(false);
+    report.booklet={...report.booklet!,setterChartKeys:[]};
+    expect(setterPages(buildReportBooklet(report,view,t))).toHaveLength(0);
+    report.booklet={...report.booklet!,setterChartKeys:undefined,includeSecondSetter:true};
+    expect([...new Set(setterPages(buildReportBooklet(report,view,t)).map(titleOf))]).toEqual(['#5 Player 5','#2 Player 2']);
+  });
   it('shares the component order between the navigator and every export layout',()=>{
     const {report,view}=fixture();
     report.notes='Staff note moved to the beginning';

@@ -2,7 +2,8 @@ import { Modal } from '@src/components/Modal';
 import { nextChartRotation } from '@src/lib/utils/chart-rotation';
 import { expandAttackerViews, expandSetterViews } from '../model/split-views';
 import { BookletSettings } from './BookletSettings';
-import type { ReportBookletPlan, ReportStaffNote } from '../model/report-booklet';
+import { chartedSetterKeys, DEFAULT_BOOKLET, rankSetterGroups, type ReportBookletPlan, type ReportStaffNote } from '../model/report-booklet';
+import { playerLabel } from '../model/report-keys';
 import { moveReportComponent, reportComponentOrder } from '../model/report-components';
 import { ReportPriorities } from './ReportPriorities';
 import { reportPriorities } from '../model/report-priorities';
@@ -252,7 +253,10 @@ export function TacticalBoardSheet({
       const descriptions = view.attackers.filter(a => report.booklet?.textOnlyAttackerKeys?.includes(a.player.key)).length;
       return t('reportComponentAttackCount', {charts: view.attackers.length - descriptions, descriptions});
     }
-    if (id === 'setter') return t(report.booklet?.includeSecondSetter ? 'reportComponentSetterCharts' : 'reportComponentSetterText');
+    if (id === 'setter') {
+      const charts = chartedSetterKeys(report.booklet, view.setter.groups).length;
+      return t('reportComponentSetterCount', {charts, text: view.setter.groups.length - charts});
+    }
     if (id === 'notes') return '';
     // Count what the coach sees: priorities and rotations, not internal pieces.
     if (id === 'keys') return t('reportComponentCount', {count: reportPriorities(report, suggestions).length});
@@ -433,6 +437,27 @@ export function TacticalBoardSheet({
         <label className="report-composer__notes">{t('opponentReportNotes')}<textarea rows={6} value={report.notes} placeholder={t('opponentReportNotesPlaceholder')} onChange={event => update(current => ({...current, notes:event.target.value}))} /></label>
       </section> : (
         <>
+          {selected === 'setter' && view.setter.groups.length > 1 ? (
+            <fieldset className="opponent-report__setter-charts">
+              <legend>{t('setterChartsTitle')}</legend>
+              <p className="opponent-report__hint">{t('setterChartsHelp')}</p>
+              {rankSetterGroups(view.setter.groups).map((group) => (
+                <label key={group.player.key}>
+                  <input
+                    type="checkbox"
+                    checked={chartedSetterKeys(report.booklet, view.setter.groups).includes(group.player.key)}
+                    onChange={(event) => update((current) => {
+                      const chosen = new Set(chartedSetterKeys(current.booklet, view.setter.groups));
+                      if (event.target.checked) chosen.add(group.player.key); else chosen.delete(group.player.key);
+                      const setterChartKeys = rankSetterGroups(view.setter.groups).map((entry) => entry.player.key).filter((key) => chosen.has(key));
+                      return { ...current, booklet: { ...DEFAULT_BOOKLET, ...current.booklet, setterChartKeys } };
+                    })}
+                  />
+                  {playerLabel(group.player)} <small>{t('setterChartsTouches', { n: group.touches ?? group.attempts ?? 0 })}</small>
+                </label>
+              ))}
+            </fieldset>
+          ) : null}
           {selected === 'setter' ? (
             <SetterViewsEditor
               views={report.setterViews}

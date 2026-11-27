@@ -26,7 +26,6 @@ export function BookletSettings({ report, plan, attackers, update }: { report: O
     <label><input type="checkbox" checked={settings.includeServe} onChange={(event) => change({ includeServe: event.target.checked })} />{t('bookletServe')}</label>
     {settings.includeServe ? <label className="tactical-booklet-settings__sub"><input type="checkbox" checked={settings.includeServeReserves ?? false} onChange={(event) => change({ includeServeReserves: event.target.checked })} />{t('bookletServeReserves')}</label> : null}
     <label><input type="checkbox" checked={settings.includeZones ?? false} onChange={(event) => change({ includeZones: event.target.checked })} />{t('bookletZones')}</label>
-    <label><input type="checkbox" checked={settings.includeSecondSetter} onChange={event => change({includeSecondSetter: event.target.checked})}/>{t('bookletSecondSetter')}</label>
     {attackers.length ? <details><summary>{t('bookletAttackTextOnly')}</summary>
       <p>{t('bookletAttackTextOnlyHelp')}</p>
       {[...attackers].sort((a,b)=>(a.attempts ?? 0)-(b.attempts ?? 0) || a.player.key.localeCompare(b.player.key)).map(attacker=><label key={attacker.player.key}>

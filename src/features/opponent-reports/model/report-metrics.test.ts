@@ -105,6 +105,11 @@ describe('opponent report metrics', () => {
     expect(metrics.rotations.find((row) => row.rotation === 1)?.sideOut).toEqual({ count: 1, total: 2, rate: 0.5 });
   });
 
+  it('counts every touch of each player of the analysed team', () => {
+    const keyOf = (id: string) => toReportPlayer(roster.find((entry) => entry.id === id)!).key;
+    expect(metrics.touchesByPlayer).toMatchObject({ [keyOf('a1')]: 2, [keyOf('a2')]: 3, [keyOf('a4')]: 1, [keyOf('a5')]: 1 });
+  });
+
   it('measures reception per receiver and per rotation', () => {
     const byName = Object.fromEntries(metrics.receivers.map((row) => [row.player.name, row.positive]));
     expect(byName.Player2).toEqual({ count: 1, total: 1, rate: 1 });

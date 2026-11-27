@@ -56,6 +56,19 @@ export function fitBookletCourt(svg: string, x: number, y: number, width: number
   return `<g transform="translate(${x + (width - sw * scale) / 2} ${y + (height - sh * scale) / 2}) scale(${scale})">${content}</g>`;
 }
 interface Page { title: string; elements: string[]; component: OpponentReportComponentId }
+
+type SetterGroup = ReportView['setter']['groups'][number];
+/** Setters in print order: most touches of every skill first, then most sets. */
+export function rankSetterGroups<G extends Pick<SetterGroup, 'player' | 'attempts' | 'touches'>>(groups: readonly G[]): G[] {
+  return [...groups].sort((a, b) => (b.touches ?? b.attempts ?? 0) - (a.touches ?? a.attempts ?? 0)
+    || (b.attempts ?? 0) - (a.attempts ?? 0) || a.player.key.localeCompare(b.player.key));
+}
+/** Setters printed with charts: the coach's choice, else every setter (old switch) or the first one. */
+export function chartedSetterKeys(booklet: Partial<OpponentReportBooklet> | undefined, groups: readonly Pick<SetterGroup, 'player' | 'attempts' | 'touches'>[]): string[] {
+  const ranked = rankSetterGroups(groups).map((group) => group.player.key);
+  if (booklet?.setterChartKeys) return ranked.filter((key) => booklet.setterChartKeys!.includes(key));
+  return booklet?.includeSecondSetter ? ranked : ranked.slice(0, 1);
+}
 interface Card { title: string; court?: ResolvedBoardCourt; body?: string; bandKey?: string; descriptionBelow?: boolean; descriptionLineLimit?: number; qrSvg?: string; note?: { id: string; body: string } }
 export interface ReportStaffNote { id: string; title: string; body: string }
 export interface ReportBookletPlan {
@@ -356,9 +369,11 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   if (showAttackers && descriptions.length) prose(t('bookletAttackTextOnly'), descriptions);
   if (showAttackers) attackers.forEach(rememberNotes);
   component = 'setter';
-  const setters = [...view.setter.groups].sort((a, b) => (b.attempts ?? 0) - (a.attempts ?? 0) || a.player.key.localeCompare(b.player.key));
-  const main = setters[0];
-  const setterCards = (group: typeof main) => {
+  const setters = rankSetterGroups(view.setter.groups);
+  const chartedKeys = new Set(chartedSetterKeys(settings, setters));
+  const charted = setters.filter((setter) => chartedKeys.has(setter.player.key));
+  const textSetters = setters.filter((setter) => !chartedKeys.has(setter.player.key));
+  const setterCards = (group: SetterGroup | undefined) => {
     const orderedBands = report.setterViews?.length
       ? (group?.bands ?? [])
       : (group?.bands ?? []).slice().sort((a, b) => Number(a.key === 'negative') - Number(b.key === 'negative'));
@@ -371,7 +386,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       return (p?.courts ?? []).map((court, idx) => ({ title: report.pieceEdits?.[p?.id ?? '']?.title ? `${p?.title} · ${court.label}` : court.label, court, body: [court.sample, report.pieceEdits?.[p?.id ?? '']?.courtBadges?.[court.key]].filter(Boolean).join('\n'), bandKey: band.key, qrSvg: idx === 0 && p?.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined }));
     });
   };
-  const setterGrid = (group: typeof main, bottom = BOTTOM) => {
+  const setterGrid = (group: SetterGroup | undefined, bottom = BOTTOM) => {
     const cards = setterCards(group);
     if (hasBoardSelection && cards.length === 0) return;
     const customLegend = collectCustomLegendEntries(cards.map((c) => c.court?.drawing));
@@ -398,9 +413,12 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     }
   };
   if (showSetter) {
-    setterGrid(main, compact && setters.length > 1 ? BOTTOM - 86 : BOTTOM);
-    setters.slice(1).forEach(setter => setter.bands.forEach(band => rememberNotes(catalog.get(setterPieceId(setter.player.key, band.key)))));
-    const summaries = setters.slice(1).map(setter => ({body: t('bookletSetterSummarySentence', {
+    const firstPage = pages.length;
+    if (charted[0]) setterGrid(charted[0], compact && textSetters.length > 0 ? BOTTOM - 86 : BOTTOM);
+    else if (!setters.length) setterGrid(undefined);
+    const drewFirst = pages.length > firstPage;
+    textSetters.forEach(setter => setter.bands.forEach(band => rememberNotes(catalog.get(setterPieceId(setter.player.key, band.key)))));
+    const summaries = textSetters.map(setter => ({body: t('bookletSetterSummarySentence', {
       player: playerLabel(setter.player),
       positive: setter.bands.find(band => band.key === 'positive')?.summary || t('bookletMissing'),
       negative: setter.bands.find(band => band.key === 'negative')?.summary || t('bookletMissing'),
@@ -408,7 +426,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     if (summaries.length) {
       // Compact summaries are placed in the lower band of the last setting page when short enough.
       // Native setting diagrams need their full grid: keep long summaries on a readable continuation.
-      if (compact && pages.length > 0) {
+      if (compact && drewFirst) {
         const summaryText = report.staffNoteEdits?.['setter-summary'] ?? summaries.map(entry => entry.body).join('\n');
         const summaryLines = wrapBookletText(summaryText, WIDTH - 8, 6.4);
         if (summaryLines.length <= 8) pages[pages.length - 1].elements.push(...summaryLines.map((line, index) => text(M + 4, BOTTOM - 72 + index * 9, line, 6.4)));
@@ -416,9 +434,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       }
       else deferred.push({ id: 'setter-summary', title: t('bookletSecondSummary'), body: summaries.map(entry => entry.body).join('\n') });
     }
-    if (settings.includeSecondSetter) for (const group of setters.slice(1)) {
-      setterGrid(group);
-    }
+    for (const group of charted.slice(1)) setterGrid(group);
   }
   // Zone analysis: one page per phase, the six rotations as on the setter's page.
   // On the board, or (without a board selection) when the sheet is switched on.
@@ -471,8 +487,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     deferred.push({ id: 'serve-text', title: t('opponentReportSheet_serve'), body: servers.map((p) => serveText.get(p.id) ?? p.title).join('\n') });
   }
   if (custom && settings.includeBoardExtras) {
-    const included = new Set([...zonePieces.map((p) => p.id), PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...main?.bands.map(b => setterPieceId(main.player.key, b.key)) ?? [],
-      ...setters.slice(1).flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
+    const included = new Set([...zonePieces.map((p) => p.id), PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...setters.flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
       ...(drawable.size ? servers.map(p => p.id) : [])]);
     const extraPieces = resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id));
     const extraCards: Card[] = [];
@@ -524,7 +539,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     for (const piece of [
       ...(showServeTargets ? [reception] : []),
       ...(showAttackers ? attackers : []),
-      ...(showSetter ? (main?.bands ?? []).filter((b) => !hasBoardSelection || boardPieceIdSet.has(setterPieceId(main!.player.key, b.key))).map(b => catalog.get(setterPieceId(main!.player.key, b.key))) : []),
+      ...(showSetter ? charted.flatMap((group) => group.bands.filter((b) => !hasBoardSelection || boardPieceIdSet.has(setterPieceId(group.player.key, b.key))).map(b => catalog.get(setterPieceId(group.player.key, b.key)))) : []),
     ]) {
       if (piece) detailed.set(piece.id, piece);
     }

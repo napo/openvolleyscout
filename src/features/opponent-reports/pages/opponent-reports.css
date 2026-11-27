@@ -888,6 +888,11 @@
 .opponent-report__video-link small { display: block; }
 .opponent-report__board-piece { min-width: 0; }
 .opponent-report__board-piece-title { min-width: 0; }
+.opponent-report__setter-charts { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; align-items: center; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 6px; padding: 0.5rem 0.75rem; margin: 0 0 0.75rem; }
+.opponent-report__setter-charts legend { font-weight: 600; padding: 0 0.25rem; }
+.opponent-report__setter-charts .opponent-report__hint { flex-basis: 100%; margin: 0; }
+.opponent-report__setter-charts label { display: inline-flex; align-items: center; gap: 0.35rem; }
+.opponent-report__setter-charts small { opacity: 0.7; }
 .opponent-report__board-catalog-groups { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; max-height: 28rem; overflow: auto; }
 .opponent-report__board-catalog-group > summary { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.35rem 0.55rem; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 6px; font-weight: 600; font-size: 0.9rem; }
 .opponent-report__board-catalog-group > summary small { font-weight: 400; opacity: 0.75; }

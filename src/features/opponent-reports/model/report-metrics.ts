@@ -182,6 +182,8 @@ export function computeTeamIndicators(matches: readonly Pick<ReportMatchInput, '
 
 export interface OpponentReportMetrics {
   sample: { matches: number; sets: number; rallies: number };
+  /** Touches of every skill per player (ReportPlayer.key): ranks the setters in the report. */
+  touchesByPlayer?: Record<string, number>;
   /** Optional so older fixtures and stored metrics stay valid. */
   teamIndicators?: TeamIndicators;
   startingRotations: StartingRotationRow[];
@@ -389,6 +391,7 @@ export function computeOpponentReportMetrics(
   };
   const attackers = mapOf<string, { kill: Counter; errors: Counter; skillStats: SkillStats }>(() => ({ kill: new Counter(), errors: new Counter(), skillStats: createEmptySkillStats() }));
   const errors = mapOf<string, { serve: Counter; attack: Counter }>(() => ({ serve: new Counter(), attack: new Counter() }));
+  const touchCounts = new Map<string, number>();
   const teamErrors = { serve: new Counter(), attack: new Counter() };
   // rotation -> player -> reception counters and zones
   const receptionsByRotation = mapOf<CourtPosition, Map<string, { positive: Counter; sideOut: Counter; zones: Map<string, { count: number; sideOut: Counter }> }>>(() => new Map());
@@ -470,6 +473,7 @@ export function computeOpponentReportMetrics(
       for (const touch of rally.touches) {
         if (touch.teamSide !== side) continue;
         const key = playerKey(touch.playerId);
+        if (key) touchCounts.set(key, (touchCounts.get(key) ?? 0) + 1);
         if (touch.skill === 'serve') {
           teamErrors.serve.add(touch.evaluation === '=');
           if (key) errors.get(key).serve.add(touch.evaluation === '=');
@@ -614,6 +618,7 @@ export function computeOpponentReportMetrics(
 
   return {
     sample: { matches: matches.length, sets, rallies },
+    touchesByPlayer: Object.fromEntries(touchCounts),
     teamIndicators: computeTeamIndicators(matches),
     startingRotations,
     startingRotationCounts,

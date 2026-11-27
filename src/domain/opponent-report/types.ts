@@ -182,7 +182,10 @@ export interface OpponentReportBooklet {
   includeServeReserves?: boolean;
   /** "Block and defence" attack-direction sheet; included unless false. */
   includeAttackers?: boolean;
+  /** Legacy switch: charts for every setter. Read only while setterChartKeys is absent. */
   includeSecondSetter: boolean;
+  /** Setters (ReportPlayer.key) printed with charts; the others as text. Absent = the setter with most touches. */
+  setterChartKeys?: string[];
   /** "Zone analysis" pages (after reception, in transition); off unless true. */
   includeZones?: boolean;
   /** Coach-selected attackers retained in text without direction drawings. */

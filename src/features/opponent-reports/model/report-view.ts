@@ -111,6 +111,8 @@ export interface ReportView {
     groups: Array<{
       player: ReportPlayer;
       attempts?: number;
+      /** Touches of every skill in the analysed matches: the setters are printed in this order. */
+      touches?: number;
       bands: Array<{
         key: string;
         title: string;
@@ -919,6 +921,7 @@ function setterDistributionView(
   thresholds: OpponentReportThresholds,
   t: ViewT,
   setterCustomGroups: readonly SetterCustomGroupMetrics[] = [],
+  touchesByPlayer: Readonly<Record<string, number>> = {},
 ): ReportView['setter'] {
   const customByPlayer = new Map(setterCustomGroups.map((g) => [g.player.key, g]));
   const groups = metrics.setters.map((setter: SetterReportMetrics) => {
@@ -960,7 +963,7 @@ function setterDistributionView(
           t,
         )];
       });
-    return { player: setter.player, bands, attempts: setter.rotations.reduce((sum, rotation) => sum + rotation.positive.attempts + rotation.negative.attempts, 0) };
+    return { player: setter.player, bands, attempts: setter.rotations.reduce((sum, rotation) => sum + rotation.positive.attempts + rotation.negative.attempts, 0), touches: touchesByPlayer[setter.player.key] };
   }).filter((group) => group.bands.length > 0);
   return {
     groups,
@@ -1403,7 +1406,7 @@ export function buildReportView(
       ? { attackerViews: customAttackerViewsView(attackerCustomViews, defaultAttackers, report, thresholds, t, videoLinks) }
       : {}),
     setter: (() => {
-      const setter = setterDistributionView(attacking, report, thresholds, t, setterCustomGroups);
+      const setter = setterDistributionView(attacking, report, thresholds, t, setterCustomGroups, metrics.touchesByPlayer);
       return { ...setter, groups: setter.groups.map((group) => ({ ...group, bands: group.bands.map((band) => ({
         ...band, videoLink: extraVideoLinks.setter?.get(`${group.player.key}:${band.key}`),
       })) })) };
