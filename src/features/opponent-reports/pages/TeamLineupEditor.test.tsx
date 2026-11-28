@@ -45,4 +45,22 @@ describe('team line-up editor', () => {
     expect(cells[0]).toEqual(['7', '2']);
     expect(cells[1]).toEqual([]);
   });
+  it('shows the photo of an athlete beside her name, or the drawing of her role', () => {
+    const photo = 'data:image/jpeg;base64,/9j/4AAQ';
+    const cells = [[{ ...players[0], pose: 'setter' as const }], [players[1]], [], [], [], [], [{ ...players[7], pose: 'reception' as const }, players[2]], []];
+    const { container } = render(
+      <I18nProvider>
+        <TeamLineupEditor cells={cells} labels={['1', '2', '3', '4', '5', '6', 'L', 'L']} players={players} photos={new Map([['1', photo]])} edited={false} onChange={() => {}} />
+      </I18nProvider>,
+    );
+    const shown = screen.getAllByTestId('athlete-photo');
+    expect(shown).toHaveLength(1);
+    expect(shown[0].getAttribute('src')).toBe(photo);
+    // Bea (no pose known: an attacker) and the libero get a drawing.
+    expect(container.querySelectorAll('svg.athlete-silhouette')).toHaveLength(3);
+    // Two athletes in a cell: the portraits go above the text, so the narrow columns keep room for it.
+    const shared = container.querySelectorAll('.team-lineup-editor__athletes--shared');
+    expect(shared).toHaveLength(1);
+    expect(shared[0].querySelectorAll('.team-lineup-editor__athlete')).toHaveLength(2);
+  });
 });

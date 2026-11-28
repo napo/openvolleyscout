@@ -49,6 +49,27 @@ export async function deleteAppAsset(id: string, now: Date = new Date()): Promis
   });
 }
 
+/**
+ * Deletes several values at once (the photos of the athletes of a team), each
+ * one remembered for cloud sync as in `deleteAppAsset`. Ids with no value are
+ * skipped. Returns how many were deleted.
+ */
+export async function deleteAppAssets(ids: Iterable<string>, now: Date = new Date()): Promise<number> {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return 0;
+  return matchProjectDb.transaction('rw', matchProjectDb.appAssets, matchProjectDb.syncDeletions, async () => {
+    const existing = await matchProjectDb.appAssets.bulkGet(unique);
+    let deleted = 0;
+    for (const record of existing) {
+      if (!record) continue;
+      await matchProjectDb.appAssets.delete(record.id);
+      await rememberDeletion('appAssets', record.id, new Date(Math.max(now.getTime(), time(record.updatedAt) + 1)).toISOString());
+      deleted += 1;
+    }
+    return deleted;
+  });
+}
+
 /** Whether `record` (from a backup) holds another value than the one here (or there is none here). */
 export async function differsFromLocalAppAsset(record: Pick<AppAssetRecord, 'id' | 'kind' | 'value'>): Promise<boolean> {
   const existing = await matchProjectDb.appAssets.get(record.id);

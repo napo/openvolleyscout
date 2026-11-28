@@ -2,6 +2,7 @@
 import { getMatchTeamSnapshot, setMatchTeamSelection } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import type { ArchivedPlayer, ArchivedTeam } from '@src/domain/team/types';
+import { mergedTeamPhotoChanges } from './roster-photos';
 
 export interface SimilarTeamGroup {
   id: string;
@@ -32,6 +33,10 @@ export interface TeamMergeDeps {
   deleteTeam: (teamId: string) => Promise<void>;
   listMatches: () => Promise<MatchProject[]>;
   updateMatch: (project: MatchProject) => Promise<unknown>;
+  /** Reads the stored photos of these archived athletes (left out: the photos are not moved). */
+  loadPhotos?: (playerIds: string[]) => Promise<ReadonlyMap<string, string>>;
+  /** Writes photo changes by archived player id (a data URL, or null to remove). */
+  savePhotoChanges?: (changes: ReadonlyMap<string, string | null>) => Promise<unknown>;
 }
 
 export function normalizeForSimilarity(value: string): string {
@@ -392,6 +397,23 @@ export async function executeTeamMerge(
     }
   }
 
+  await moveMergedPhotos(playerRemap, deps);
   await deps.deleteTeam(discardId);
   return { updatedMatches, mergedPlayers: mergedPlayers.length };
+}
+
+/**
+ * Gives the photo of a discarded athlete to the kept athlete she was merged
+ * into, when that one has none. A failure here only loses the photo, so it
+ * does not stop the merge.
+ */
+async function moveMergedPhotos(playerRemap: ReadonlyMap<string, string>, deps: TeamMergeDeps): Promise<void> {
+  if (!deps.loadPhotos || !deps.savePhotoChanges || playerRemap.size === 0) return;
+  try {
+    const photos = await deps.loadPhotos([...new Set([...playerRemap.keys(), ...playerRemap.values()])]);
+    const changes = mergedTeamPhotoChanges(playerRemap, photos);
+    if (changes.size > 0) await deps.savePhotoChanges(changes);
+  } catch (error) {
+    console.warn('Could not move the athlete photos of the merged team', error);
+  }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createEmptyMatchProject } from '@src/domain/match';
 import type { ArchivedPlayer, ArchivedTeam } from '@src/domain/team/types';
 import {
@@ -115,5 +115,54 @@ describe('team merge', () => {
     expect(res.mergedPlayers).toBe(2);
     expect(teams.has('tB')).toBe(false);
     expect(matches[0].homeSelection.archivedTeamId).toBe('tA');
+  });
+
+  it('gives the photo of a merged athlete to the kept athlete when that one has none', async () => {
+    const teams = new Map<string, ArchivedTeam>([['tA', makeTeam('tA', 'Club Roma')], ['tB', makeTeam('tB', 'Club Roma Copia')]]);
+    const rosters = new Map<string, ArchivedPlayer[]>([
+      ['tA', [makePlayer('a1', 1, 'Elena', 'Rossi'), makePlayer('a2', 7, 'Sara', 'Bianchi')]],
+      ['tB', [makePlayer('b1', 1, 'Elena', 'Rossi'), makePlayer('b2', 7, 'Sara', 'Bianchi'), makePlayer('b3', 5, 'Marta', 'Neri')]],
+    ]);
+    // a2 has her own photo: it stays. b3 is a new athlete of the kept team: she keeps her id and photo.
+    const photos = new Map([['b1', 'data:image/png;base64,B1'], ['b2', 'data:image/png;base64,B2'], ['a2', 'data:image/png;base64,A2'], ['b3', 'data:image/png;base64,B3']]);
+    const asked: string[][] = [];
+    const written: Array<Map<string, string | null>> = [];
+    await executeTeamMerge('tA', 'tB', {
+      getTeamAggregate: async (id) => {
+        const team = teams.get(id);
+        return team ? { team, roster: { players: rosters.get(id) ?? [] } } : null;
+      },
+      updateTeam: async (id, updates) => { if (updates.players) rosters.set(id, updates.players); },
+      deleteTeam: async (id) => { teams.delete(id); },
+      listMatches: async () => [],
+      updateMatch: async () => undefined,
+      loadPhotos: async (ids) => { asked.push([...ids].sort()); return new Map(ids.flatMap((id) => (photos.has(id) ? [[id, photos.get(id)!] as const] : []))); },
+      savePhotoChanges: async (changes) => { written.push(new Map(changes)); },
+    });
+    expect(asked).toEqual([['a1', 'a2', 'b1', 'b2']]);
+    expect(written).toEqual([new Map<string, string | null>([['a1', 'data:image/png;base64,B1'], ['b1', null], ['b2', null]])]);
+    expect(teams.has('tB')).toBe(false);
+  });
+
+  it('still merges when the photos cannot be moved', async () => {
+    const teams = new Map<string, ArchivedTeam>([['tA', makeTeam('tA', 'Club Roma')], ['tB', makeTeam('tB', 'Club Roma Copia')]]);
+    const rosters = new Map<string, ArchivedPlayer[]>([['tA', [makePlayer('a1', 1, 'Elena', 'Rossi')]], ['tB', [makePlayer('b1', 1, 'Elena', 'Rossi')]]]);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const res = await executeTeamMerge('tA', 'tB', {
+      getTeamAggregate: async (id) => {
+        const team = teams.get(id);
+        return team ? { team, roster: { players: rosters.get(id) ?? [] } } : null;
+      },
+      updateTeam: async () => undefined,
+      deleteTeam: async (id) => { teams.delete(id); },
+      listMatches: async () => [],
+      updateMatch: async () => undefined,
+      loadPhotos: async () => { throw new Error('no database'); },
+      savePhotoChanges: async () => undefined,
+    });
+    expect(res.mergedPlayers).toBe(1);
+    expect(teams.has('tB')).toBe(false);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

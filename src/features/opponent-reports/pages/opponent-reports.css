@@ -916,6 +916,12 @@
 .team-lineup-editor__cell small { opacity: 0.7; align-self: flex-end; }
 .team-lineup-editor__athletes { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0.4rem; }
 .team-lineup-editor__athletes > span { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.team-lineup-editor__athletes > .team-lineup-editor__athlete { flex-direction: row; align-items: flex-start; gap: 0.35rem; }
+.team-lineup-editor__athlete > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+/* Two athletes in a cell, or a narrow screen: the portrait above the text, as in the booklet, so the text keeps its width. */
+.team-lineup-editor__athletes--shared > .team-lineup-editor__athlete { flex-direction: column; }
+@media (max-width: 600px) { .team-lineup-editor__athletes > .team-lineup-editor__athlete { flex-direction: column; } }
+.team-lineup-editor__portrait { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid rgba(148, 163, 184, 0.6); border-radius: 4px; background: #fff; color: #142e42; object-fit: cover; overflow: hidden; }
 .team-lineup-editor__athletes strong { color: #007e80; }
 .team-lineup-editor__athletes em { font-style: normal; font-size: 0.8em; opacity: 0.75; }
 .team-lineup-editor__empty { opacity: 0.6; font-style: italic; }

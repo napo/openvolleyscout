@@ -35,7 +35,8 @@ import { DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems/reception-de
 import { ReportShareControl } from './ReportShareControl';
 import { SvgEditingHelp } from './SvgEditingHelp';
 import { BookletSettings } from './BookletSettings';
-import { buildReportBooklet } from '../model/report-booklet';
+import { buildReportBooklet, buildSharedReportBooklet } from '../model/report-booklet';
+import { useReportAthletePhotos } from './use-report-athlete-photos';
 import { exportReportBooklet } from '../model/opponent-report-pdf';
 import { TacticalBoardSheet } from './TacticalBoardSheet';
 import '@src/features/teams/pages/team-analysis-page.css';
@@ -216,12 +217,15 @@ export function OpponentReportEditorPage() {
         const recovered = recoverArchivedSetterSheets(report, view, stale);
         if (recovered !== report) update(() => recovered);
     }, [report, view, inputs]);
-    const booklet = useMemo(() => report && view ? buildReportBooklet(report, view, viewT, t('opponentReportSampleText', sample)) : null, [report, view, viewT, t, sample]);
+    // Athlete photos for the line-up of the Team page: in the preview and the exported files only.
+    const athletePhotos = useReportAthletePhotos(view?.team?.players, report?.opponent);
+    // The editor and the share link use the pages without photos (the link must stay short).
+    const booklet = useMemo(() => report && view ? buildSharedReportBooklet(report, view, viewT, t('opponentReportSampleText', sample)) : null, [report, view, viewT, t, sample]);
     const fullPlan = useMemo(() => report && view && booklet ? buildReportBooklet({ ...report, booklet: {
         ...booklet.format, format: 'custom', base: 'extended', includeBoardExtras: true,
-    } }, view, viewT, t('opponentReportSampleText', sample), { a4: true,
+    } }, view, viewT, t('opponentReportSampleText', sample), { a4: true, athletePhotos,
         matchLines: selectedMatches.map(({ project, faced }) => [formatDisplayDate(project.metadata.playedAt), `${t('vs')} ${faced.name}`, project.metadata.competition ?? '', formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') }).text].filter(Boolean).join(' · ')),
-    }) : null, [report, view, booklet, viewT, t, sample, selectedMatches]);
+    }) : null, [report, view, booklet, viewT, t, sample, selectedMatches, athletePhotos]);
     const players = useMemo(() => {
         const result = new Map<string, ReportPlayer>();
         inputs.forEach((input) => input.roster.forEach((player) => { const item = toReportPlayer(player); result.set(item.key, item); }));
@@ -250,7 +254,7 @@ export function OpponentReportEditorPage() {
     type ExportLayout = 'a4' | 'booklet';
     const makePlan = (layout: ExportLayout) => layout === 'a4' ? fullPlan! : buildReportBooklet({ ...report, booklet: {
         ...booklet!.format, format: 'custom', base: 'extended', includeBoardExtras: true,
-    } }, view, viewT, t('opponentReportSampleText', sample), { a4: false,
+    } }, view, viewT, t('opponentReportSampleText', sample), { a4: false, athletePhotos,
         matchLines: selectedMatches.map(({ project, faced }) => [formatDisplayDate(project.metadata.playedAt), `${t('vs')} ${faced.name}`, project.metadata.competition ?? '', formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') }).text].filter(Boolean).join(' · ')),
     });
     const runExport = async (kind: 'pdf' | 'svg' | 'preview' | 'pptx' | 'odp', layout: ExportLayout) => {
@@ -372,7 +376,7 @@ export function OpponentReportEditorPage() {
       {sample.actions < thresholds.minSample ? <p className="opponent-report__warning">{t('opponentReportLowSampleWarning', { n: thresholds.minSample })}</p> : null}
       {preview.length ? <details open><summary><ActionIcon name="preview" />{t('tacticalPreview')}</summary>{preview.map((svg, index) => <img className="tactical-preview" key={index} alt={`${opponentReportTitle(report)} · ${index + 1}`} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}/>)}</details> : null}
 
-      <TacticalBoardSheet report={report} plan={booklet!} staffNotes={fullPlan?.staffNotes ?? []} view={view} viewT={viewT} rosterPlayers={players} attackCodeOptions={attackCodeOptions} setterCallCodes={setterCallCodes} suggestions={suggestions} update={update}/>
+      <TacticalBoardSheet report={report} plan={booklet!} athletePhotos={athletePhotos} staffNotes={fullPlan?.staffNotes ?? []} view={view} viewT={viewT} rosterPlayers={players} attackCodeOptions={attackCodeOptions} setterCallCodes={setterCallCodes} suggestions={suggestions} update={update}/>
     </>}
   </AppPageLayout>;
 }

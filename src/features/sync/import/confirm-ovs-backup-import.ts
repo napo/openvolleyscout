@@ -11,6 +11,8 @@ import type { OvsImportPreview } from './build-ovs-import-preview';
 import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/systems/model';
 import { restoreAppAssets } from '@src/infrastructure/storage/app-asset-storage';
 import { refreshPrintBrandingFromDatabase } from '@src/features/branding/print-branding';
+import { remapRestoredAthletePhotos } from '@src/features/branding/athlete-photos';
+import { loadAthletePhotos } from '@src/features/branding/athlete-photo-storage';
 import { notifyLocalDataChanged } from '../cloud/local-change-bus';
 
 function playerMergeKey(player: ArchivedPlayer): string {
@@ -44,7 +46,7 @@ export interface ConfirmOvsBackupImportResult {
   archiveConflicts: PathConflict[];
   /** Reception/defense systems added from the backup. */
   addedSystems: number;
-  /** Print look and club logo taken from the backup (where they differ from the ones here). */
+  /** Print look, club logo and athlete photos taken from the backup (where they differ from the ones here). */
   restoredAppAssets: number;
 }
 
@@ -75,6 +77,8 @@ export async function confirmOvsBackupImport(
   const { merged, conflicts } = preview.archivePreview.result;
   const localTeams = await teamRepository.list();
   const remappedTeamIds = new Map<string, string>();
+  // Incoming athletes merged into an athlete here (incoming id to the id kept here), for their photos.
+  const remappedPlayerIds = new Map<string, string>();
   const rostersByTeamId = new Map(merged.rosters.map((roster) => [roster.teamId, roster]));
 
   for (const team of merged.teams) {
@@ -90,7 +94,9 @@ export async function confirmOvsBackupImport(
           for (const p of agg.roster.players) mergedPlayers.set(playerMergeKey(p), p);
           for (const p of incomingRoster.players) {
             const key = playerMergeKey(p);
-            if (!mergedPlayers.has(key)) mergedPlayers.set(key, p);
+            const kept = mergedPlayers.get(key);
+            if (!kept) mergedPlayers.set(key, p);
+            else if (kept.id !== p.id) remappedPlayerIds.set(p.id, kept.id);
           }
           await teamRepository.update(existing.id, { players: [...mergedPlayers.values()] });
         }
@@ -146,9 +152,17 @@ export async function confirmOvsBackupImport(
   const defense = useDefenseSystemStore.getState()
     .importDefenseSystemBlocks(preview.systemsPreview.defenseSystems, renameConflict);
 
-  // Print look and club logo: the backup's value takes the place of the one here,
+  // Print look, club logo and athlete photos: the backup's value takes the place of the one here,
   // saved as a new change so cloud sync passes it on.
-  const restoredAppAssets = await restoreAppAssets(preview.appAssetsPreview?.records ?? []);
+  // The photo of an incoming athlete merged into one here goes to the athlete here, when she has none.
+  const localPhotos = remappedPlayerIds.size > 0
+    ? await loadAthletePhotos(remappedPlayerIds.values())
+    : new Map<string, string>();
+  const restoredAppAssets = await restoreAppAssets(remapRestoredAthletePhotos(
+    preview.appAssetsPreview?.records ?? [],
+    remappedPlayerIds,
+    new Set(localPhotos.keys()),
+  ));
   if (restoredAppAssets > 0) {
     await refreshPrintBrandingFromDatabase();
     notifyLocalDataChanged();

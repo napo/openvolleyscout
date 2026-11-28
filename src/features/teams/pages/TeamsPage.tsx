@@ -40,6 +40,10 @@ import { RosterImportModal } from '@src/features/import/rosters/ui/RosterImportM
 import type { RosterImportFormat, RosterImportPayload } from '@src/features/import/rosters';
 import { confirmAction } from '@src/components/confirm-dialog';
 import { createEmptyTeamForm, validateTeamForm, type TeamFieldError, type TeamFormData } from '../model/team-form';
+import { athletePoseForRole } from '@src/components/athlete-silhouettes/athlete-silhouettes';
+import { loadAthletePhotos, saveAthletePhotoChanges } from '@src/features/branding/athlete-photo-storage';
+import { RosterPhotoCell } from './RosterPhotoCell';
+import { useRosterPhotos } from './use-roster-photos';
 
 /** Roles offered in the team list (the filter letters: P, S, O, C, L in Italian). */
 const TEAM_ROLE_OPTIONS: ReadonlyArray<[PlayerRole, RoleGroup]> = [
@@ -48,6 +52,12 @@ const TEAM_ROLE_OPTIONS: ReadonlyArray<[PlayerRole, RoleGroup]> = [
 
 type PlayerField = 'jerseyNumber' | 'firstName' | 'lastName' | 'role' | 'isLibero' | 'isCaptain';
 const RANDOM_ROSTER_SIZE = 14;
+
+/** Name of an athlete for the photo labels: first and last name, else `#jersey`. */
+function rosterPlayerLabel(player: Pick<ArchivedPlayer, 'firstName' | 'lastName' | 'jerseyNumber'>): string {
+  const name = `${player.firstName} ${player.lastName}`.trim();
+  return name || `#${player.jerseyNumber || ''}`;
+}
 
 export function TeamsPage() {
   const { t } = useTranslation();
@@ -61,10 +71,14 @@ export function TeamsPage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const savedFormRef = useRef(JSON.stringify(form));
+  /** Athletes of the roster as last saved, so a save removes the photos of those taken off it. */
+  const savedPlayerIdsRef = useRef<string[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
   const listPositionRef = useRef({ page: 0, top: 0, left: 0 });
   const returnFocusRef = useRef<HTMLElement | null>(null);
-  const dirty = editing && JSON.stringify(form) !== savedFormRef.current;
+  const playerIds = useMemo(() => form.players.map((player) => player.id), [form.players]);
+  const rosterPhotos = useRosterPhotos(editing ? playerIds : []);
+  const dirty = editing && (JSON.stringify(form) !== savedFormRef.current || rosterPhotos.hasChanges);
   const [errors, setErrors] = useState<TeamFieldError>({});
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [statusTone, setStatusTone] = useState<'error' | 'success' | null>(null);
@@ -218,6 +232,7 @@ export function TeamsPage() {
       updatedAt: team.updatedAt,
     };
     savedFormRef.current = JSON.stringify(next);
+    savedPlayerIdsRef.current = players.map((player) => player.id);
     setForm(next);
     setErrors({});
     setStatusTone(null);
@@ -231,19 +246,22 @@ export function TeamsPage() {
       }
 
       applyTeamRecordToForm(teamRecord.team, teamRecord.roster.players);
+      rosterPhotos.discard();
       setStatusMessage('');
       return true;
     },
-    [applyTeamRecordToForm],
+    [applyTeamRecordToForm, rosterPhotos.discard],
   );
 
   const resetEditor = useCallback(() => {
     const next = createEmptyTeamForm();
     savedFormRef.current = JSON.stringify(next);
+    savedPlayerIdsRef.current = [];
     setForm(next);
+    rosterPhotos.discard();
     setErrors({});
     setStatusTone(null);
-  }, []);
+  }, [rosterPhotos.discard]);
 
   const refreshSelectedTeam = useCallback(async (teamId: string) => {
     await loadTeams();
@@ -458,7 +476,8 @@ export function TeamsPage() {
     setSaving(true);
     let syncedMatchCount = 0;
     try {
-      if (!form.id) {
+      let teamId = form.id;
+      if (!teamId) {
         const createdTeam = await teamRepository.create({
           name: form.name.trim(),
           staff: form.staff,
@@ -466,17 +485,33 @@ export function TeamsPage() {
           createdAt: form.createdAt,
           updatedAt: form.updatedAt,
         });
-        await refreshSelectedTeam(createdTeam.team.id);
-        syncedMatchCount = await syncNamesToMatches(createdTeam.team.id);
+        teamId = createdTeam.team.id;
       } else {
-        await teamRepository.update(form.id, {
+        await teamRepository.update(teamId, {
           name: form.name.trim(),
           staff: form.staff,
           players: form.players,
         });
-        await refreshSelectedTeam(form.id);
-        syncedMatchCount = await syncNamesToMatches(form.id);
       }
+      // The athletes keep their ids when saved, so their photos can be written after the roster.
+      let photosFailed = false;
+      const previousPlayerIds = savedPlayerIdsRef.current;
+      try {
+        await rosterPhotos.commit(previousPlayerIds, form.players.map((player) => player.id));
+      } catch (error) {
+        console.error('Error saving athlete photos:', error);
+        photosFailed = true;
+      }
+      await refreshSelectedTeam(teamId);
+      if (photosFailed) {
+        // The team is saved (the editor now holds it); the photos stay to be saved again.
+        // The athletes taken off the roster stay listed, so saving again still removes their photos.
+        savedPlayerIdsRef.current = [...new Set([...previousPlayerIds, ...savedPlayerIdsRef.current])];
+        setStatusMessage(t('teamSaveFailed'));
+        setStatusTone('error');
+        return;
+      }
+      syncedMatchCount = await syncNamesToMatches(teamId);
 
       setStatusMessage(syncedMatchCount > 0
         ? `${t('teamSaved')} ${t('teamNamesSyncedToMatches', { count: syncedMatchCount })}`
@@ -529,6 +564,8 @@ export function TeamsPage() {
         deleteTeam: (id) => teamRepository.delete(id),
         listMatches: () => matchRepository.list(),
         updateMatch: (project) => matchRepository.update(project),
+        loadPhotos: (playerIds) => loadAthletePhotos(playerIds),
+        savePhotoChanges: (changes) => saveAthletePhotoChanges(changes),
       });
       if (form.id === discardId) {
         resetEditor();
@@ -569,6 +606,7 @@ export function TeamsPage() {
   }, [loadTeams, t]);
 
   const selectedTeamLabel = form.id ? t('editTeam') : t('newTeam');
+  const photoErrorPlayers = form.players.filter((player) => rosterPhotos.hasError(player.id));
 
   const exportTeamList = teams.map((team) => ({ id: team.id, name: team.name }));
 
@@ -765,6 +803,19 @@ export function TeamsPage() {
 
                   <QuickJerseyEntry onAdd={handleQuickAddPlayers} />
 
+                  {form.players.length > 0 ? (
+                    <p className={`teams-roster__photo-hint${rosterPhotos.hasChanges ? ' is-pending' : ''}`} role="status">
+                      {rosterPhotos.hasChanges ? t('athletePhotoSavedWithTeam') : t('athletePhotoHint')}
+                    </p>
+                  ) : null}
+                  {photoErrorPlayers.length > 0 ? (
+                    <ul className="teams-roster__photo-errors" role="alert">
+                      {photoErrorPlayers.map((player) => (
+                        <li key={player.id} className="form-error">{rosterPlayerLabel(player)}: {t('athletePhotoError')}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+
                   <div className="teams-roster__body">
                     {form.players.length === 0 ? (
                       <p className="teams-roster__empty">{t('noPlayersAdded')}</p>
@@ -773,6 +824,7 @@ export function TeamsPage() {
                         <table className="roster-table teams-roster__table">
                           <thead>
                             <tr>
+                              <th>{t('athletePhoto')}</th>
                               <th>{t('jerseyNumber')}</th>
                               <th>{t('firstName')}</th>
                               <th>{t('lastName')}</th>
@@ -785,6 +837,17 @@ export function TeamsPage() {
                           <tbody>
                             {form.players.map((player, index) => (
                               <tr key={player.id}>
+                                <td>
+                                  <RosterPhotoCell
+                                    name={rosterPlayerLabel(player)}
+                                    pose={athletePoseForRole(player.role, player.isLibero)}
+                                    photo={rosterPhotos.photoOf(player.id)}
+                                    busy={rosterPhotos.isBusy(player.id)}
+                                    error={rosterPhotos.hasError(player.id)}
+                                    onChoose={(file) => { setStatusMessage(''); setStatusTone(null); void rosterPhotos.choose(player.id, file); }}
+                                    onRemove={() => { setStatusMessage(''); setStatusTone(null); rosterPhotos.remove(player.id); }}
+                                  />
+                                </td>
                                 <td>
                                   <input
                                     type="number"

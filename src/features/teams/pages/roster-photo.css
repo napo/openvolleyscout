@@ -1,0 +1,176 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Athlete photo in the roster editor of the Teams page. */
+.roster-photo {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  vertical-align: middle;
+}
+
+.roster-photo__thumb {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px dashed rgba(71, 85, 105, 0.45);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.roster-photo__thumb.has-photo {
+  border-style: solid;
+  border-color: rgba(71, 85, 105, 0.3);
+}
+
+.roster-photo__thumb:hover:not(:disabled),
+.roster-photo__thumb:focus-visible {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.roster-photo__thumb.is-error {
+  border: 2px solid var(--c-b91c1c);
+}
+
+.roster-photo__thumb:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.roster-photo__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.roster-photo__thumb .athlete-silhouette {
+  display: block;
+}
+
+/* Small round button on the top right corner of the thumbnail. */
+.roster-photo__remove {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  display: inline-grid;
+  place-items: center;
+  /* 24 px: the smallest pointer target WCAG 2.2 AA accepts. */
+  width: 24px;
+  height: 24px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid rgba(185, 28, 28, 0.45);
+  border-radius: 50%;
+  background: var(--t-fef2f2);
+  color: var(--c-b91c1c);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.roster-photo__remove:hover:not(:disabled),
+.roster-photo__remove:focus-visible {
+  background: var(--c-b91c1c);
+  color: #ffffff;
+}
+
+.roster-photo__input {
+  display: none;
+}
+
+.teams-roster__photo-hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.teams-roster__photo-hint.is-pending {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.teams-roster__photo-errors {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * The photo comes first in the roster table. The shared roster-table rules
+ * size the columns by position, so they are set again here for this table
+ * (same widths and looks as before, plus the photo column).
+ */
+.roster-table.teams-roster__table th:nth-child(1),
+.roster-table.teams-roster__table td:nth-child(1) {
+  width: 60px;
+  text-align: center;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.roster-table.teams-roster__table th:nth-child(2),
+.roster-table.teams-roster__table td:nth-child(2) {
+  width: 12%;
+  text-align: center;
+}
+
+.roster-table.teams-roster__table th:nth-child(3),
+.roster-table.teams-roster__table td:nth-child(3) {
+  width: 20%;
+  text-align: left;
+}
+
+.roster-table.teams-roster__table th:nth-child(4),
+.roster-table.teams-roster__table td:nth-child(4) {
+  width: 25%;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.roster-table.teams-roster__table th:nth-child(5),
+.roster-table.teams-roster__table td:nth-child(5) {
+  width: 18%;
+  text-align: left;
+  font-family: monospace;
+  font-size: var(--font-size-xs);
+}
+
+.roster-table.teams-roster__table th:nth-child(6),
+.roster-table.teams-roster__table td:nth-child(6),
+.roster-table.teams-roster__table th:nth-child(7),
+.roster-table.teams-roster__table td:nth-child(7) {
+  width: 10%;
+  text-align: center;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.roster-table.teams-roster__table th:nth-child(8),
+.roster-table.teams-roster__table td:nth-child(8) {
+  width: 5%;
+  text-align: center;
+}
+
+/*
+ * On a phone the eight columns do not fit: the table keeps a usable width and
+ * scrolls sideways inside its frame (the page itself does not scroll).
+ */
+@media (max-width: 720px) {
+  .roster-table.teams-roster__table {
+    min-width: 660px;
+  }
+
+  /* Two-digit jersey numbers stay whole beside the number arrows. */
+  .roster-table.teams-roster__table td:nth-child(2) input {
+    min-width: 3.4rem;
+  }
+}

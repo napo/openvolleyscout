@@ -5,6 +5,35 @@ import type { TranslationKey } from '@src/i18n';
 import type { ArchivedTeam } from '@src/domain/team/types';
 import { matchRepository, teamRepository, type MatchSummaryRecord } from '@src/infrastructure/repositories';
 import { findRelatedMatchIds } from '../model/team-matches';
+import { removeAthletePhotos } from '@src/features/branding/athlete-photo-storage';
+import { orphanedPhotoIds } from '../model/roster-photos';
+
+/**
+ * Archived ids of the athletes of these teams, read before the teams are
+ * deleted. Every roster of the team counts (older ones too: deleting a team
+ * removes all of them), not only the latest.
+ */
+async function rosterPlayerIds(teamIds: readonly string[]): Promise<string[]> {
+  const deleted = new Set(teamIds);
+  const rosters = await teamRepository.listAllRosters();
+  return rosters
+    .filter((roster) => deleted.has(roster.teamId))
+    .flatMap((roster) => roster.players.map((player) => player.id));
+}
+
+/**
+ * Removes the photos of the athletes of deleted teams, unless an athlete is
+ * still on a roster left. A failure only leaves unused photos behind.
+ */
+async function removePhotosOfDeletedAthletes(playerIds: readonly string[]): Promise<void> {
+  if (playerIds.length === 0) return;
+  try {
+    const remaining = (await teamRepository.listAllRosters()).flatMap((roster) => roster.players.map((player) => player.id));
+    await removeAthletePhotos(orphanedPhotoIds(playerIds, remaining));
+  } catch (error) {
+    console.warn('Could not remove the photos of the deleted athletes', error);
+  }
+}
 
 interface UseTeamDeletionOptions {
   t: (key: TranslationKey, params?: Record<string, string | number>) => string;
@@ -51,7 +80,9 @@ export function useTeamDeletion({
           await matchRepository.delete(matchId);
         }
       }
+      const playerIds = await rosterPlayerIds([teamId]);
       await teamRepository.delete(teamId);
+      await removePhotosOfDeletedAthletes(playerIds);
       await loadTeams();
 
       if (form.id === teamId) {
@@ -93,6 +124,7 @@ export function useTeamDeletion({
           await matchRepository.delete(matchId);
         }
       }
+      const playerIds = await rosterPlayerIds(selectedTeams.map((team) => team.id));
       for (const team of selectedTeams) {
         await teamRepository.delete(team.id);
         if (form.id === team.id) {
@@ -100,6 +132,7 @@ export function useTeamDeletion({
           showList();
         }
       }
+      await removePhotosOfDeletedAthletes(playerIds);
       await loadTeams();
       setStatus(
         deleteMatches

@@ -6,6 +6,7 @@ import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import type { SkillStats } from '@src/features/scouting/model/match-stats';
 import { placeSvgLabels } from '@src/lib/utils/svg-label-placement';
+import { athletePoseForRole, type AthletePose } from '@src/components/athlete-silhouettes/athlete-silhouettes';
 import { attackerViewFilterLabel } from './attacker-view-label';
 import { reportPriorities, priorityText } from './report-priorities';
 import type { OpponentReport } from '@src/domain/opponent-report/types';
@@ -231,6 +232,8 @@ export interface TeamPlayerInfo {
   matches: number;
   /** Row of the starters' table (number, name, serve, reception, attack, block). */
   stats: ViewCell[];
+  /** The drawing shown in place of a photo: reception (libero), setter, blocker (middle), attacker (the others). */
+  pose?: AthletePose;
 }
 
 function teamLineupView(metrics: OpponentReportMetrics, t: ViewT): Pick<NonNullable<ReportView['team']>, 'players' | 'lineupCells' | 'liberoLabels' | 'lineupCaption' | 'startersColumns'> {
@@ -263,6 +266,7 @@ function teamLineupView(metrics: OpponentReportMetrics, t: ViewT): Pick<NonNulla
       role: roleShort(role, libero),
       figures: keyFigures(player.key, role, libero),
       matches,
+      pose: athletePoseForRole(role, libero),
       stats: [
         plain(player.jersey), plain(player.name),
         plain(s?.serve.total ?? 0), plain(percent(efficiency(s?.serve, 'serve'))),

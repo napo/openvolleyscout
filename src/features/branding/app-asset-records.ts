@@ -14,6 +14,7 @@ import {
   parsePrintThemeChoice,
   type PrintBranding,
 } from '@src/lib/theme/print-theme';
+import { isAthletePhoto, isAthletePhotoAssetId } from './athlete-photos';
 
 /**
  * A record from a backup or a cloud file, or null when it is not one. Only its
@@ -33,12 +34,14 @@ export function readAppAssetRecord(raw: unknown): AppAssetRecord | null {
 
 /**
  * Whether this version can use the record, so a backup may put it in place of
- * the value here: a valid print look, a valid club logo, or a kind this
- * version does not know (kept as it is for the versions that do).
+ * the value here: a valid print look, a valid club logo, a valid athlete
+ * photo, or a kind this version does not know (kept as it is for the versions
+ * that do).
  */
 export function isUsableAppAsset(record: AppAssetRecord): boolean {
   if (record.id === PRINT_THEME_ASSET_ID) return record.kind === 'printTheme' && parsePrintThemeChoice(record.value) !== null;
   if (record.id === CLUB_LOGO_ASSET_ID) return record.kind === 'image' && isPrintLogo(record.value);
+  if (isAthletePhotoAssetId(record.id)) return record.kind === 'image' && isAthletePhoto(record.value);
   return true;
 }
 

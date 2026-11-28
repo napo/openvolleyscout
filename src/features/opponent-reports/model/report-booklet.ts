@@ -10,6 +10,8 @@ import { buildAttackDefenseLegendSvg, buildCustomLegendSvg, buildServeHowLegendS
 import { collectCustomLegendEntries, drawingHasMoveArrows, findMoveArrowColor } from './tactical-board';
 import { videoLinkWatchKey } from './attacker-video-links';
 import { activePrintTheme, PRINT_THEMES, readPrintLogo, type PrintTheme } from '@src/lib/theme/print-theme';
+import { athleteSilhouetteSvg, type AthletePose } from '@src/components/athlete-silhouettes/athlete-silhouettes';
+import { isAthletePhoto } from '@src/features/branding/athlete-photos';
 
 export const BOOKLET_WIDTH = 419.528;
 export const BOOKLET_HEIGHT = 595.276;
@@ -18,13 +20,17 @@ const M = 20, TOP = 87;
 const xml = (s: string) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[ch]!);
 const color = '#142e42';
 
+/** The width a text is expected to take, on the generous side (the measure the wrapping uses). */
+export function bookletTextWidth(value: string, size: number): number {
+  return [...value].reduce((n, ch) => n + (/[^\u0000-\u024f\u0600-\u06ff]/u.test(ch) ? 1.3 : /[MW@%]/.test(ch) ? .9 : /[il.,' :]/.test(ch) ? .34 : .65), 0) * size;
+}
 /** Conservative wrapping supports long names, manual newlines and CJK without truncation. */
 export function wrapBookletText(text: string, width: number, size: number): string[] {
   const result: string[] = [];
   for (const paragraph of text.split('\n')) {
     let line = '', used = 0;
     for (const token of paragraph.match(/\s+|[^\s]+/gu) ?? ['']) {
-      const weight = (value: string) => [...value].reduce((n, ch) => n + (/[^\u0000-\u024f\u0600-\u06ff]/u.test(ch) ? 1.3 : /[MW@%]/.test(ch) ? .9 : /[il.,' :]/.test(ch) ? .34 : .65), 0) * size;
+      const weight = (value: string) => bookletTextWidth(value, size);
       if (used + weight(token) > width && line.trim()) { result.push(line.trimEnd()); line = ''; used = 0; }
       for (const ch of token) {
         const w = weight(ch);
@@ -54,6 +60,46 @@ export function fitBookletCourt(svg: string, x: number, y: number, width: number
   return `<g transform="translate(${x + (width - sw * scale) / 2} ${y + (height - sh * scale) / 2}) scale(${scale})">${content}</g>`;
 }
 interface Page { title: string; elements: string[]; component: OpponentReportComponentId }
+
+/** Height of the line-up cells: the larger one when the starters' table below still fits, never less than the old one. */
+export const LINEUP_CELL_HEIGHT = { a5: { base: 62, full: 78 }, a4: { base: 74, full: 94 } } as const;
+export function lineupCellHeight(a4: boolean, room: number, rows: number): number {
+  const { base, full } = a4 ? LINEUP_CELL_HEIGHT.a4 : LINEUP_CELL_HEIGHT.a5;
+  return Math.max(base, Math.min(full, Math.floor(room / Math.max(1, rows))));
+}
+/**
+ * The square portrait of an athlete in a line-up cell: beside the text when the athlete is alone in the cell,
+ * above the name (the role beside it) when two athletes share the cell.
+ */
+export function lineupPortraitSize(a4: boolean, athletes: number, cellHeight: number): number {
+  if (athletes <= 1) return Math.min(a4 ? 64 : 38, cellHeight - 12);
+  return Math.max(10, Math.min(a4 ? 34 : 24, cellHeight - (a4 ? 56 : 50)));
+}
+/** The two figures of an athlete on one line, or one figure per line when they do not fit together. */
+export function lineupFigureLines(figures: string, width: number): string[] {
+  const whole = wrapBookletText(figures, width, 6);
+  if (whole.length <= 1) return whole;
+  return figures.split(' · ').flatMap((figure) => wrapBookletText(figure, width, 6)).slice(0, 2);
+}
+/** Height of the drawings kept in the portrait (the floor shadow and the ball included), and the middle of each pose. */
+const SILHOUETTE_TOP = 4, SILHOUETTE_SPAN = 140;
+const SILHOUETTE_MIDDLE: Record<AthletePose, number> = { reception: 64.5, setter: 60, attacker: 64.5, blocker: 71.7, unknown: 60 };
+/**
+ * A role drawing fitted in a square of the page, in the ink of the theme. The empty space around the drawing
+ * is left out and each pose is centred on what it draws. Curved shapes made of several pieces become one path
+ * per piece: the slide export turns each path into one outline.
+ */
+export function bookletSilhouette(pose: AthletePose, x: number, y: number, size: number, ink: string): string {
+  const scale = size * 0.94 / SILHOUETTE_SPAN;
+  const left = x + size / 2 - SILHOUETTE_MIDDLE[pose] * scale;
+  const top = y + size / 2 - (SILHOUETTE_TOP + SILHOUETTE_SPAN / 2) * scale;
+  // athleteSilhouetteSvg centres the 120 x 150 drawing in a square: the box is chosen so that its origin lands on (left, top).
+  const markup = athleteSilhouetteSvg(pose, { x: left - 15 * scale, y: top, size: 150 * scale }, ink);
+  return markup.replace(/<path d="([^"]+)"([^>]*)\/>/g, (whole, d: string, rest: string) => {
+    const pieces = d.split(/(?=M)/).filter(Boolean);
+    return pieces.length > 1 && /[ACQST]/i.test(d) ? pieces.map((piece) => `<path d="${piece}"${rest}/>`).join('') : whole;
+  });
+}
 
 /** The highest bars; on a tie, the one used most in the latest matches, if that settles it. */
 function highestBars(values: readonly number[], recent: readonly number[] | undefined): { bars: Set<number>; tieBrokenBy?: number } {
@@ -156,8 +202,20 @@ export interface ReportBookletPlan {
   format: OpponentReportBooklet;
 }
 
+export interface ReportBookletOptions {
+  a4?: boolean;
+  matchLines?: string[];
+  theme?: PrintTheme;
+  logo?: string | null;
+  /**
+   * Athlete photos by report player key (PNG or JPEG data URLs), drawn in the line-up cells of the Team page;
+   * an athlete with none gets the drawing of the role. Left out of the pages of the share link.
+   */
+  athletePhotos?: ReadonlyMap<string, string>;
+}
+
 /** Same plan drives the source-selection count, preview, A5 PDF and A4 imposition. */
-export function buildReportBooklet(report: OpponentReport, view: ReportView, t: ViewT, sampleLine = '', options: { a4?: boolean; matchLines?: string[]; theme?: PrintTheme; logo?: string | null } = {}): ReportBookletPlan {
+export function buildReportBooklet(report: OpponentReport, view: ReportView, t: ViewT, sampleLine = '', options: ReportBookletOptions = {}): ReportBookletPlan {
   const theme = options.theme ?? activePrintTheme(report.booklet?.printTheme);
   // The club logo sits at the right of the band; titles leave it room.
   const logo = options.logo !== undefined ? options.logo : report.booklet?.hideClubLogo ? null : readPrintLogo();
@@ -173,6 +231,8 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const pageHeight = a4 ? 841.89 : BOOKLET_HEIGHT;
   const WIDTH = pageWidth - M * 2, BOTTOM = pageHeight - 37;
   const titleWidth = logo ? WIDTH - 60 : WIDTH;
+  // Only usable pictures; the share link never gets any (see buildSharedReportBooklet).
+  const athletePhotos = options.athletePhotos && new Map([...options.athletePhotos].filter(([, photo]) => isAthletePhoto(photo)));
   const logoImage = logo ? `<image href="${logo}" x="${pageWidth - M - 52}" y="7" width="52" height="52" preserveAspectRatio="xMaxYMid meet"/>` : '';
   const settings = { ...DEFAULT_BOOKLET, ...report.booklet };
   const compact = !a4 && (settings.format === 'compact' || settings.format === 'custom' && settings.base === 'compact');
@@ -350,9 +410,29 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
         second.elements.push(text(M, top + 10, teamLineup.title, 10, true));
         top += 18;
         const cells = teamLineup.lineupCells, labels = teamLineup.lineupLabels ?? [];
-        const cellWidth = (WIDTH - 12) / 3, cellHeight = a4 ? 74 : 62, gap = 6;
+        const gap = 6, cellWidth = (WIDTH - 12) / 3;
+        const caption = wrapBookletText(teamLineup.subtitle ?? '', WIDTH, 6);
+        const liberoCells = [6, 7].filter((index) => (cells[index] ?? []).length > 0);
+        const rows = 2 + (liberoCells.length ? 1 : 0);
+        // Taller cells for the portraits, as long as the starters' table below still fits on the page.
+        const startersStep = (a4 ? 8 : 7) * 1.6;
+        const startersHeight = teamStarters?.table ? 22 + (teamStarters.table.rows.length + 1) * startersStep + 4 : 0;
+        const room = BOTTOM - top - 6 - rows * gap - 10 - caption.length * 8 - startersHeight;
+        const cellHeight = lineupCellHeight(a4, room, rows);
         // The net above the front row: zones 4, 3, 2 in front, 5, 6, 1 behind; the liberos below.
         second.elements.push(`<line x1="${M}" y1="${top}" x2="${M + WIDTH}" y2="${top}" stroke="${theme.ink}" stroke-width="2"/>`);
+        const portrait = (athlete: { key: string; pose?: AthletePose }, x: number, y: number, size: number, id: string) => {
+          const photo = athletePhotos?.get(athlete.key);
+          const frame = (fill: string) => `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="3" fill="${fill}" stroke="${theme.border}" stroke-width=".6"/>`;
+          if (photo) {
+            second.elements.push(`<defs><clipPath id="${id}"><rect x="${x}" y="${y}" width="${size}" height="${size}" rx="3"/></clipPath></defs>`);
+            second.elements.push(`<image href="${photo}" x="${x}" y="${y}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})" data-athlete-photo="1"/>`);
+            second.elements.push(frame('none'));
+          } else {
+            second.elements.push(frame('#fff'));
+            second.elements.push(bookletSilhouette(athlete.pose ?? 'attacker', x, y, size, theme.ink));
+          }
+        };
         const drawCell = (index: number, x: number, y: number) => {
           const athletes = cells[index] ?? [];
           second.elements.push(`<rect x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}" rx="4" fill="${theme.soft}" stroke="${theme.border}" stroke-width=".8"/>`);
@@ -360,24 +440,80 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
           second.elements.push(`<text x="${x + cellWidth - 4}" y="${y + 9}" font-size="6" fill="${theme.muted}" text-anchor="end">${xml(label)}</text>`);
           // Two athletes share the cell side by side, in the order the coach chose.
           const part = cellWidth / Math.max(1, athletes.length);
+          const shared = athletes.length > 1;
+          const fullNameSize = shared ? (a4 ? 8 : 7) : (a4 ? 9 : 8), figureStep = 7.5;
+          const bottom = y + cellHeight - 5, lastFigure = bottom - 8;
+          let size = lineupPortraitSize(a4, athletes.length, cellHeight);
+          const largest = size;
+          const labelLeft = x + cellWidth - 4 - bookletTextWidth(label, 6);
+          // In a shared cell the role is written beside the portrait: it must stay in its column and clear the zone label.
+          const roleClashAt = (n: number, portrait: number) => {
+            const left = x + n * part;
+            const limit = n === athletes.length - 1 ? labelLeft - 3 : left + part - 2;
+            return left + 4 + portrait + 4 + bookletTextWidth(athletes[n].role, 8) > limit;
+          };
+          const layout = athletes.map((athlete) => {
+            const width = shared ? part - 8 : part - size - 13;
+            const name = `#${athlete.jersey} ${athlete.name}`;
+            const figures = lineupFigureLines(athlete.figures, width);
+            // A word too long for the column is written smaller rather than cut in two.
+            let nameSize = fullNameSize;
+            while (nameSize > 5.5 && name.split(/\s+/).some((word) => wrapBookletText(word, width, nameSize).length > 1)) nameSize -= 0.5;
+            let lines = wrapBookletText(name, width, nameSize);
+            // Alone in the cell: a slightly smaller name rather than a figure lost at the bottom.
+            const fits = () => 12 + nameSize + 3 + Math.min(lines.length, 3) * (nameSize + 1.5) + 1 + (figures.length - 1) * figureStep <= cellHeight - 13;
+            while (!shared && nameSize > fullNameSize - 1.5 && !fits()) {
+              nameSize -= 0.5;
+              lines = wrapBookletText(name, width, nameSize);
+            }
+            return { nameSize, name: lines.slice(0, shared ? 2 : 3), figures, roleLine: false };
+          });
+          // Shared cells: the text goes below the portraits, which are made smaller until the names and figures fit.
+          if (shared) {
+            const textHeight = (entry: typeof layout[number]) => (entry.roleLine ? entry.nameSize + 1.5 : 0)
+              + entry.nameSize + 1 + entry.name.length * (entry.nameSize + 1.5) + (entry.figures.length - 1) * figureStep;
+            const fit = () => Math.max(10, Math.min(largest, lastFigure - 1 - Math.max(...layout.map(textHeight)) - y - 5));
+            size = fit();
+            // A role with no room beside a small portrait goes on its own line above the name, for both
+            // athletes so that their names stay level (a large portrait moves the role one line down instead).
+            if (size < 18 && athletes.some((_, n) => roleClashAt(n, size))) {
+              layout.forEach((entry) => { entry.roleLine = true; });
+              size = fit();
+            }
+          }
+          // Beside a large portrait, the roles go one line down when the zone label leaves one of them no room.
+          const roleDown = shared && athletes.some((_, n) => roleClashAt(n, size));
           athletes.forEach((athlete, n) => {
             const left = x + n * part;
             if (n > 0) second.elements.push(`<line x1="${left}" y1="${y + 4}" x2="${left}" y2="${y + cellHeight - 4}" stroke="${theme.border}" stroke-width=".6"/>`);
-            const nameSize = athletes.length > 1 ? (a4 ? 8 : 7) : (a4 ? 9 : 8);
-            let lineY = y + 11;
-            second.elements.push(text(left + 4, lineY, athlete.role, 8, true, theme.accent));
-            lineY += nameSize + 3;
-            wrapBookletText(`#${athlete.jersey} ${athlete.name}`, part - 8, nameSize).slice(0, 2).forEach((line) => { second.elements.push(text(left + 4, lineY, line, nameSize, true)); lineY += nameSize + 1.5; });
-            wrapBookletText(athlete.figures, part - 8, 6).slice(0, 2).forEach((line) => { second.elements.push(text(left + 4, lineY + 1, line, 6, false, theme.muted)); lineY += 7.5; });
-            second.elements.push(text(left + 4, y + cellHeight - 5, t('teamCellMatches', { n: athlete.matches }), 6, false, theme.muted));
+            portrait(athlete, left + 4, y + 5, size, `lineup-photo-${index}-${n}`);
+            // Alone: the text beside the portrait. Shared: the role beside the portrait, the rest below it.
+            const textX = shared ? left + 4 : left + 4 + size + 5;
+            const { name, figures, nameSize, roleLine } = layout[n];
+            const nameStep = nameSize + 1.5;
+            let lineY = shared ? y + 5 + size + nameSize + 1 : y + 12 + nameSize + 3;
+            if (roleLine) {
+              second.elements.push(text(textX, lineY, athlete.role, nameSize, true, theme.accent));
+              lineY += nameStep;
+            } else {
+              const roleX = shared ? left + 4 + size + 4 : textX;
+              second.elements.push(text(roleX, roleDown ? y + 21 : y + 12, athlete.role, 8, true, theme.accent));
+            }
+            // A long name gives up its third line before the figures lose theirs.
+            const names = !shared && name.length > 2 && lineY + name.length * nameStep + (figures.length - 1) * figureStep + 1 > lastFigure ? name.slice(0, 2) : name;
+            names.forEach((line) => { second.elements.push(text(textX, lineY, line, nameSize, true)); lineY += nameStep; });
+            // The figures stop above the matches line.
+            figures.forEach((line) => {
+              if (lineY + 1 > lastFigure) return;
+              second.elements.push(text(textX, lineY + 1, line, 6, false, theme.muted)); lineY += figureStep;
+            });
+            second.elements.push(text(textX, bottom, t('teamCellMatches', { n: athlete.matches }), 6, false, theme.muted));
           });
         };
         [[3, 2, 1], [4, 5, 0]].forEach((indexes, line) => indexes.forEach((index, column) => drawCell(index, M + column * (cellWidth + gap), top + 6 + line * (cellHeight + gap))));
         let y = top + 6 + 2 * (cellHeight + gap);
-        const liberoCells = [6, 7].filter((index) => (cells[index] ?? []).length > 0);
         liberoCells.forEach((index, n) => drawCell(index, M + n * (cellWidth + gap), y));
         if (liberoCells.length) y += cellHeight + gap;
-        const caption = wrapBookletText(teamLineup.subtitle ?? '', WIDTH, 6);
         caption.forEach((line, n) => second.elements.push(text(M, y + 6 + n * 8, line, 6, false, theme.muted)));
         top = y + 10 + caption.length * 8;
         rememberNotes(teamLineup);
@@ -860,6 +996,14 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     width: pageWidth, height: pageHeight,
     contentPages, paddingPages: pages.length - contentPages, sheets: pages.length / 4, format: settings,
   };
+}
+
+/**
+ * The pages put in a share link: the line-up shows the drawing of each role, never the athlete photos,
+ * which would make the link too long (each photo is a different picture, so the link cannot share them).
+ */
+export function buildSharedReportBooklet(report: OpponentReport, view: ReportView, t: ViewT, sampleLine = '', options: ReportBookletOptions = {}): ReportBookletPlan {
+  return buildReportBooklet(report, view, t, sampleLine, { ...options, athletePhotos: undefined });
 }
 
 export function bookletImposition(pageCount: number): Array<[number, number]> {

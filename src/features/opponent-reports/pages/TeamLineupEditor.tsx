@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
+import { AthleteSilhouette } from '@src/components/athlete-silhouettes/AthleteSilhouette';
 import { assignLineupCell } from '../model/board-pieces';
 import type { TeamPlayerInfo } from '../model/report-view';
 
@@ -10,6 +11,8 @@ interface TeamLineupEditorProps {
   cells: readonly TeamPlayerInfo[][];
   labels: readonly string[];
   players: readonly TeamPlayerInfo[];
+  /** Athlete photos by player key; an athlete with none shows the drawing of the role. */
+  photos?: ReadonlyMap<string, string>;
   /** True when the coach changed the computed line-up. */
   edited: boolean;
   onChange: (cells: string[][] | undefined) => void;
@@ -18,7 +21,7 @@ interface TeamLineupEditorProps {
 /** Zones as on the printed page: 4, 3, 2 at the net, 5, 6, 1 behind, the liberos below. */
 const LAYOUT = [[3, 2, 1], [4, 5, 0], [6, 7]] as const;
 
-export function TeamLineupEditor({ cells, labels, players, edited, onChange }: TeamLineupEditorProps) {
+export function TeamLineupEditor({ cells, labels, players, photos, edited, onChange }: TeamLineupEditorProps) {
   const { t } = useTranslation();
   const [active, setActive] = useState<number | null>(null);
   const keys = cells.map((cell) => cell.map((player) => player.key));
@@ -48,11 +51,17 @@ export function TeamLineupEditor({ cells, labels, players, edited, onChange }: T
             >
               <small>{cellLabel(index)}</small>
               {cells[index]?.length ? (
-                <span className="team-lineup-editor__athletes">
+                <span className={`team-lineup-editor__athletes${cells[index].length > 1 ? ' team-lineup-editor__athletes--shared' : ''}`}>
                   {cells[index].map((player) => (
-                    <span key={player.key}>
-                      <strong>{player.role}</strong> #{player.jersey} {player.name}
-                      <em>{player.figures} · {t('teamCellMatches', { n: player.matches })}</em>
+                    <span key={player.key} className="team-lineup-editor__athlete">
+                      {photos?.get(player.key)
+                        // The name is written beside it: the picture adds nothing for a screen reader.
+                        ? <img className="team-lineup-editor__portrait" src={photos.get(player.key)} alt="" data-testid="athlete-photo" />
+                        : <span className="team-lineup-editor__portrait"><AthleteSilhouette pose={player.pose ?? 'attacker'} size={26} /></span>}
+                      <span>
+                        <strong>{player.role}</strong> #{player.jersey} {player.name}
+                        <em>{player.figures} · {t('teamCellMatches', { n: player.matches })}</em>
+                      </span>
                     </span>
                   ))}
                 </span>

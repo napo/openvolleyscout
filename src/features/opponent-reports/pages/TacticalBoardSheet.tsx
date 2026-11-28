@@ -210,6 +210,7 @@ export function TacticalBoardSheet({
   setterCallCodes = [],
   suggestions,
   update,
+  athletePhotos,
 }: {
   report: OpponentReport;
   plan: ReportBookletPlan;
@@ -222,6 +223,8 @@ export function TacticalBoardSheet({
   setterCallCodes?: readonly string[];
   suggestions: readonly KeySuggestion[];
   update: Update;
+  /** Athlete photos by report player key, shown in the line-up editor. */
+  athletePhotos?: ReadonlyMap<string, string>;
 }) {
   const { t } = useTranslation();
   const [editingCourtTarget, setEditingCourtTarget] = useState<
@@ -839,6 +842,7 @@ export function TacticalBoardSheet({
                     cells={piece.lineupCells}
                     labels={piece.lineupLabels ?? []}
                     players={view.team?.players ?? []}
+                    photos={athletePhotos}
                     edited={Boolean(edit?.lineupCells)}
                     onChange={(cells) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
                       const next = { ...prev };
